@@ -1,0 +1,4 @@
+#!/bin/sh
+killall -q metrics
+
+HOSTNAME=dd-wrt API_KEY=123er HOST_TAGS=location:home,room:living-room exec /tmp/metrics
