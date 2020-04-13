@@ -56,6 +56,10 @@ func (c *ARP) collectMetrics() (datadog.GaugeList, error) {
 			continue
 		}
 		ipAddress, macAddress, device := raw[0], raw[3], raw[5]
+		if macAddress == "00:00:00:00:00:00" {
+			log.Printf("ignoring entry %s %s %s", ipAddress, macAddress, device)
+			continue
+		}
 		macAddress = strings.ReplaceAll(macAddress, ":", "-")
 		// TODO batch some host tags / alias from this
 		gaugeLists = append(gaugeLists, &datadog.Metric{

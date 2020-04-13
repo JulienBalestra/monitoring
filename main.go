@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"github.com/JulienBalestra/metrics/pkg/collecter"
+	"github.com/JulienBalestra/metrics/pkg/collecter/dnsmasq"
 	"github.com/JulienBalestra/metrics/pkg/collecter/load"
+	"github.com/JulienBalestra/metrics/pkg/collecter/memory"
 	"github.com/JulienBalestra/metrics/pkg/collecter/network"
 	"github.com/JulienBalestra/metrics/pkg/collecter/temperature"
 	"github.com/JulienBalestra/metrics/pkg/datadog"
@@ -63,7 +65,13 @@ func main() {
 		waitGroup.Done()
 	}()
 
-	client := datadog.NewClient(apiKey)
+	tagger := datadog.NewTagger()
+	tagger.Upsert(host, hostTags...)
+
+	// not really useful but doesn't hurt either
+	tagger.Print()
+
+	client := datadog.NewClient(host, apiKey, tagger)
 	waitGroup.Add(1)
 	go func() {
 		client.Run(ctx)
@@ -71,12 +79,6 @@ func main() {
 	}()
 	// TODO lifecycle of this chan / create outside ? Wrap ?
 	defer close(client.ChanSeries)
-
-	tagger := datadog.NewTagger()
-	tagger.Upsert(host, hostTags...)
-
-	// not really useful but doesn't hurt either
-	tagger.Print()
 
 	collecterConfig := &collecter.Config{
 		MetricsCh:       client.ChanSeries,
@@ -87,9 +89,11 @@ func main() {
 
 	for i, c := range []collecter.Collecter{
 		network.NewARPReporter(collecterConfig.OverrideCollectInterval(time.Second * 10)),
-		load.NewLoadReporter(collecterConfig),
-		temperature.NewTemperatureReporter(collecterConfig),
+		dnsmasq.NewDnsMasqReporter(collecterConfig),
+		load.NewLoadReporter(collecterConfig.OverrideCollectInterval(time.Second * 10)),
+		temperature.NewTemperatureReporter(collecterConfig.OverrideCollectInterval(time.Second * 30)),
 		network.NewStatisticsReporter(collecterConfig),
+		memory.NewMemoryReporter(collecterConfig),
 	} {
 		select {
 		case <-ctx.Done():

@@ -60,3 +60,30 @@ func (m *CounterMap) Count(chanSeries chan Series, newMetrics CounterMap) {
 		}
 	}
 }
+
+func (m *CounterMap) GetCountSeries(newMetrics CounterMap) []Series {
+	var series []Series
+	for path, prevMetric := range *m {
+		newMetric, ok := newMetrics[path]
+		if !ok {
+			continue
+		}
+		metricsValue := newMetric.Value - prevMetric.Value
+		// count must be > 0
+		if metricsValue <= 0 {
+			continue
+		}
+		series = append(series, Series{
+			Metric: newMetric.Name,
+			Points: [][]float64{
+				{float64(prevMetric.Timestamp.Unix()), metricsValue},
+			},
+			Type:     typeCount,
+			Interval: math.Round(newMetric.Timestamp.Sub(prevMetric.Timestamp).Seconds()),
+			Host:     newMetric.Host,
+			Tags:     newMetric.Tags,
+		},
+		)
+	}
+	return series
+}

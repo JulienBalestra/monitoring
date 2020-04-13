@@ -28,16 +28,22 @@ curl  -X POST -H "Content-type: application/json" \
 const (
 	contentType     = "Content-Type"
 	applicationJson = "application/json"
+
+	clientSentBytesMetric  = "client.sent.bytes"
+	clientSentSeriesMetric = "client.sent.series"
 )
 
 type Client struct {
+	tagger *Tagger
+
 	httpClient *http.Client
 	url        string
+	host       string
 
 	ChanSeries chan Series
 }
 
-func NewClient(apiKey string) *Client {
+func NewClient(host, apiKey string, tagger *Tagger) *Client {
 	c := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
@@ -49,7 +55,9 @@ func NewClient(apiKey string) *Client {
 	return &Client{
 		httpClient: c,
 		url:        "https://api.datadoghq.com/api/v1/series?api_key=" + apiKey,
+		host:       host,
 		ChanSeries: make(chan Series),
+		tagger:     tagger,
 	}
 }
 
@@ -77,6 +85,8 @@ func (c *Client) Run(ctx context.Context) {
 	ticker := time.NewTicker(tickerPeriod)
 	defer ticker.Stop()
 	log.Printf("starting datadog client")
+
+	var counters CounterMap
 	for {
 		select {
 		case <-ctx.Done():
@@ -92,11 +102,15 @@ func (c *Client) Run(ctx context.Context) {
 				continue
 			}
 			ctxTimeout, _ := context.WithTimeout(ctx, tickerPeriod)
-			err := c.SendSeries(ctxTimeout, series)
+			newCounter, err := c.SendSeries(ctxTimeout, series)
 			if err == nil {
 				log.Printf("successfully sent %d series", len(series))
 				failures = 0
 				series = series[:0]
+				if counters != nil {
+					series = append(series, counters.GetCountSeries(newCounter)...)
+				}
+				counters = newCounter
 				continue
 			}
 			failures++
@@ -113,10 +127,10 @@ func (c *Client) Run(ctx context.Context) {
 	}
 }
 
-func (c *Client) SendSeries(ctx context.Context, series []Series) error {
+func (c *Client) SendSeries(ctx context.Context, series []Series) (CounterMap, error) {
 	b, err := json.Marshal(Payload{Series: series})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// TODO find a good logger to debug this
@@ -124,15 +138,34 @@ func (c *Client) SendSeries(ctx context.Context, series []Series) error {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, bytes.NewBuffer(b))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	req.Header.Set(contentType, applicationJson)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if resp.StatusCode > 300 {
-		return fmt.Errorf("failed to send series status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("failed to send series status code: %d", resp.StatusCode)
 	}
-	return nil
+
+	now := time.Now()
+	hostTags := c.tagger.Get(c.host)
+	return CounterMap{
+			clientSentBytesMetric: &Metric{
+				Name:      clientSentBytesMetric,
+				Value:     float64(len(b)),
+				Host:      c.host,
+				Timestamp: now,
+				Tags:      hostTags,
+			},
+			clientSentSeriesMetric: &Metric{
+				Name:      clientSentSeriesMetric,
+				Value:     float64(len(series)),
+				Host:      c.host,
+				Timestamp: now,
+				Tags:      hostTags,
+			},
+		},
+		nil
 }

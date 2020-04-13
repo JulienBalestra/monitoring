@@ -22,4 +22,5 @@ func (c Config) OverrideCollectInterval(d time.Duration) *Config {
 
 type Collecter interface {
 	Collect(context.Context)
+	//Name() string TODO make the interface with less boilerplate
 }
