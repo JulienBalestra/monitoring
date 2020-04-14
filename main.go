@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -108,7 +109,13 @@ func main() {
 			time.Sleep(time.Second)
 		}
 	}
+	// TODO: maybe add something else like version
+	stableTag := "ts:" + strconv.FormatInt(time.Now().Unix(), 10)
+	client.ClientUp(stableTag)
 	<-ctx.Done()
+
+	ctxShutdown, _ := context.WithTimeout(context.Background(), time.Second*5)
+	_ = client.ClientShutdown(ctxShutdown, stableTag)
 	waitGroup.Wait()
 	log.Printf("program exit")
 }

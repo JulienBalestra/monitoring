@@ -169,3 +169,36 @@ func (c *Client) SendSeries(ctx context.Context, series []Series) (CounterMap, e
 		},
 		nil
 }
+
+func (c *Client) ClientUp(tags ...string) {
+	c.ChanSeries <- Series{
+		Metric: "client.up",
+		Points: [][]float64{
+			{
+				float64(time.Now().Unix()),
+				1.0,
+			},
+		},
+		Type: typeGauge,
+		Host: c.host,
+		Tags: append(c.tagger.Get(c.host), tags...),
+	}
+}
+
+func (c *Client) ClientShutdown(ctx context.Context, tags ...string) error {
+	_, err := c.SendSeries(ctx, []Series{
+		{
+			Metric: "client.shutdown",
+			Points: [][]float64{
+				{
+					float64(time.Now().Unix()),
+					1.0,
+				},
+			},
+			Type: typeGauge,
+			Host: c.host,
+			Tags: append(c.tagger.Get(c.host), tags...),
+		},
+	})
+	return err
+}
