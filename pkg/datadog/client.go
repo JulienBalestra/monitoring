@@ -78,6 +78,7 @@ type Series struct {
 
 func (c *Client) Run(ctx context.Context) {
 	// TODO explain these magic numbers
+	const shutdownTimeout = 5 * time.Second
 	const tickerPeriod = 20 * time.Second
 	failures, failuresDropThreshold := 0, 300/int(tickerPeriod.Seconds())
 	series := make([]Series, 0, 1000)
@@ -90,6 +91,15 @@ func (c *Client) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			if len(series) > 0 {
+				// TODO find something better
+				log.Printf("sending %d pending series with %s timeout", len(series), shutdownTimeout)
+				ctxTimeout, _ := context.WithTimeout(context.TODO(), shutdownTimeout)
+				_, err := c.SendSeries(ctxTimeout, series)
+				if err != nil {
+					log.Printf("still %d pending series: %v", len(series), err)
+				}
+			}
 			log.Printf("end of datadog client")
 			return
 

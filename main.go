@@ -88,7 +88,7 @@ func main() {
 		CollectInterval: time.Second * 15,
 	}
 
-	for i, c := range []collecter.Collecter{
+	for _, c := range []collecter.Collecter{
 		network.NewARPReporter(collecterConfig.OverrideCollectInterval(time.Second * 10)),
 		dnsmasq.NewDnsMasqReporter(collecterConfig),
 		load.NewLoadReporter(collecterConfig.OverrideCollectInterval(time.Second * 10)),
@@ -101,12 +101,10 @@ func main() {
 			break
 		default:
 			waitGroup.Add(1)
-			go func(i int, coll collecter.Collecter) {
+			go func(coll collecter.Collecter) {
 				coll.Collect(ctx)
 				waitGroup.Done()
-			}(i, c)
-			// TODO do we need this poor load spread ?
-			time.Sleep(time.Second)
+			}(c)
 		}
 	}
 	// TODO: maybe add something else like version
