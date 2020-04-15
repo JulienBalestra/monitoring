@@ -9,6 +9,7 @@ import (
 	"github.com/JulienBalestra/metrics/pkg/collecter/network"
 	"github.com/JulienBalestra/metrics/pkg/collecter/temperature"
 	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"log"
 	"os"
 	"os/signal"
@@ -66,13 +67,13 @@ func main() {
 		waitGroup.Done()
 	}()
 
-	tagger := datadog.NewTagger()
-	tagger.Upsert(host, hostTags...)
+	tags := tagger.NewTagger()
+	tags.Upsert(host, hostTags...)
 
 	// not really useful but doesn't hurt either
-	tagger.Print()
+	tags.Print()
 
-	client := datadog.NewClient(host, apiKey, tagger)
+	client := datadog.NewClient(host, apiKey, tags)
 	waitGroup.Add(1)
 	go func() {
 		client.Run(ctx)
@@ -83,7 +84,7 @@ func main() {
 
 	collecterConfig := &collecter.Config{
 		MetricsCh:       client.ChanSeries,
-		Tagger:          tagger,
+		Tagger:          tags,
 		Host:            host,
 		CollectInterval: time.Second * 15,
 	}

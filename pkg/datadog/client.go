@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"hash/fnv"
 	"log"
 	"net/http"
@@ -37,7 +38,7 @@ const (
 )
 
 type Client struct {
-	tagger *Tagger
+	tagger *tagger.Tagger
 
 	httpClient *http.Client
 	url        string
@@ -51,7 +52,7 @@ type Client struct {
 	sentSeries float64
 }
 
-func NewClient(host, apiKey string, tagger *Tagger) *Client {
+func NewClient(host, apiKey string, tagger *tagger.Tagger) *Client {
 	c := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{

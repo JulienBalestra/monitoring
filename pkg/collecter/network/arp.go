@@ -3,7 +3,9 @@ package network
 import (
 	"context"
 	"github.com/JulienBalestra/metrics/pkg/collecter"
+	exportedTags "github.com/JulienBalestra/metrics/pkg/collecter/dnsmasq/tags"
 	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"io/ioutil"
 	"log"
 	"strings"
@@ -61,13 +63,19 @@ func (c *ARP) collectMetrics() (datadog.GaugeList, error) {
 			continue
 		}
 		macAddress = strings.ReplaceAll(macAddress, ":", "-")
-		// TODO batch some host tags / alias from this
+		macAddressTag, ipAddressTag := "mac:"+macAddress, "ip:"+ipAddress
+		c.conf.Tagger.Upsert(ipAddress, macAddressTag)
+		c.conf.Tagger.Upsert(macAddress, ipAddressTag)
+
+		// we rely on dnsmasq tags collection to make this available
+		tags := append(hostTags, c.conf.Tagger.GetWithDefault(macAddress, exportedTags.LeaseKey, tagger.MissingTagValue)...)
+		tags = append(tags, "device:"+device, "mac:"+macAddress)
 		gaugeLists = append(gaugeLists, &datadog.Metric{
 			Name:      "network.arp",
 			Value:     1,
 			Timestamp: now,
 			Host:      c.conf.Host,
-			Tags:      append(hostTags, "device:"+device, "mac:"+macAddress, "ip:"+ipAddress),
+			Tags:      tags,
 		})
 	}
 

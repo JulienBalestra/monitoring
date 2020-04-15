@@ -1,4 +1,8 @@
 #!/bin/sh
 killall -q metrics
 
-HOSTNAME=dd-wrt API_KEY=123er HOST_TAGS=location:home,room:living-room exec /tmp/metrics
+export HOSTNAME=dd-wrt
+export API_KEY=123er
+export HOST_TAGS=location:home,room:living-room
+
+exec nohup /tmp/metrics

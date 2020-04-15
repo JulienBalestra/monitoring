@@ -2,6 +2,7 @@ package collecter
 
 import (
 	"context"
+	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"time"
 
 	"github.com/JulienBalestra/metrics/pkg/datadog"
@@ -9,7 +10,7 @@ import (
 
 type Config struct {
 	MetricsCh chan datadog.Series
-	Tagger    *datadog.Tagger
+	Tagger    *tagger.Tagger
 
 	Host            string
 	CollectInterval time.Duration

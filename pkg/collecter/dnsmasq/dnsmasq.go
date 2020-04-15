@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/JulienBalestra/metrics/pkg/collecter"
+	"github.com/JulienBalestra/metrics/pkg/collecter/dnsmasq/tags"
 	"github.com/JulienBalestra/metrics/pkg/datadog"
 	"github.com/miekg/dns"
 	"io/ioutil"
@@ -16,6 +17,8 @@ import (
 
 const (
 	dnsmasqPath = "/tmp/dnsmasq.leases"
+
+	dhcpWildcardLeaseTag = tags.LeaseKey + ":" + "wildcard"
 )
 
 /* cat /tmp/dnsmasq.leases
@@ -93,28 +96,38 @@ func (c *DnsMasq) collectMetrics() (datadog.GaugeList, datadog.CounterMap, error
 	now := time.Now()
 	timestampSeconds := float64(now.Unix())
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
-	for i, line := range lines[1:] {
+	for i, line := range lines {
 		raw := strings.Fields(line)
 		if len(raw) != 5 {
 			log.Printf("failed to parse dnsmasq line %d len(%d): %q : %q", i, len(raw), line, strings.Join(raw, ","))
 			continue
 		}
 
-		// TODO do something with the host raw[3]
-		lease, macAddress, ipAddress := raw[0], raw[1], raw[2]
+		lease, macAddress, ipAddress, leaseName := raw[0], raw[1], raw[2], raw[3]
 		leaseStarted, err := strconv.ParseFloat(lease, 10)
 		if err != nil {
 			log.Printf("failed to parse dnsmasq lease: %v", err)
 			continue
 		}
 		macAddress = strings.ReplaceAll(macAddress, ":", "-")
-		// TODO batch some host tags / alias from this
+		macAddressTag, ipAddressTag, leaseNameTag := "mac:"+macAddress, "ip:"+ipAddress, ""
+		if leaseName == "*" {
+			leaseNameTag = dhcpWildcardLeaseTag
+			c.conf.Tagger.Upsert(ipAddress, macAddressTag)
+			c.conf.Tagger.Upsert(macAddress, ipAddressTag)
+		} else {
+			leaseNameTag = tags.LeaseKey + ":" + leaseName
+			c.conf.Tagger.Upsert(leaseName, macAddressTag, ipAddressTag)
+			c.conf.Tagger.Upsert(ipAddress, leaseNameTag, macAddressTag)
+			c.conf.Tagger.Upsert(macAddress, ipAddressTag, leaseNameTag)
+		}
+
 		gaugeLists = append(gaugeLists, &datadog.Metric{
 			Name:      "dnsmasq.dhcp.lease",
 			Value:     leaseStarted - timestampSeconds,
 			Timestamp: now,
 			Host:      c.conf.Host,
-			Tags:      append(hostTags, "mac:"+macAddress, "ip:"+ipAddress),
+			Tags:      append(hostTags, leaseNameTag, macAddressTag, ipAddressTag),
 		})
 	}
 
