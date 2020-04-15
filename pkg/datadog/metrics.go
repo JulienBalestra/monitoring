@@ -35,6 +35,23 @@ func (m *GaugeList) Gauge(chanSeries chan Series) {
 	}
 }
 
+func (m *GaugeList) GetGaugeSeries() []Series {
+	var series []Series
+	for _, metric := range *m {
+		series = append(series, Series{
+			Metric: metric.Name,
+			Points: [][]float64{
+				{float64(metric.Timestamp.Unix()), metric.Value},
+			},
+			Type: typeGauge,
+			Host: metric.Host,
+			Tags: metric.Tags,
+		},
+		)
+	}
+	return series
+}
+
 type CounterMap map[string]*Metric
 
 func (m *CounterMap) Count(chanSeries chan Series, newMetrics CounterMap) {

@@ -89,12 +89,13 @@ func main() {
 	}
 
 	for _, c := range []collecter.Collecter{
-		network.NewARPReporter(collecterConfig.OverrideCollectInterval(time.Second * 10)),
-		dnsmasq.NewDnsMasqReporter(collecterConfig),
 		load.NewLoadReporter(collecterConfig.OverrideCollectInterval(time.Second * 10)),
-		temperature.NewTemperatureReporter(collecterConfig.OverrideCollectInterval(time.Second * 30)),
-		network.NewStatisticsReporter(collecterConfig),
-		memory.NewMemoryReporter(collecterConfig),
+		network.NewStatisticsReporter(collecterConfig.OverrideCollectInterval(time.Second * 10)),
+		network.NewARPReporter(collecterConfig),
+
+		dnsmasq.NewDnsMasqReporter(collecterConfig.OverrideCollectInterval(collecterConfig.CollectInterval * 2)),
+		temperature.NewTemperatureReporter(collecterConfig.OverrideCollectInterval(collecterConfig.CollectInterval * 2)),
+		memory.NewMemoryReporter(collecterConfig.OverrideCollectInterval(collecterConfig.CollectInterval * 2)),
 	} {
 		select {
 		case <-ctx.Done():
@@ -109,11 +110,11 @@ func main() {
 	}
 	// TODO: maybe add something else like version
 	stableTag := "ts:" + strconv.FormatInt(time.Now().Unix(), 10)
-	client.ClientUp(stableTag)
+	client.MetricClientUp(stableTag)
 	<-ctx.Done()
 
 	ctxShutdown, _ := context.WithTimeout(context.Background(), time.Second*5)
-	_ = client.ClientShutdown(ctxShutdown, stableTag)
+	_ = client.MetricClientShutdown(ctxShutdown, stableTag)
 	waitGroup.Wait()
 	log.Printf("program exit")
 }

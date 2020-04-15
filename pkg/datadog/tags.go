@@ -42,13 +42,13 @@ func (t *Tagger) Update(entity string, tags ...string) {
 	t.mu.Unlock()
 }
 
-func (t *Tagger) GetStable(entity string) []string {
-	tags := t.Get(entity)
+func (t *Tagger) Get(entity string) []string {
+	tags := t.GetUnstable(entity)
 	sort.Strings(tags)
 	return tags
 }
 
-func (t *Tagger) Get(entity string) []string {
+func (t *Tagger) GetUnstable(entity string) []string {
 	tags := make([]string, 0)
 
 	t.mu.RLock()
@@ -67,7 +67,7 @@ func (t *Tagger) Get(entity string) []string {
 func (t *Tagger) Print() {
 	t.mu.RLock()
 	for entity := range t.tags {
-		log.Printf("%s: %s", entity, t.GetStable(entity))
+		log.Printf("%s: %s", entity, t.Get(entity))
 	}
 	t.mu.RUnlock()
 }

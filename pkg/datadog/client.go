@@ -6,8 +6,11 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"log"
 	"net/http"
+	"strconv"
+	"sync"
 	"time"
 )
 
@@ -29,7 +32,7 @@ const (
 	contentType     = "Content-Type"
 	applicationJson = "application/json"
 
-	clientSentBytesMetric  = "client.sent.bytes"
+	clientSentByteMetric   = "client.sent.byte"
 	clientSentSeriesMetric = "client.sent.series"
 )
 
@@ -41,6 +44,11 @@ type Client struct {
 	host       string
 
 	ChanSeries chan Series
+
+	// internal self metrics
+	mu         sync.RWMutex
+	sentBytes  float64
+	sentSeries float64
 }
 
 func NewClient(host, apiKey string, tagger *Tagger) *Client {
@@ -74,14 +82,59 @@ type Series struct {
 	Tags     []string    `json:"tags"`
 }
 
-// TODO aggregate same timeseries
+type AggregateStore struct {
+	store map[uint64]*Series
+}
+
+func NewAggregateStore() *AggregateStore {
+	return &AggregateStore{store: make(map[uint64]*Series)}
+}
+
+func (st *AggregateStore) Reset() {
+	st.store = make(map[uint64]*Series)
+}
+
+func (st *AggregateStore) Series() []Series {
+	var series []Series
+	for _, s := range st.store {
+		series = append(series, *s)
+	}
+	return series
+}
+
+func (st *AggregateStore) Aggregate(series ...*Series) {
+	for _, s := range series {
+		h := fnv.New64()
+		_, _ = h.Write([]byte(s.Metric))
+		_, _ = h.Write([]byte(s.Host))
+		_, _ = h.Write([]byte(s.Type))
+		_, _ = h.Write([]byte(strconv.FormatInt(int64(s.Interval), 10)))
+
+		for _, tag := range s.Tags {
+			_, _ = h.Write([]byte(tag))
+		}
+		hash := h.Sum64()
+
+		existing, ok := st.store[hash]
+		if !ok {
+			st.store[hash] = s
+			return
+		}
+		existing.Points = append(existing.Points, s.Points...)
+	}
+}
+
+func (st *AggregateStore) Len() int {
+	return len(st.store)
+}
 
 func (c *Client) Run(ctx context.Context) {
 	// TODO explain these magic numbers
 	const shutdownTimeout = 5 * time.Second
 	const tickerPeriod = 20 * time.Second
 	failures, failuresDropThreshold := 0, 300/int(tickerPeriod.Seconds())
-	series := make([]Series, 0, 1000)
+
+	store := NewAggregateStore()
 
 	ticker := time.NewTicker(tickerPeriod)
 	defer ticker.Stop()
@@ -91,56 +144,82 @@ func (c *Client) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			if len(series) > 0 {
+			if store.Len() > 0 {
 				// TODO find something better
-				log.Printf("sending %d pending series with %s timeout", len(series), shutdownTimeout)
+				log.Printf("sending %d pending series with %s timeout", store.Len(), shutdownTimeout)
 				ctxTimeout, _ := context.WithTimeout(context.TODO(), shutdownTimeout)
-				_, err := c.SendSeries(ctxTimeout, series)
+				err := c.SendSeries(ctxTimeout, store.Series())
 				if err != nil {
-					log.Printf("still %d pending series: %v", len(series), err)
+					log.Printf("still %d pending series: %v", store.Len(), err)
 				}
 			}
 			log.Printf("end of datadog client")
 			return
 
 		case s := <-c.ChanSeries:
-			series = append(series, s)
+			store.Aggregate(&s)
 
 		case <-ticker.C:
-			if len(series) == 0 {
+			if store.Len() == 0 {
 				log.Printf("no series cached")
 				continue
 			}
 			ctxTimeout, _ := context.WithTimeout(ctx, tickerPeriod)
-			newCounter, err := c.SendSeries(ctxTimeout, series)
+			err := c.SendSeries(ctxTimeout, store.Series())
 			if err == nil {
-				log.Printf("successfully sent %d series", len(series))
+				log.Printf("successfully sent %d series", store.Len())
 				failures = 0
-				series = series[:0]
+				store.Reset()
+				newCounter := c.GetClientCounter()
 				if counters != nil {
-					series = append(series, counters.GetCountSeries(newCounter)...)
+					for _, s := range counters.GetCountSeries(newCounter) {
+						store.Aggregate(&s)
+					}
 				}
 				counters = newCounter
 				continue
 			}
 			failures++
-			log.Printf("failed to send %d series: %v", len(series), err)
+			log.Printf("failed to send %d series: %v", store.Len(), err)
 			// TODO maybe use a rate limited queue
 			if failures < failuresDropThreshold {
 				log.Printf("attempt %d/%d: will drop the series over threshold", failures, failuresDropThreshold)
 				continue
 			}
-			log.Printf("dropping %d series", len(series))
+			log.Printf("dropping %d series", store.Len())
 			failures = 0
-			series = series[:0]
+			store.Reset()
 		}
 	}
 }
 
-func (c *Client) SendSeries(ctx context.Context, series []Series) (CounterMap, error) {
+func (c *Client) GetClientCounter() CounterMap {
+	now := time.Now()
+	hostTags := c.tagger.Get(c.host)
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return CounterMap{
+		clientSentByteMetric: &Metric{
+			Name:      clientSentByteMetric,
+			Value:     c.sentBytes,
+			Host:      c.host,
+			Timestamp: now,
+			Tags:      hostTags,
+		},
+		clientSentSeriesMetric: &Metric{
+			Name:      clientSentSeriesMetric,
+			Value:     c.sentSeries,
+			Host:      c.host,
+			Timestamp: now,
+			Tags:      hostTags,
+		},
+	}
+}
+
+func (c *Client) SendSeries(ctx context.Context, series []Series) error {
 	b, err := json.Marshal(Payload{Series: series})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// TODO find a good logger to debug this
@@ -148,39 +227,26 @@ func (c *Client) SendSeries(ctx context.Context, series []Series) (CounterMap, e
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, bytes.NewBuffer(b))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	req.Header.Set(contentType, applicationJson)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if resp.StatusCode > 300 {
-		return nil, fmt.Errorf("failed to send series status code: %d", resp.StatusCode)
+		return fmt.Errorf("failed to send series status code: %d", resp.StatusCode)
 	}
 
-	now := time.Now()
-	hostTags := c.tagger.Get(c.host)
-	return CounterMap{
-			clientSentBytesMetric: &Metric{
-				Name:      clientSentBytesMetric,
-				Value:     float64(len(b)),
-				Host:      c.host,
-				Timestamp: now,
-				Tags:      hostTags,
-			},
-			clientSentSeriesMetric: &Metric{
-				Name:      clientSentSeriesMetric,
-				Value:     float64(len(series)),
-				Host:      c.host,
-				Timestamp: now,
-				Tags:      hostTags,
-			},
-		},
-		nil
+	// internal self metrics/counters
+	c.mu.Lock()
+	c.sentBytes += float64(len(b))
+	c.sentSeries += float64(len(series))
+	c.mu.Unlock()
+	return nil
 }
 
-func (c *Client) ClientUp(tags ...string) {
+func (c *Client) MetricClientUp(tags ...string) {
 	c.ChanSeries <- Series{
 		Metric: "client.up",
 		Points: [][]float64{
@@ -195,8 +261,8 @@ func (c *Client) ClientUp(tags ...string) {
 	}
 }
 
-func (c *Client) ClientShutdown(ctx context.Context, tags ...string) error {
-	_, err := c.SendSeries(ctx, []Series{
+func (c *Client) MetricClientShutdown(ctx context.Context, tags ...string) error {
+	return c.SendSeries(ctx, []Series{
 		{
 			Metric: "client.shutdown",
 			Points: [][]float64{
@@ -210,5 +276,4 @@ func (c *Client) ClientShutdown(ctx context.Context, tags ...string) error {
 			Tags: append(c.tagger.Get(c.host), tags...),
 		},
 	})
-	return err
 }
