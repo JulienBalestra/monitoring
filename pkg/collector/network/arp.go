@@ -2,8 +2,8 @@ package network
 
 import (
 	"context"
-	"github.com/JulienBalestra/metrics/pkg/collecter"
-	exportedTags "github.com/JulienBalestra/metrics/pkg/collecter/dnsmasq/tags"
+	"github.com/JulienBalestra/metrics/pkg/collector"
+	exportedTags "github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
 	"github.com/JulienBalestra/metrics/pkg/datadog"
 	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"io/ioutil"
@@ -28,26 +28,35 @@ IP address       HW type     Flags       HW address            Mask     Device
 */
 
 type ARP struct {
-	conf *collecter.Config
+	conf *collector.Config
 }
 
-func NewARPReporter(conf *collecter.Config) *ARP {
+func NewARPReporter(conf *collector.Config) *ARP {
 	return &ARP{
 		conf: conf,
 	}
 }
 
-func (c *ARP) collectMetrics() (datadog.GaugeList, error) {
-	var gaugeLists datadog.GaugeList
+func (c *ARP) Config() *collector.Config {
+	return c.conf
+}
+
+func (c *ARP) Name() string {
+	return "network/arp"
+}
+
+func (c *ARP) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
+	var counters datadog.Counter
+	var gauges datadog.Gauge
 
 	b, err := ioutil.ReadFile(arpPath)
 	if err != nil {
-		return gaugeLists, err
+		return counters, gauges, err
 	}
 
 	lines := strings.Split(string(b[:len(b)-1]), "\n")
 	if len(lines) == 0 {
-		return gaugeLists, nil
+		return counters, gauges, nil
 	}
 	now := time.Now()
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
@@ -63,14 +72,14 @@ func (c *ARP) collectMetrics() (datadog.GaugeList, error) {
 			continue
 		}
 		macAddress = strings.ReplaceAll(macAddress, ":", "-")
-		macAddressTag, ipAddressTag := tagger.NewTag("mac", macAddress), tagger.NewTag("ip", ipAddress)
-		c.conf.Tagger.Update(ipAddress, macAddressTag)
-		c.conf.Tagger.Update(macAddress, ipAddressTag)
+		macAddressTag, ipAddressTag, deviceTag := tagger.NewTag("mac", macAddress), tagger.NewTag("ip", ipAddress), tagger.NewTag("device", device)
+		c.conf.Tagger.Update(ipAddress, macAddressTag, deviceTag)
+		c.conf.Tagger.Update(macAddress, ipAddressTag, deviceTag)
 
 		// we rely on dnsmasq tags collection to make this available
 		tags := append(hostTags, c.conf.Tagger.GetWithDefault(macAddress, tagger.NewTag(exportedTags.LeaseKey, tagger.MissingTagValue))...)
-		tags = append(tags, "device:"+device, macAddressTag.String())
-		gaugeLists = append(gaugeLists, &datadog.Metric{
+		tags = append(tags, deviceTag.String(), macAddressTag.String())
+		gauges = append(gauges, &datadog.Metric{
 			Name:      "network.arp",
 			Value:     1,
 			Timestamp: now,
@@ -79,27 +88,5 @@ func (c *ARP) collectMetrics() (datadog.GaugeList, error) {
 		})
 	}
 
-	return gaugeLists, nil
-}
-
-func (c *ARP) Collect(ctx context.Context) {
-	ticker := time.NewTicker(c.conf.CollectInterval)
-	defer ticker.Stop()
-	log.Printf("collecting network/arp metrics every %s", c.conf.CollectInterval.String())
-	for {
-		select {
-		case <-ctx.Done():
-			log.Printf("end of network/arp collection")
-			return
-
-		case <-ticker.C:
-			gauges, err := c.collectMetrics()
-			if err != nil {
-				log.Printf("failed network/arp collection: %v", err)
-				continue
-			}
-			gauges.Gauge(c.conf.MetricsCh)
-			log.Printf("successfully run network/arp collection")
-		}
-	}
+	return counters, gauges, nil
 }

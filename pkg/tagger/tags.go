@@ -59,21 +59,21 @@ type entityStore map[tagKey]map[tagValue]string
 type tagStore map[string]entityStore
 
 type Tagger struct {
-	tags tagStore
+	store tagStore
 
 	mu *sync.RWMutex
 }
 
 func NewTagger() *Tagger {
 	return &Tagger{
-		tags: make(tagStore),
-		mu:   &sync.RWMutex{},
+		store: make(tagStore),
+		mu:    &sync.RWMutex{},
 	}
 }
 
 func (t *Tagger) Add(entity string, tags ...*Tag) {
 	t.mu.Lock()
-	entityTags, hasEntity := t.tags[entity]
+	entityTags, hasEntity := t.store[entity]
 	if !hasEntity {
 		entityTags = make(entityStore)
 	}
@@ -86,13 +86,13 @@ func (t *Tagger) Add(entity string, tags ...*Tag) {
 			tag.value: tag.keyValue,
 		}
 	}
-	t.tags[entity] = entityTags
+	t.store[entity] = entityTags
 	t.mu.Unlock()
 }
 
 func (t *Tagger) Update(entity string, tags ...*Tag) {
 	t.mu.Lock()
-	entityTags, hasEntity := t.tags[entity]
+	entityTags, hasEntity := t.store[entity]
 	if !hasEntity {
 		entityTags = make(entityStore)
 	}
@@ -101,7 +101,7 @@ func (t *Tagger) Update(entity string, tags ...*Tag) {
 			tag.value: tag.keyValue,
 		}
 	}
-	t.tags[entity] = entityTags
+	t.store[entity] = entityTags
 	t.mu.Unlock()
 }
 
@@ -113,7 +113,7 @@ func (t *Tagger) Replace(entity string, tags ...*Tag) {
 			tag.value: tag.keyValue,
 		}
 	}
-	t.tags[entity] = entityTags
+	t.store[entity] = entityTags
 	t.mu.Unlock()
 }
 
@@ -123,33 +123,40 @@ func (t *Tagger) Get(entity string) []string {
 	return tags
 }
 
-func (t *Tagger) GetWithDefault(entity string, tag *Tag) []string {
-	tags := t.GetUnstableWithDefault(entity, tag)
+func (t *Tagger) GetWithDefault(entity string, defaultTags ...*Tag) []string {
+	tags := t.GetUnstableWithDefault(entity, defaultTags...)
 	sort.Strings(tags)
 	return tags
 }
 
-func (t *Tagger) GetUnstableWithDefault(entity string, defaultTag *Tag) []string {
+func (t *Tagger) GetUnstableWithDefault(entity string, defaultTags ...*Tag) []string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
 	tags := make([]string, 0)
 
-	entityTags, ok := t.tags[entity]
+	entityTags, ok := t.store[entity]
 	if !ok {
+		for _, t := range defaultTags {
+			tags = append(tags, t.keyValue)
+		}
 		return tags
 	}
-	hasDefaultKey := false
+	meetDefault := make(map[tagKey]*Tag)
+	for _, t := range defaultTags {
+		meetDefault[t.key] = t
+	}
 	for tagKey := range entityTags {
 		for _, keyValue := range entityTags[tagKey] {
-			if tagKey == defaultTag.key {
-				hasDefaultKey = true
+			_, ok := meetDefault[tagKey]
+			if ok {
+				delete(meetDefault, tagKey)
 			}
 			tags = append(tags, keyValue)
 		}
 	}
-	if !hasDefaultKey {
-		tags = append(tags, defaultTag.keyValue)
+	for _, t := range meetDefault {
+		tags = append(tags, t.keyValue)
 	}
 	return tags
 }
@@ -160,7 +167,7 @@ func (t *Tagger) GetUnstable(entity string) []string {
 
 	tags := make([]string, 0)
 
-	entityTags, ok := t.tags[entity]
+	entityTags, ok := t.store[entity]
 	if !ok {
 		return tags
 	}
@@ -178,7 +185,7 @@ func (t *Tagger) GetIndexed(entity string) map[string]struct{} {
 
 	tags := make(map[string]struct{})
 
-	entityTags, ok := t.tags[entity]
+	entityTags, ok := t.store[entity]
 	if !ok {
 		return tags
 	}
@@ -192,9 +199,9 @@ func (t *Tagger) GetIndexed(entity string) map[string]struct{} {
 
 func (t *Tagger) Print() {
 	t.mu.RLock()
-	tags := make([]string, 0, len(t.tags))
+	tags := make([]string, 0, len(t.store))
 
-	for entity := range t.tags {
+	for entity := range t.store {
 		tags = append(tags, entity)
 	}
 	t.mu.RUnlock()

@@ -19,9 +19,9 @@ type Metric struct {
 	Tags []string
 }
 
-type GaugeList []*Metric
+type Gauge []*Metric
 
-func (m *GaugeList) Gauge(chanSeries chan Series) {
+func (m *Gauge) Gauge(chanSeries chan Series) {
 	for _, metric := range *m {
 		chanSeries <- Series{
 			Metric: metric.Name,
@@ -35,7 +35,7 @@ func (m *GaugeList) Gauge(chanSeries chan Series) {
 	}
 }
 
-func (m *GaugeList) GetGaugeSeries() []Series {
+func (m *Gauge) GetSeries() []Series {
 	var series []Series
 	for _, metric := range *m {
 		series = append(series, Series{
@@ -52,9 +52,9 @@ func (m *GaugeList) GetGaugeSeries() []Series {
 	return series
 }
 
-type CounterMap map[string]*Metric
+type Counter map[string]*Metric
 
-func (m *CounterMap) Count(chanSeries chan Series, newMetrics CounterMap) {
+func (m *Counter) Count(chanSeries chan Series, newMetrics Counter) {
 	for path, prevMetric := range *m {
 		newMetric, ok := newMetrics[path]
 		if !ok {
@@ -78,7 +78,7 @@ func (m *CounterMap) Count(chanSeries chan Series, newMetrics CounterMap) {
 	}
 }
 
-func (m *CounterMap) GetCountSeries(newMetrics CounterMap) []Series {
+func (m *Counter) GetSeries(newMetrics Counter) []Series {
 	var series []Series
 	for path, prevMetric := range *m {
 		newMetric, ok := newMetrics[path]

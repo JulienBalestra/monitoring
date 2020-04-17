@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"github.com/JulienBalestra/metrics/pkg/collecter"
-	"github.com/JulienBalestra/metrics/pkg/collecter/dnsmasq"
-	"github.com/JulienBalestra/metrics/pkg/collecter/load"
-	"github.com/JulienBalestra/metrics/pkg/collecter/memory"
-	"github.com/JulienBalestra/metrics/pkg/collecter/network"
-	"github.com/JulienBalestra/metrics/pkg/collecter/temperature"
+	"github.com/JulienBalestra/metrics/pkg/collector"
+	"github.com/JulienBalestra/metrics/pkg/collector/dnsmasq"
+	"github.com/JulienBalestra/metrics/pkg/collector/load"
+	"github.com/JulienBalestra/metrics/pkg/collector/memory"
+	"github.com/JulienBalestra/metrics/pkg/collector/network"
+	"github.com/JulienBalestra/metrics/pkg/collector/temperature"
 	"github.com/JulienBalestra/metrics/pkg/datadog"
 	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"log"
@@ -40,6 +40,7 @@ func notifySignals(ctx context.Context, cancel context.CancelFunc) {
 }
 
 func main() {
+	var err error
 	// TODO use a real command line parser:
 	host := os.Getenv("HOSTNAME")
 	if host == "" {
@@ -54,7 +55,7 @@ func main() {
 	var hostTags []*tagger.Tag
 	hostTagsStr := os.Getenv("HOST_TAGS")
 	if hostTagsStr != "" {
-		hostTags, err := tagger.CreateTags(strings.Split(hostTagsStr, ",")...)
+		hostTags, err = tagger.CreateTags(strings.Split(hostTagsStr, ",")...)
 		if err != nil {
 			log.Fatalf("cannot parse given HOST_TAGS: %v", err)
 		}
@@ -85,29 +86,47 @@ func main() {
 	// TODO lifecycle of this chan / create outside ? Wrap ?
 	defer close(client.ChanSeries)
 
-	collecterConfig := &collecter.Config{
-		MetricsCh:       client.ChanSeries,
+	collecterConfig := &collector.Config{
+		SeriesCh:        client.ChanSeries,
 		Tagger:          tags,
 		Host:            host,
 		CollectInterval: time.Second * 15,
 	}
 
-	for _, c := range []collecter.Collecter{
-		load.NewLoadReporter(collecterConfig.OverrideCollectInterval(time.Second * 10)),
-		network.NewStatisticsReporter(collecterConfig.OverrideCollectInterval(time.Second * 10)),
-		network.NewARPReporter(collecterConfig),
+	for _, c := range []collector.Collector{
+		load.NewLoadReporter(collecterConfig.
+			WithCollectorName("load").
+			OverrideCollectInterval(time.Second * 10)),
 
-		dnsmasq.NewDnsMasqReporter(collecterConfig.OverrideCollectInterval(collecterConfig.CollectInterval * 2)),
-		temperature.NewTemperatureReporter(collecterConfig.OverrideCollectInterval(collecterConfig.CollectInterval * 2)),
-		memory.NewMemoryReporter(collecterConfig.OverrideCollectInterval(collecterConfig.CollectInterval * 2)),
+		network.NewStatisticsReporter(collecterConfig.
+			WithCollectorName("network/statistics").
+			OverrideCollectInterval(time.Second * 10)),
+
+		network.NewConntrackReporter(collecterConfig.
+			WithCollectorName("network/conntrack")),
+
+		network.NewARPReporter(collecterConfig.
+			WithCollectorName("network/arp")),
+
+		dnsmasq.NewDnsMasqReporter(collecterConfig.
+			WithCollectorName("dnsmasq").
+			OverrideCollectInterval(collecterConfig.CollectInterval * 2)),
+
+		temperature.NewTemperatureReporter(collecterConfig.
+			WithCollectorName("temperature").
+			OverrideCollectInterval(collecterConfig.CollectInterval * 2)),
+
+		memory.NewMemoryReporter(collecterConfig.
+			WithCollectorName("meminfo").
+			OverrideCollectInterval(collecterConfig.CollectInterval * 2)),
 	} {
 		select {
 		case <-ctx.Done():
 			break
 		default:
 			waitGroup.Add(1)
-			go func(coll collecter.Collecter) {
-				coll.Collect(ctx)
+			go func(coll collector.Collector) {
+				collector.RunCollection(ctx, coll)
 				waitGroup.Done()
 			}(c)
 		}

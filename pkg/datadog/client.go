@@ -141,7 +141,7 @@ func (c *Client) Run(ctx context.Context) {
 	defer ticker.Stop()
 	log.Printf("starting datadog client")
 
-	var counters CounterMap
+	var counters Counter
 	for {
 		select {
 		case <-ctx.Done():
@@ -173,7 +173,7 @@ func (c *Client) Run(ctx context.Context) {
 				store.Reset()
 				newCounter := c.GetClientCounter()
 				if counters != nil {
-					for _, s := range counters.GetCountSeries(newCounter) {
+					for _, s := range counters.GetSeries(newCounter) {
 						store.Aggregate(&s)
 					}
 				}
@@ -194,12 +194,12 @@ func (c *Client) Run(ctx context.Context) {
 	}
 }
 
-func (c *Client) GetClientCounter() CounterMap {
+func (c *Client) GetClientCounter() Counter {
 	now := time.Now()
 	hostTags := c.tagger.Get(c.host)
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return CounterMap{
+	return Counter{
 		clientSentByteMetric: &Metric{
 			Name:      clientSentByteMetric,
 			Value:     c.sentBytes,

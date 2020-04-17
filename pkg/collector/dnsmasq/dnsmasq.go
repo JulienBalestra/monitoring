@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/JulienBalestra/metrics/pkg/collecter"
-	"github.com/JulienBalestra/metrics/pkg/collecter/dnsmasq/tags"
+	"github.com/JulienBalestra/metrics/pkg/collector"
+	"github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
 	"github.com/JulienBalestra/metrics/pkg/datadog"
 	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"github.com/miekg/dns"
@@ -19,7 +19,7 @@ import (
 const (
 	dnsmasqPath = "/tmp/dnsmasq.leases"
 
-	dhcpWildcardLeaseTag = tags.LeaseKey + ":" + "wildcard"
+	dhcpWildcardLeaseTag = exported.LeaseKey + ":" + "wildcard"
 )
 
 /* cat /tmp/dnsmasq.leases
@@ -34,14 +34,14 @@ const (
 */
 
 type DnsMasq struct {
-	conf *collecter.Config
+	conf *collector.Config
 
 	dnsClient           *dns.Client
 	dnsCounterQuestions map[string]dns.Question
 	dnsGaugeQuestions   map[string]dns.Question
 }
 
-func NewDnsMasqReporter(conf *collecter.Config) *DnsMasq {
+func NewDnsMasqReporter(conf *collector.Config) *DnsMasq {
 	return &DnsMasq{
 		conf: conf,
 		dnsClient: &dns.Client{
@@ -82,17 +82,26 @@ func NewDnsMasqReporter(conf *collecter.Config) *DnsMasq {
 	}
 }
 
-func (c *DnsMasq) collectMetrics() (datadog.GaugeList, datadog.CounterMap, error) {
-	var gaugeLists datadog.GaugeList
+func (c *DnsMasq) Config() *collector.Config {
+	return c.conf
+}
+
+func (c *DnsMasq) Name() string {
+	return "dnsmasq"
+}
+
+func (c *DnsMasq) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
+	var counters datadog.Counter
+	var gauges datadog.Gauge
 
 	b, err := ioutil.ReadFile(dnsmasqPath)
 	if err != nil {
-		return gaugeLists, nil, err
+		return counters, gauges, err
 	}
 
 	lines := strings.Split(string(b[:len(b)-1]), "\n")
 	if len(lines) == 0 {
-		return gaugeLists, nil, nil
+		return counters, gauges, nil
 	}
 	now := time.Now()
 	timestampSeconds := float64(now.Unix())
@@ -111,9 +120,9 @@ func (c *DnsMasq) collectMetrics() (datadog.GaugeList, datadog.CounterMap, error
 			continue
 		}
 		macAddress = strings.ReplaceAll(macAddress, ":", "-")
-		macAddressTag, ipAddressTag, leaseNameTag := tagger.NewTag("mac", macAddress), tagger.NewTag("ip", ipAddress), tagger.NewTag(tags.LeaseKey, leaseName)
+		macAddressTag, ipAddressTag, leaseNameTag := tagger.NewTag("mac", macAddress), tagger.NewTag("ip", ipAddress), tagger.NewTag(exported.LeaseKey, leaseName)
 		if leaseName == "*" {
-			leaseNameTag = tagger.NewTag(tags.LeaseKey, "wildcard")
+			leaseNameTag = tagger.NewTag(exported.LeaseKey, "wildcard")
 			c.conf.Tagger.Update(ipAddress, macAddressTag)
 			c.conf.Tagger.Update(macAddress, ipAddressTag)
 		} else {
@@ -122,7 +131,7 @@ func (c *DnsMasq) collectMetrics() (datadog.GaugeList, datadog.CounterMap, error
 			c.conf.Tagger.Update(macAddress, ipAddressTag, leaseNameTag)
 		}
 
-		gaugeLists = append(gaugeLists, &datadog.Metric{
+		gauges = append(gauges, &datadog.Metric{
 			Name:      "dnsmasq.dhcp.lease",
 			Value:     leaseStarted - timestampSeconds,
 			Timestamp: now,
@@ -131,14 +140,14 @@ func (c *DnsMasq) collectMetrics() (datadog.GaugeList, datadog.CounterMap, error
 		})
 	}
 
-	counts := make(datadog.CounterMap, len(c.dnsCounterQuestions))
+	counters = make(datadog.Counter, len(c.dnsCounterQuestions))
 	for metricName, dnsQuestion := range c.dnsCounterQuestions {
 		v, err := c.queryDnsmasqMetric(&dnsQuestion)
 		if err != nil {
 			log.Printf("failed to query dnsmasq for %s: %v", dnsQuestion.Name, err)
 			continue
 		}
-		counts[metricName] = &datadog.Metric{
+		counters[metricName] = &datadog.Metric{
 			Name:      metricName,
 			Value:     v,
 			Timestamp: now,
@@ -152,7 +161,7 @@ func (c *DnsMasq) collectMetrics() (datadog.GaugeList, datadog.CounterMap, error
 			log.Printf("failed to query dnsmasq for %s: %v", dnsQuestion.Name, err)
 			continue
 		}
-		gaugeLists = append(gaugeLists, &datadog.Metric{
+		gauges = append(gauges, &datadog.Metric{
 			Name:      metricName,
 			Value:     v,
 			Timestamp: now,
@@ -160,7 +169,7 @@ func (c *DnsMasq) collectMetrics() (datadog.GaugeList, datadog.CounterMap, error
 			Tags:      hostTags,
 		})
 	}
-	return gaugeLists, counts, nil
+	return counters, gauges, nil
 }
 
 func (c *DnsMasq) queryDnsmasqMetric(question *dns.Question) (float64, error) {
@@ -185,31 +194,4 @@ func (c *DnsMasq) queryDnsmasqMetric(question *dns.Question) (float64, error) {
 		return 0, fmt.Errorf("invalid number of TXT records: %d", len(t.Txt))
 	}
 	return strconv.ParseFloat(t.Txt[0], 10)
-}
-
-func (c *DnsMasq) Collect(ctx context.Context) {
-	ticker := time.NewTicker(c.conf.CollectInterval)
-	defer ticker.Stop()
-	log.Printf("collecting dnsmasq metrics every %s", c.conf.CollectInterval.String())
-	var counters datadog.CounterMap
-	for {
-		select {
-		case <-ctx.Done():
-			log.Printf("end of dnsmasq collection")
-			return
-
-		case <-ticker.C:
-			gauges, newCounters, err := c.collectMetrics()
-			if err != nil {
-				log.Printf("failed dnsmasq collection: %v", err)
-				continue
-			}
-			gauges.Gauge(c.conf.MetricsCh)
-			if counters != nil {
-				counters.Count(c.conf.MetricsCh, newCounters)
-			}
-			counters = newCounters
-			log.Printf("successfully run dnsmasq collection")
-		}
-	}
 }

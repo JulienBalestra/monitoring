@@ -66,6 +66,8 @@ func TestNewTagger(t *testing.T) {
 
 			_, err = CreateTags("")
 			assert.Error(t, err)
+
+			assert.Equal(t, []string{"4:4"}, tagger.GetWithDefault("unknownEntity", NewTag("4", "4")))
 		})
 	}
 }
