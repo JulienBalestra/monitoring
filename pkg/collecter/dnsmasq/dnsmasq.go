@@ -7,6 +7,7 @@ import (
 	"github.com/JulienBalestra/metrics/pkg/collecter"
 	"github.com/JulienBalestra/metrics/pkg/collecter/dnsmasq/tags"
 	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"github.com/miekg/dns"
 	"io/ioutil"
 	"log"
@@ -110,16 +111,15 @@ func (c *DnsMasq) collectMetrics() (datadog.GaugeList, datadog.CounterMap, error
 			continue
 		}
 		macAddress = strings.ReplaceAll(macAddress, ":", "-")
-		macAddressTag, ipAddressTag, leaseNameTag := "mac:"+macAddress, "ip:"+ipAddress, ""
+		macAddressTag, ipAddressTag, leaseNameTag := tagger.NewTag("mac", macAddress), tagger.NewTag("ip", ipAddress), tagger.NewTag(tags.LeaseKey, leaseName)
 		if leaseName == "*" {
-			leaseNameTag = dhcpWildcardLeaseTag
-			c.conf.Tagger.Upsert(ipAddress, macAddressTag)
-			c.conf.Tagger.Upsert(macAddress, ipAddressTag)
+			leaseNameTag = tagger.NewTag(tags.LeaseKey, "wildcard")
+			c.conf.Tagger.Update(ipAddress, macAddressTag)
+			c.conf.Tagger.Update(macAddress, ipAddressTag)
 		} else {
-			leaseNameTag = tags.LeaseKey + ":" + leaseName
-			c.conf.Tagger.Upsert(leaseName, macAddressTag, ipAddressTag)
-			c.conf.Tagger.Upsert(ipAddress, leaseNameTag, macAddressTag)
-			c.conf.Tagger.Upsert(macAddress, ipAddressTag, leaseNameTag)
+			c.conf.Tagger.Update(leaseName, macAddressTag, ipAddressTag)
+			c.conf.Tagger.Update(ipAddress, leaseNameTag, macAddressTag)
+			c.conf.Tagger.Update(macAddress, ipAddressTag, leaseNameTag)
 		}
 
 		gaugeLists = append(gaugeLists, &datadog.Metric{
@@ -127,7 +127,7 @@ func (c *DnsMasq) collectMetrics() (datadog.GaugeList, datadog.CounterMap, error
 			Value:     leaseStarted - timestampSeconds,
 			Timestamp: now,
 			Host:      c.conf.Host,
-			Tags:      append(hostTags, leaseNameTag, macAddressTag, ipAddressTag),
+			Tags:      append(hostTags, leaseNameTag.String(), macAddressTag.String(), ipAddressTag.String()),
 		})
 	}
 

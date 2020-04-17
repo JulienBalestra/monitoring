@@ -51,10 +51,13 @@ func main() {
 		log.Fatalf("empty envvar API_KEY")
 	}
 
-	var hostTags []string
+	var hostTags []*tagger.Tag
 	hostTagsStr := os.Getenv("HOST_TAGS")
 	if hostTagsStr != "" {
-		hostTags = strings.Split(hostTagsStr, ",")
+		hostTags, err := tagger.CreateTags(strings.Split(hostTagsStr, ",")...)
+		if err != nil {
+			log.Fatalf("cannot parse given HOST_TAGS: %v", err)
+		}
 		log.Printf("parsed the following host tags: %q -> %s", hostTagsStr, hostTags)
 	}
 
@@ -68,7 +71,7 @@ func main() {
 	}()
 
 	tags := tagger.NewTagger()
-	tags.Upsert(host, hostTags...)
+	tags.Add(host, hostTags...)
 
 	// not really useful but doesn't hurt either
 	tags.Print()

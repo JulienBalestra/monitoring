@@ -63,13 +63,13 @@ func (c *ARP) collectMetrics() (datadog.GaugeList, error) {
 			continue
 		}
 		macAddress = strings.ReplaceAll(macAddress, ":", "-")
-		macAddressTag, ipAddressTag := "mac:"+macAddress, "ip:"+ipAddress
-		c.conf.Tagger.Upsert(ipAddress, macAddressTag)
-		c.conf.Tagger.Upsert(macAddress, ipAddressTag)
+		macAddressTag, ipAddressTag := tagger.NewTag("mac", macAddress), tagger.NewTag("ip", ipAddress)
+		c.conf.Tagger.Update(ipAddress, macAddressTag)
+		c.conf.Tagger.Update(macAddress, ipAddressTag)
 
 		// we rely on dnsmasq tags collection to make this available
-		tags := append(hostTags, c.conf.Tagger.GetWithDefault(macAddress, exportedTags.LeaseKey, tagger.MissingTagValue)...)
-		tags = append(tags, "device:"+device, "mac:"+macAddress)
+		tags := append(hostTags, c.conf.Tagger.GetWithDefault(macAddress, tagger.NewTag(exportedTags.LeaseKey, tagger.MissingTagValue))...)
+		tags = append(tags, "device:"+device, macAddressTag.String())
 		gaugeLists = append(gaugeLists, &datadog.Metric{
 			Name:      "network.arp",
 			Value:     1,
