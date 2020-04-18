@@ -17,6 +17,7 @@ func GetCollectorCatalog() map[string]func(*collector.Config) collector.Collecto
 		network.CollectorARPName:             network.NewARPReporter,
 		network.CollectorConntrackName:       network.NewConntrackReporter,
 		network.CollectorStatisticsName:      network.NewStatisticsReporter,
+		network.CollectorWirelessName:        network.NewWirelessReporter,
 		temperature.CollectorTemperatureName: temperature.NewTemperatureReporter,
 	}
 }
