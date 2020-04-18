@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -22,21 +23,41 @@ import (
 	"github.com/spf13/pflag"
 )
 
-func notifySignals(ctx context.Context, cancel context.CancelFunc) {
+func notifySystemSignals(ctx context.Context, cancel context.CancelFunc) {
 	signals := make(chan os.Signal)
 	defer close(signals)
 	defer signal.Stop(signals)
+	defer signal.Reset()
 
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("end of signal handling")
+			log.Printf("end of system signal handling")
 			return
 
 		case sig := <-signals:
 			log.Printf("signal %s received", sig)
 			cancel()
+		}
+	}
+}
+func notifyUSRSignals(ctx context.Context, tag *tagger.Tagger) {
+	signals := make(chan os.Signal)
+	defer close(signals)
+	defer signal.Stop(signals)
+	defer signal.Reset()
+
+	signal.Notify(signals, syscall.SIGUSR1)
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("end of USR signal handling")
+			return
+
+		case sig := <-signals:
+			log.Printf("signal %s received", sig)
+			tag.Print()
 		}
 	}
 }
@@ -46,20 +67,21 @@ const (
 	datadogClientSendInterval = "datadog-client-send-interval"
 	hostnameFlag              = "hostname"
 	defaultCollectionInterval = time.Second * 30
+	minimalSendInterval       = time.Second * 10
+	defaultPIDFilePath        = "/tmp/metrics.pid"
 )
 
 func main() {
 	root := &cobra.Command{
-		Short: "metrics",
-		Long:  "metrics",
-		Use: `
-disable any collector with --collector-${collector} 0s
-`,
+		Short: "metrics for dd-wrt routers",
+		Long:  "metrics for dd-wrt routers, disable any collector with --collector-${collector}=0s",
+		Use:   "metrics",
 	}
 	root.AddCommand(version.NewCommand())
 	fs := &pflag.FlagSet{}
 
 	var hostTagsStrings []string
+	pidFilePath := ""
 	hostname, _ := os.Hostname()
 	hostname = strings.ToLower(hostname)
 	datadogClientConfig := &datadog.Config{
@@ -67,9 +89,10 @@ disable any collector with --collector-${collector} 0s
 	}
 
 	fs.StringArrayVar(&hostTagsStrings, "datadog-host-tags", nil, "datadog host tags")
-	fs.StringVar(&datadogClientConfig.DatadogAPIKey, datadogAPIKeyFlag, os.Getenv("DATADOG_API_KEY"), "datadog API key to submit series")
+	fs.StringVar(&pidFilePath, "pid-file", defaultPIDFilePath, "file to write process id")
+	fs.StringVar(&datadogClientConfig.DatadogAPIKey, datadogAPIKeyFlag, "", "datadog API key to submit series")
 	fs.StringVar(&hostname, hostnameFlag, hostname, "datadog host tag")
-	fs.DurationVar(&datadogClientConfig.SendInterval, datadogClientSendInterval, time.Second*35, "datadog client send interval to the API")
+	fs.DurationVar(&datadogClientConfig.SendInterval, datadogClientSendInterval, time.Second*35, "datadog client send interval to the API >= "+minimalSendInterval.String())
 
 	collectorCatalog := catalog.GetCollectorCatalog()
 	collectionDuration := make(map[string]*time.Duration, len(collectorCatalog))
@@ -83,16 +106,18 @@ disable any collector with --collector-${collector} 0s
 	root.PreRunE = func(cmd *cobra.Command, args []string) error {
 		var errorStrings []string
 		if datadogClientConfig.DatadogAPIKey == "" {
-			errorStrings = append(errorStrings, fmt.Sprintf("flag --%s must be set to a datadog API key", datadogAPIKeyFlag))
+			datadogClientConfig.DatadogAPIKey = os.Getenv("DATADOG_API_KEY")
+			if datadogClientConfig.DatadogAPIKey == "" {
+				errorStrings = append(errorStrings, fmt.Sprintf("flag --%s must be set to a datadog API key", datadogAPIKeyFlag))
+			}
+			log.Printf("using environment variable DATADOG_API_KEY")
 		}
-		const minimalSendInterval = time.Second * 10
 		if datadogClientConfig.SendInterval <= minimalSendInterval {
 			errorStrings = append(errorStrings, fmt.Sprintf("flag --%s must be greater or equal to %s", datadogClientSendInterval, minimalSendInterval))
 		}
 		if hostname == "" {
 			errorStrings = append(errorStrings, fmt.Sprintf("empty hostname, flag --%s to define one", hostnameFlag))
 		}
-
 		if errorStrings == nil {
 			return nil
 		}
@@ -105,17 +130,29 @@ disable any collector with --collector-${collector} 0s
 			return err
 		}
 
+		err = ioutil.WriteFile(pidFilePath, []byte(strconv.Itoa(os.Getpid())), 0644)
+		if err != nil {
+			return err
+		}
+		log.Printf("pid %d to %s", os.Getpid(), pidFilePath)
+
 		ctx, cancel := context.WithCancel(context.TODO())
 		waitGroup := &sync.WaitGroup{}
 
 		waitGroup.Add(1)
 		go func() {
-			notifySignals(ctx, cancel)
+			notifySystemSignals(ctx, cancel)
 			waitGroup.Done()
 		}()
 
 		tag := tagger.NewTagger()
 		tag.Add(hostname, hostTags...)
+
+		waitGroup.Add(1)
+		go func() {
+			notifyUSRSignals(ctx, tag)
+			waitGroup.Done()
+		}()
 
 		// not really useful but doesn't hurt either
 		tag.Print()
