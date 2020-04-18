@@ -12,6 +12,8 @@ import (
 )
 
 const (
+	CollectorMemoryName = "memory"
+
 	memInfoPath        = "/proc/meminfo"
 	memoryMetricPrefix = "memory."
 )
@@ -66,7 +68,7 @@ type Memory struct {
 	metricsMapping map[string]string
 }
 
-func NewMemoryReporter(conf *collector.Config) *Memory {
+func NewMemoryReporter(conf *collector.Config) collector.Collector {
 	return &Memory{
 		conf: conf,
 		// TODO this is all the available metrics, some are commented for random reasons
@@ -119,10 +121,7 @@ func (c *Memory) Config() *collector.Config {
 }
 
 func (c *Memory) Name() string {
-	if c.conf.CollectorName != "" {
-		return c.conf.CollectorName
-	}
-	return "meminfo"
+	return CollectorMemoryName
 }
 
 func (c *Memory) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {

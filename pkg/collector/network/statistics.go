@@ -11,6 +11,8 @@ import (
 )
 
 const (
+	CollectorStatisticsName = "network-statistics"
+
 	devicesPath = "/sys/class/net/"
 )
 
@@ -26,7 +28,7 @@ type Statistics struct {
 	statisticsFilesToUpdate time.Time
 }
 
-func NewStatisticsReporter(conf *collector.Config) *Statistics {
+func NewStatisticsReporter(conf *collector.Config) collector.Collector {
 	return &Statistics{
 		conf: conf,
 	}
@@ -37,10 +39,7 @@ func (c *Statistics) Config() *collector.Config {
 }
 
 func (c *Statistics) Name() string {
-	if c.conf.CollectorName != "" {
-		return c.conf.CollectorName
-	}
-	return "network/statistics"
+	return CollectorStatisticsName
 }
 
 func (c *Statistics) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {

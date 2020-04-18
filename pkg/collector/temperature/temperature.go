@@ -10,6 +10,8 @@ import (
 )
 
 const (
+	CollectorTemperatureName = "temperature"
+
 	cpuTemperaturePath = "/proc/dmu/temperature"
 )
 
@@ -17,7 +19,7 @@ type Temperature struct {
 	conf *collector.Config
 }
 
-func NewTemperatureReporter(conf *collector.Config) *Temperature {
+func NewTemperatureReporter(conf *collector.Config) collector.Collector {
 	return &Temperature{
 		conf: conf,
 	}
@@ -28,10 +30,7 @@ func (c *Temperature) Config() *collector.Config {
 }
 
 func (c *Temperature) Name() string {
-	if c.conf.CollectorName != "" {
-		return c.conf.CollectorName
-	}
-	return "temperature"
+	return CollectorTemperatureName
 }
 
 func (c *Temperature) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {

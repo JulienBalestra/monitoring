@@ -13,6 +13,8 @@ import (
 )
 
 const (
+	CollectorARPName = "network-arp"
+
 	arpPath = "/proc/self/net/arp"
 )
 
@@ -31,7 +33,7 @@ type ARP struct {
 	conf *collector.Config
 }
 
-func NewARPReporter(conf *collector.Config) *ARP {
+func NewARPReporter(conf *collector.Config) collector.Collector {
 	return &ARP{
 		conf: conf,
 	}
@@ -42,10 +44,7 @@ func (c *ARP) Config() *collector.Config {
 }
 
 func (c *ARP) Name() string {
-	if c.conf.CollectorName != "" {
-		return c.conf.CollectorName
-	}
-	return "network/arp"
+	return CollectorARPName
 }
 
 func (c *ARP) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {

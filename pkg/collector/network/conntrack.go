@@ -16,6 +16,8 @@ import (
 )
 
 const (
+	CollectorConntrackName = "network-conntrack"
+
 	conntrackPath = "/proc/net/ip_conntrack"
 )
 
@@ -23,7 +25,7 @@ type Conntrack struct {
 	conf *collector.Config
 }
 
-func NewConntrackReporter(conf *collector.Config) *Conntrack {
+func NewConntrackReporter(conf *collector.Config) collector.Collector {
 	return &Conntrack{
 		conf: conf,
 	}
@@ -34,10 +36,7 @@ func (c *Conntrack) Config() *collector.Config {
 }
 
 func (c *Conntrack) Name() string {
-	if c.conf.CollectorName != "" {
-		return c.conf.CollectorName
-	}
-	return "network/conntrack"
+	return CollectorConntrackName
 }
 
 func (c *Conntrack) parseTCPFields(fields []string, tcpStats map[string]*datadog.Metric) {

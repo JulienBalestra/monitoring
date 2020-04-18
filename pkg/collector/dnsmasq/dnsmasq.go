@@ -17,9 +17,11 @@ import (
 )
 
 const (
+	CollectorDnsMasqName = "dnsmasq"
+
 	dnsmasqPath = "/tmp/dnsmasq.leases"
 
-	dhcpWildcardLeaseTag = exported.LeaseKey + ":" + "wildcard"
+	dhcpWildcardLeaseValue = "wildcard"
 )
 
 /* cat /tmp/dnsmasq.leases
@@ -41,7 +43,7 @@ type DnsMasq struct {
 	dnsGaugeQuestions   map[string]dns.Question
 }
 
-func NewDnsMasqReporter(conf *collector.Config) *DnsMasq {
+func NewDnsMasqReporter(conf *collector.Config) collector.Collector {
 	return &DnsMasq{
 		conf: conf,
 		dnsClient: &dns.Client{
@@ -87,10 +89,7 @@ func (c *DnsMasq) Config() *collector.Config {
 }
 
 func (c *DnsMasq) Name() string {
-	if c.conf.CollectorName != "" {
-		return c.conf.CollectorName
-	}
-	return "dnsmasq"
+	return CollectorDnsMasqName
 }
 
 func (c *DnsMasq) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
@@ -125,7 +124,7 @@ func (c *DnsMasq) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, er
 		macAddress = strings.ReplaceAll(macAddress, ":", "-")
 		macAddressTag, ipAddressTag, leaseNameTag := tagger.NewTag("mac", macAddress), tagger.NewTag("ip", ipAddress), tagger.NewTag(exported.LeaseKey, leaseName)
 		if leaseName == "*" {
-			leaseNameTag = tagger.NewTag(exported.LeaseKey, "wildcard")
+			leaseNameTag = tagger.NewTag(exported.LeaseKey, dhcpWildcardLeaseValue)
 			c.conf.Tagger.Update(ipAddress, macAddressTag)
 			c.conf.Tagger.Update(macAddress, ipAddressTag)
 		} else {

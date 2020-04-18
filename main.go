@@ -2,19 +2,21 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"github.com/JulienBalestra/metrics/cmd/version"
 	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/collector/dnsmasq"
-	"github.com/JulienBalestra/metrics/pkg/collector/load"
-	"github.com/JulienBalestra/metrics/pkg/collector/memory"
-	"github.com/JulienBalestra/metrics/pkg/collector/network"
-	"github.com/JulienBalestra/metrics/pkg/collector/temperature"
+	"github.com/JulienBalestra/metrics/pkg/collector/catalog"
 	"github.com/JulienBalestra/metrics/pkg/datadog"
 	"github.com/JulienBalestra/metrics/pkg/tagger"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"strings"
+
 	"log"
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -39,105 +41,134 @@ func notifySignals(ctx context.Context, cancel context.CancelFunc) {
 	}
 }
 
+const (
+	datadogAPIKeyFlag         = "datadog-api-key"
+	datadogClientSendInterval = "datadog-client-send-interval"
+	hostnameFlag              = "hostname"
+	defaultCollectionInterval = time.Second * 30
+)
+
 func main() {
-	var err error
-	// TODO use a real command line parser:
-	host := os.Getenv("HOSTNAME")
-	if host == "" {
-		log.Fatalf("empty envvar HOSTNAME")
+	root := &cobra.Command{
+		Short: "metrics",
+		Long:  "metrics",
+		Use: `
+disable any collector with --collector-${collector} 0s
+`,
+	}
+	root.AddCommand(version.NewCommand())
+	fs := &pflag.FlagSet{}
+
+	var hostTagsStrings []string
+	hostname, _ := os.Hostname()
+	hostname = strings.ToLower(hostname)
+	datadogClientConfig := &datadog.Config{
+		Host: hostname,
 	}
 
-	apiKey := os.Getenv("API_KEY")
-	if apiKey == "" {
-		log.Fatalf("empty envvar API_KEY")
+	fs.StringArrayVar(&hostTagsStrings, "datadog-host-tags", nil, "datadog host tags")
+	fs.StringVar(&datadogClientConfig.DatadogAPIKey, datadogAPIKeyFlag, os.Getenv("DATADOG_API_KEY"), "datadog API key to submit series")
+	fs.StringVar(&hostname, hostnameFlag, hostname, "datadog host tag")
+	fs.DurationVar(&datadogClientConfig.SendInterval, datadogClientSendInterval, time.Second*35, "datadog client send interval to the API")
+
+	collectorCatalog := catalog.GetCollectorCatalog()
+	collectionDuration := make(map[string]*time.Duration, len(collectorCatalog))
+	for name := range collectorCatalog {
+		var d time.Duration
+		collectionDuration[name] = &d
+		fs.DurationVar(&d, "collector-"+name, defaultCollectionInterval, "collection interval for "+name)
 	}
 
-	var hostTags []*tagger.Tag
-	hostTagsStr := os.Getenv("HOST_TAGS")
-	if hostTagsStr != "" {
-		hostTags, err = tagger.CreateTags(strings.Split(hostTagsStr, ",")...)
+	root.Flags().AddFlagSet(fs)
+	root.PreRunE = func(cmd *cobra.Command, args []string) error {
+		var errorStrings []string
+		if datadogClientConfig.DatadogAPIKey == "" {
+			errorStrings = append(errorStrings, fmt.Sprintf("flag --%s must be set to a datadog API key", datadogAPIKeyFlag))
+		}
+		const minimalSendInterval = time.Second * 10
+		if datadogClientConfig.SendInterval <= minimalSendInterval {
+			errorStrings = append(errorStrings, fmt.Sprintf("flag --%s must be greater or equal to %s", datadogClientSendInterval, minimalSendInterval))
+		}
+		if hostname == "" {
+			errorStrings = append(errorStrings, fmt.Sprintf("empty hostname, flag --%s to define one", hostnameFlag))
+		}
+
+		if errorStrings == nil {
+			return nil
+		}
+		return errors.New(strings.Join(errorStrings, "; "))
+	}
+
+	root.RunE = func(cmd *cobra.Command, args []string) error {
+		hostTags, err := tagger.CreateTags(hostTagsStrings...)
 		if err != nil {
-			log.Fatalf("cannot parse given HOST_TAGS: %v", err)
+			return err
 		}
-		log.Printf("parsed the following host tags: %q -> %s", hostTagsStr, hostTags)
-	}
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	waitGroup := &sync.WaitGroup{}
+		ctx, cancel := context.WithCancel(context.TODO())
+		waitGroup := &sync.WaitGroup{}
 
-	waitGroup.Add(1)
-	go func() {
-		notifySignals(ctx, cancel)
-		waitGroup.Done()
-	}()
+		waitGroup.Add(1)
+		go func() {
+			notifySignals(ctx, cancel)
+			waitGroup.Done()
+		}()
 
-	tags := tagger.NewTagger()
-	tags.Add(host, hostTags...)
+		tag := tagger.NewTagger()
+		tag.Add(hostname, hostTags...)
 
-	// not really useful but doesn't hurt either
-	tags.Print()
+		// not really useful but doesn't hurt either
+		tag.Print()
 
-	client := datadog.NewClient(host, apiKey, tags)
-	waitGroup.Add(1)
-	go func() {
-		client.Run(ctx)
-		waitGroup.Done()
-	}()
-	// TODO lifecycle of this chan / create outside ? Wrap ?
-	defer close(client.ChanSeries)
+		datadogClientConfig.Tagger = tag
+		client := datadog.NewClient(datadogClientConfig)
+		waitGroup.Add(1)
+		go func() {
+			client.Run(ctx)
+			waitGroup.Done()
+		}()
+		// TODO lifecycle of this chan / create outside ? Wrap ?
+		defer close(client.ChanSeries)
 
-	collecterConfig := &collector.Config{
-		SeriesCh:        client.ChanSeries,
-		Tagger:          tags,
-		Host:            host,
-		CollectInterval: time.Second * 15,
-	}
-
-	for _, c := range []collector.Collector{
-		load.NewLoadReporter(collecterConfig.
-			WithCollectorName("load").
-			OverrideCollectInterval(time.Second * 10)),
-
-		network.NewStatisticsReporter(collecterConfig.
-			WithCollectorName("network/statistics").
-			OverrideCollectInterval(time.Second * 10)),
-
-		network.NewConntrackReporter(collecterConfig.
-			WithCollectorName("network/conntrack")),
-
-		network.NewARPReporter(collecterConfig.
-			WithCollectorName("network/arp")),
-
-		dnsmasq.NewDnsMasqReporter(collecterConfig.
-			WithCollectorName("dnsmasq").
-			OverrideCollectInterval(collecterConfig.CollectInterval * 2)),
-
-		temperature.NewTemperatureReporter(collecterConfig.
-			WithCollectorName("temperature").
-			OverrideCollectInterval(collecterConfig.CollectInterval * 2)),
-
-		memory.NewMemoryReporter(collecterConfig.
-			WithCollectorName("meminfo").
-			OverrideCollectInterval(collecterConfig.CollectInterval * 2)),
-	} {
-		select {
-		case <-ctx.Done():
-			break
-		default:
-			waitGroup.Add(1)
-			go func(coll collector.Collector) {
-				collector.RunCollection(ctx, coll)
-				waitGroup.Done()
-			}(c)
+		for name, newFn := range collectorCatalog {
+			select {
+			case <-ctx.Done():
+				break
+			default:
+				d := collectionDuration[name]
+				if *d <= 0 {
+					log.Printf("ignoring collector %s", name)
+					continue
+				}
+				config := &collector.Config{
+					SeriesCh:        client.ChanSeries,
+					Tagger:          tag,
+					Host:            hostname,
+					CollectInterval: *d,
+				}
+				c := newFn(config)
+				waitGroup.Add(1)
+				go func(coll collector.Collector) {
+					collector.RunCollection(ctx, coll)
+					waitGroup.Done()
+				}(c)
+			}
 		}
-	}
-	// TODO: maybe add something else like version
-	stableTag := "ts:" + strconv.FormatInt(time.Now().Unix(), 10)
-	client.MetricClientUp(stableTag)
-	<-ctx.Done()
+		tsTag := "ts:" + strconv.FormatInt(time.Now().Unix(), 10)
+		revisionTag := "commit:" + version.Revision[:8]
+		client.MetricClientUp(tsTag, revisionTag)
+		<-ctx.Done()
 
-	ctxShutdown, _ := context.WithTimeout(context.Background(), time.Second*5)
-	_ = client.MetricClientShutdown(ctxShutdown, stableTag)
-	waitGroup.Wait()
-	log.Printf("program exit")
+		ctxShutdown, _ := context.WithTimeout(context.Background(), time.Second*5)
+		_ = client.MetricClientShutdown(ctxShutdown, tsTag, revisionTag)
+		waitGroup.Wait()
+		log.Printf("program exit")
+		return nil
+	}
+	exitCode := 0
+	err := root.Execute()
+	if err != nil {
+		exitCode = 1
+	}
+	os.Exit(exitCode)
 }

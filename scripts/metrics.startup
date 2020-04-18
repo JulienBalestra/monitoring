@@ -1,8 +1,15 @@
 #!/bin/sh
 killall -q metrics
 
-export HOSTNAME=dd-wrt
-export API_KEY=123er
-export HOST_TAGS=location:home,room:living-room
+export DATADOG_API_KEY=123er
+export DATADOG_HOST_TAGS=location:home,room:living-room
 
-exec nohup /tmp/metrics
+exec nohup /tmp/metrics \
+    --collector-dnsmasq                         30s     \
+    --collector-load                            15s     \
+    --collector-memory                          30s     \
+    --collector-network-arp                     30s     \
+    --collector-network-conntrack               30s     \
+    --collector-network-statistics              10s     \
+    --collector-temperature                     60s     \
+    --datadog-host-tags=${DATADOG_HOST_TAGS}

@@ -37,12 +37,20 @@ const (
 	clientSentSeriesMetric = "client.sent.series"
 )
 
+type Config struct {
+	Host string
+
+	DatadogAPIKey string
+
+	Tagger       *tagger.Tagger
+	SendInterval time.Duration
+}
+
 type Client struct {
-	tagger *tagger.Tagger
+	conf *Config
 
 	httpClient *http.Client
 	url        string
-	host       string
 
 	ChanSeries chan Series
 
@@ -52,8 +60,8 @@ type Client struct {
 	sentSeries float64
 }
 
-func NewClient(host, apiKey string, tagger *tagger.Tagger) *Client {
-	c := &http.Client{
+func NewClient(conf *Config) *Client {
+	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true, // TODO this is needed on dd-wrt, load certificate authority there
@@ -62,11 +70,11 @@ func NewClient(host, apiKey string, tagger *tagger.Tagger) *Client {
 		Timeout: time.Second * 15,
 	}
 	return &Client{
-		httpClient: c,
-		url:        "https://api.datadoghq.com/api/v1/series?api_key=" + apiKey,
-		host:       host,
+		httpClient: httpClient,
+		conf:       conf,
+
+		url:        "https://api.datadoghq.com/api/v1/series?api_key=" + conf.DatadogAPIKey,
 		ChanSeries: make(chan Series),
-		tagger:     tagger,
 	}
 }
 
@@ -132,12 +140,11 @@ func (st *AggregateStore) Len() int {
 func (c *Client) Run(ctx context.Context) {
 	// TODO explain these magic numbers
 	const shutdownTimeout = 5 * time.Second
-	const tickerPeriod = 20 * time.Second
-	failures, failuresDropThreshold := 0, 300/int(tickerPeriod.Seconds())
+	failures, failuresDropThreshold := 0, 300/int(c.conf.SendInterval.Seconds())
 
 	store := NewAggregateStore()
 
-	ticker := time.NewTicker(tickerPeriod)
+	ticker := time.NewTicker(c.conf.SendInterval)
 	defer ticker.Stop()
 	log.Printf("starting datadog client")
 
@@ -165,7 +172,7 @@ func (c *Client) Run(ctx context.Context) {
 				log.Printf("no series cached")
 				continue
 			}
-			ctxTimeout, _ := context.WithTimeout(ctx, tickerPeriod)
+			ctxTimeout, _ := context.WithTimeout(ctx, c.conf.SendInterval)
 			err := c.SendSeries(ctxTimeout, store.Series())
 			if err == nil {
 				log.Printf("successfully sent %d series", store.Len())
@@ -196,21 +203,21 @@ func (c *Client) Run(ctx context.Context) {
 
 func (c *Client) GetClientCounter() Counter {
 	now := time.Now()
-	hostTags := c.tagger.Get(c.host)
+	hostTags := c.conf.Tagger.Get(c.conf.Host)
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return Counter{
 		clientSentByteMetric: &Metric{
 			Name:      clientSentByteMetric,
 			Value:     c.sentBytes,
-			Host:      c.host,
+			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      hostTags,
 		},
 		clientSentSeriesMetric: &Metric{
 			Name:      clientSentSeriesMetric,
 			Value:     c.sentSeries,
-			Host:      c.host,
+			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      hostTags,
 		},
@@ -257,8 +264,8 @@ func (c *Client) MetricClientUp(tags ...string) {
 			},
 		},
 		Type: typeGauge,
-		Host: c.host,
-		Tags: append(c.tagger.Get(c.host), tags...),
+		Host: c.conf.Host,
+		Tags: append(c.conf.Tagger.Get(c.conf.Host), tags...),
 	}
 }
 
@@ -273,8 +280,8 @@ func (c *Client) MetricClientShutdown(ctx context.Context, tags ...string) error
 				},
 			},
 			Type: typeGauge,
-			Host: c.host,
-			Tags: append(c.tagger.Get(c.host), tags...),
+			Host: c.conf.Host,
+			Tags: append(c.conf.Tagger.Get(c.conf.Host), tags...),
 		},
 	})
 }

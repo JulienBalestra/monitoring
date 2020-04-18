@@ -15,16 +15,10 @@ type Config struct {
 
 	Host            string
 	CollectInterval time.Duration
-	CollectorName   string
 }
 
 func (c Config) OverrideCollectInterval(d time.Duration) *Config {
 	c.CollectInterval = d
-	return &c
-}
-
-func (c Config) WithCollectorName(name string) *Config {
-	c.CollectorName = name
 	return &c
 }
 
@@ -36,6 +30,7 @@ type Collector interface {
 
 func RunCollection(ctx context.Context, c Collector) {
 	config := c.Config()
+
 	ticker := time.NewTicker(config.CollectInterval)
 	defer ticker.Stop()
 	log.Printf("collecting metrics every %s: %s", config.CollectInterval.String(), c.Name())

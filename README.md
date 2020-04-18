@@ -1,12 +1,12 @@
 # metrics project
 
+Intend to setup and monitor a dd-wrt router.
 
 ## dd-wrt setup
 
-
 ### ssh-keys
 
-In the **service** tab, under the **Secure shell* section:
+In the **service** tab, under the *Secure shell* section:
 
 * SSHd : Enable
 * Password Login : Disable
@@ -18,12 +18,6 @@ Get from any host the current loaded public keys:
 ssh-add -L
 ```
 
-### build
-
-```shell script
-GOARCH=arm GOARM=5 go build .
-```
-
 ### configuration list
 
 In the **service** tab, under the **dnsmasq** section, there is a text box for __Additional Dnsmasq Options__:
@@ -32,4 +26,11 @@ server=8.8.8.8
 server=8.8.4.4
 log-queries
 log-facility=/tmp/dnsmasq.log
+```
+
+
+## build
+
+```shell script
+make arm amd64
 ```

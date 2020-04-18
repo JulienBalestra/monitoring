@@ -13,6 +13,8 @@ import (
 )
 
 const (
+	CollectorLoadName = "load"
+
 	loadPath = "/proc/loadavg"
 )
 
@@ -20,7 +22,7 @@ type Load struct {
 	conf *collector.Config
 }
 
-func NewLoadReporter(conf *collector.Config) *Load {
+func NewLoadReporter(conf *collector.Config) collector.Collector {
 	return &Load{
 		conf: conf,
 	}
@@ -31,10 +33,7 @@ func (c *Load) Config() *collector.Config {
 }
 
 func (c *Load) Name() string {
-	if c.conf.CollectorName != "" {
-		return c.conf.CollectorName
-	}
-	return "load"
+	return CollectorLoadName
 }
 
 func (c *Load) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
