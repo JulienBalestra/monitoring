@@ -36,7 +36,7 @@ func (c *Conntrack) Name() string {
 	return "network/conntrack"
 }
 
-func (c *Conntrack) tcp(fields []string, tcpStats map[string]*datadog.Metric) {
+func (c *Conntrack) parseTCPFields(fields []string, tcpStats map[string]*datadog.Metric) {
 	state, srcIp, dstPort := fields[3], fields[4], fields[7]
 	srcIp = strings.TrimPrefix(srcIp, "src=")
 	dstPort = strings.TrimPrefix(dstPort, "dport=")
@@ -56,9 +56,17 @@ func (c *Conntrack) tcp(fields []string, tcpStats map[string]*datadog.Metric) {
 	st.Value++
 }
 
-func (c *Conntrack) udp(fields []string, udpStats map[string]*datadog.Metric) {
+func (c *Conntrack) parseUDPFields(fields []string, udpStats map[string]*datadog.Metric) error {
 	srcIp, dstPort := fields[3], fields[6]
 	srcIp = strings.TrimPrefix(srcIp, "src=")
+	dstPort = strings.TrimPrefix(dstPort, "dport=")
+	port, err := strconv.Atoi(dstPort)
+	if err != nil {
+		return err
+	}
+	if port > 1023 {
+		dstPort = "1024+"
+	}
 	mapKey := srcIp + dstPort
 	st, ok := udpStats[mapKey]
 	if !ok {
@@ -68,11 +76,12 @@ func (c *Conntrack) udp(fields []string, udpStats map[string]*datadog.Metric) {
 			Tags: append(c.conf.Tagger.GetWithDefault(srcIp,
 				tagger.NewTag(exported.LeaseKey, tagger.MissingTagValue),
 				tagger.NewTag(selfExported.DeviceKey, tagger.MissingTagValue),
-			), "src_ip:"+srcIp),
+			), "src_ip:"+srcIp, "dst_port:"+dstPort),
 		}
 		udpStats[mapKey] = st
 	}
 	st.Value++
+	return nil
 }
 
 func (c *Conntrack) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
@@ -95,11 +104,11 @@ func (c *Conntrack) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, 
 		s := string(line)
 		fields := strings.Fields(s)
 		if fields[0] == "tcp" {
-			c.tcp(fields, tcpStats)
+			c.parseTCPFields(fields, tcpStats)
 			continue
 		}
 		// udp
-		c.udp(fields, udpStats)
+		_ = c.parseUDPFields(fields, udpStats)
 	}
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
 	now := time.Now()
