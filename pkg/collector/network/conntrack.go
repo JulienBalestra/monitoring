@@ -68,8 +68,8 @@ func (c *Conntrack) parseUDPFields(fields []string, udpStats map[string]*datadog
 	if err != nil {
 		return err
 	}
-	if port > 1023 {
-		dstPort = "1024+"
+	if port > 1024 {
+		dstPort = "gt-1024"
 	}
 	mapKey := srcIp + dstPort
 	st, ok := udpStats[mapKey]
