@@ -119,6 +119,9 @@ func (c *Memory) Config() *collector.Config {
 }
 
 func (c *Memory) Name() string {
+	if c.conf.CollectorName != "" {
+		return c.conf.CollectorName
+	}
 	return "meminfo"
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -33,6 +34,9 @@ func (c *Conntrack) Config() *collector.Config {
 }
 
 func (c *Conntrack) Name() string {
+	if c.conf.CollectorName != "" {
+		return c.conf.CollectorName
+	}
 	return "network/conntrack"
 }
 

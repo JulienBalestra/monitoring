@@ -37,6 +37,9 @@ func (c *Statistics) Config() *collector.Config {
 }
 
 func (c *Statistics) Name() string {
+	if c.conf.CollectorName != "" {
+		return c.conf.CollectorName
+	}
 	return "network/statistics"
 }
 

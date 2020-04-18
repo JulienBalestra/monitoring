@@ -31,6 +31,9 @@ func (c *Load) Config() *collector.Config {
 }
 
 func (c *Load) Name() string {
+	if c.conf.CollectorName != "" {
+		return c.conf.CollectorName
+	}
 	return "load"
 }
 

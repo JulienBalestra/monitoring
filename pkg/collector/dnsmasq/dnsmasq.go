@@ -87,6 +87,9 @@ func (c *DnsMasq) Config() *collector.Config {
 }
 
 func (c *DnsMasq) Name() string {
+	if c.conf.CollectorName != "" {
+		return c.conf.CollectorName
+	}
 	return "dnsmasq"
 }
 

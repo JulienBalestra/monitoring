@@ -28,6 +28,9 @@ func (c *Temperature) Config() *collector.Config {
 }
 
 func (c *Temperature) Name() string {
+	if c.conf.CollectorName != "" {
+		return c.conf.CollectorName
+	}
 	return "temperature"
 }
 
