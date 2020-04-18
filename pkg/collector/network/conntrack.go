@@ -101,9 +101,13 @@ func (c *Conntrack) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, 
 	tcpStats := make(map[string]*datadog.Metric)
 	udpStats := make(map[string]*datadog.Metric)
 	for {
+		// TODO improve this reader
 		line, _, err := reader.ReadLine()
-		if err == io.EOF {
-			break
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return counters, gauges, err
 		}
 		s := string(line)
 		fields := strings.Fields(s)
