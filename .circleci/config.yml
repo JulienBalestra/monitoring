@@ -1,0 +1,56 @@
+version: 2
+
+templates:
+  base: &base
+    docker:
+    - image: golang:1.13.4
+
+jobs:
+  fmt:
+    <<: *base
+    steps:
+    - checkout
+    - run: make verify-fmt
+
+  import:
+    <<: *base
+    steps:
+    - checkout
+    - run: go get golang.org/x/tools/cmd/goimports
+    - run: make verify-import
+
+  vet:
+    <<: *base
+    steps:
+    - checkout
+    - run: make vet
+
+  lint:
+    <<: *base
+    steps:
+    - checkout
+    - run: go get golang.org/x/lint/golint
+    - run: make lint
+
+  test:
+    <<: *base
+    steps:
+    - checkout
+    - run: make test
+
+  build-amd64:
+    <<: *base
+    steps:
+    - checkout
+    - run: make amd64
+
+workflows:
+  version: 2
+  workflow:
+    jobs:
+    - fmt
+    - import
+    - vet
+    - lint
+    - test
+    - build-amd64

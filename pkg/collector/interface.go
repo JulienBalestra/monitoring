@@ -2,9 +2,10 @@ package collector
 
 import (
 	"context"
-	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"log"
 	"time"
+
+	"github.com/JulienBalestra/metrics/pkg/tagger"
 
 	"github.com/JulienBalestra/metrics/pkg/datadog"
 )

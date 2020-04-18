@@ -3,16 +3,17 @@ package network
 import (
 	"bufio"
 	"context"
-	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
-	selfExported "github.com/JulienBalestra/metrics/pkg/collector/network/exported"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
-	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"io"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/JulienBalestra/metrics/pkg/collector"
+	"github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
+	selfExported "github.com/JulienBalestra/metrics/pkg/collector/network/exported"
+	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/tagger"
 )
 
 const (

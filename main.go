@@ -4,6 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"strconv"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
+
 	"github.com/JulienBalestra/metrics/cmd/version"
 	"github.com/JulienBalestra/metrics/pkg/collector"
 	"github.com/JulienBalestra/metrics/pkg/collector/catalog"
@@ -11,15 +20,6 @@ import (
 	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"strings"
-
-	"log"
-	"os"
-	"os/signal"
-	"strconv"
-	"sync"
-	"syscall"
-	"time"
 )
 
 func notifySignals(ctx context.Context, cancel context.CancelFunc) {
@@ -159,8 +159,9 @@ disable any collector with --collector-${collector} 0s
 		client.MetricClientUp(tsTag, revisionTag)
 		<-ctx.Done()
 
-		ctxShutdown, _ := context.WithTimeout(context.Background(), time.Second*5)
+		ctxShutdown, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		_ = client.MetricClientShutdown(ctxShutdown, tsTag, revisionTag)
+		cancel()
 		waitGroup.Wait()
 		log.Printf("program exit")
 		return nil

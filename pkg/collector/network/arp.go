@@ -2,14 +2,15 @@ package network
 
 import (
 	"context"
-	"github.com/JulienBalestra/metrics/pkg/collector"
-	exportedTags "github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
-	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"io/ioutil"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/JulienBalestra/metrics/pkg/collector"
+	exportedTags "github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
+	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/tagger"
 )
 
 const (

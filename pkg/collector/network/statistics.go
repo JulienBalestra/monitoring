@@ -2,12 +2,13 @@ package network
 
 import (
 	"context"
-	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
 	"io/ioutil"
 	"log"
 	"strconv"
 	"time"
+
+	"github.com/JulienBalestra/metrics/pkg/collector"
+	"github.com/JulienBalestra/metrics/pkg/datadog"
 )
 
 const (
