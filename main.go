@@ -42,6 +42,7 @@ func notifySystemSignals(ctx context.Context, cancel context.CancelFunc) {
 		}
 	}
 }
+
 func notifyUSRSignals(ctx context.Context, tag *tagger.Tagger) {
 	signals := make(chan os.Signal)
 	defer close(signals)
@@ -112,7 +113,7 @@ func main() {
 			}
 			log.Printf("using environment variable DATADOG_API_KEY")
 		}
-		if datadogClientConfig.SendInterval <= minimalSendInterval {
+		if datadogClientConfig.SendInterval < minimalSendInterval {
 			errorStrings = append(errorStrings, fmt.Sprintf("flag --%s must be greater or equal to %s", datadogClientSendInterval, minimalSendInterval))
 		}
 		if hostname == "" {
