@@ -3,13 +3,14 @@ package load
 import (
 	"context"
 	"fmt"
-	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
 	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/JulienBalestra/metrics/pkg/collector"
+	"github.com/JulienBalestra/metrics/pkg/datadog"
 )
 
 const (

@@ -6,13 +6,14 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"hash/fnv"
 	"log"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/JulienBalestra/metrics/pkg/tagger"
 )
 
 /*
@@ -155,8 +156,9 @@ func (c *Client) Run(ctx context.Context) {
 			if store.Len() > 0 {
 				// TODO find something better
 				log.Printf("sending %d pending series with %s timeout", store.Len(), shutdownTimeout)
-				ctxTimeout, _ := context.WithTimeout(context.TODO(), shutdownTimeout)
+				ctxTimeout, cancel := context.WithTimeout(context.TODO(), shutdownTimeout)
 				err := c.SendSeries(ctxTimeout, store.Series())
+				cancel()
 				if err != nil {
 					log.Printf("still %d pending series: %v", store.Len(), err)
 				}
@@ -172,8 +174,9 @@ func (c *Client) Run(ctx context.Context) {
 				log.Printf("no series cached")
 				continue
 			}
-			ctxTimeout, _ := context.WithTimeout(ctx, c.conf.SendInterval)
+			ctxTimeout, cancel := context.WithTimeout(ctx, c.conf.SendInterval)
 			err := c.SendSeries(ctxTimeout, store.Series())
+			cancel()
 			if err == nil {
 				log.Printf("successfully sent %d series", store.Len())
 				failures = 0

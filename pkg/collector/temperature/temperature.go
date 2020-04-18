@@ -2,11 +2,12 @@ package temperature
 
 import (
 	"context"
-	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
 	"io/ioutil"
 	"strconv"
 	"time"
+
+	"github.com/JulienBalestra/metrics/pkg/collector"
+	"github.com/JulienBalestra/metrics/pkg/datadog"
 )
 
 const (

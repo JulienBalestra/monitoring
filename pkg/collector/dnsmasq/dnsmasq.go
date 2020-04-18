@@ -4,16 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
-	"github.com/JulienBalestra/metrics/pkg/tagger"
-	"github.com/miekg/dns"
 	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/JulienBalestra/metrics/pkg/collector"
+	"github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
+	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/tagger"
+	"github.com/miekg/dns"
 )
 
 const (
