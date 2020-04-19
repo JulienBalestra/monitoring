@@ -1,19 +1,11 @@
-TARGET=metrics
-REVISION=$(shell git rev-parse HEAD)
-VERSION=
-
-VERSION_FLAGS=-ldflags '-s -w \
-    -X github.com/JulienBalestra/metrics/cmd/version.Version=$(VERSION) \
-    -X github.com/JulienBalestra/metrics/cmd/version.Revision=$(REVISION)'
-
 arm:
-	GOARCH=arm GOARM=5 go build -o $(TARGET)-arm $(VERSION_FLAGS) .
+	$(MAKE) -C dd-wrt $@
 
 amd64:
-	go build -o $(TARGET)-amd64 $(VERSION_FLAGS) .
+	$(MAKE) -C dd-wrt $@
 
 clean:
-	$(RM) $(TARGET)-amd64 $(TARGET)-arm
+	$(MAKE) -C dd-wrt $@
 
 re: clean amd64 arm
 
@@ -24,7 +16,7 @@ lint:
 	golint -set_exit_status $(go list ./...)
 
 import:
-	goimports -w pkg/ cmd/ main.go
+	goimports -w pkg/ cmd/
 
 test:
 	@go test -v -race ./...
