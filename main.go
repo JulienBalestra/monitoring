@@ -200,11 +200,11 @@ func main() {
 		}
 		tsTag := "ts:" + strconv.FormatInt(time.Now().Unix(), 10)
 		revisionTag := "commit:" + version.Revision[:8]
-		client.MetricClientUp(tsTag, revisionTag)
+		client.MetricClientUp(hostname, tsTag, revisionTag)
 		<-ctx.Done()
 
 		ctxShutdown, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		_ = client.MetricClientShutdown(ctxShutdown, tsTag, revisionTag)
+		_ = client.MetricClientShutdown(ctxShutdown, hostname, tsTag, revisionTag)
 		cancel()
 		waitGroup.Wait()
 		log.Printf("program exit")
