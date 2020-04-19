@@ -1,3 +1,4 @@
-/metrics-amd64
-/metrics-arm
+/dd-wrt/metrics-amd64
+/dd-wrt/metrics-arm
+/dd-wrt/dd-wrt
 /vendor
