@@ -1,8 +1,9 @@
 package tagger
 
 import (
+	"bytes"
 	"errors"
-	"log"
+	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -13,6 +14,7 @@ const (
 	keyValueJoin    = ":"
 )
 
+// Tag should be created with CreateTags/NewTag to be safe
 type Tag struct {
 	key      tagKey
 	value    tagValue
@@ -33,12 +35,26 @@ Update "entity" -> "keyOne" -> "valueThree" -> "keyOne:valueThree"
 with the same entity/key we have the updated following tags "keyOne:valueThree"
 */
 
-func NewTag(key, value string) *Tag {
+func NewTagUnsafe(key, value string) *Tag {
 	return &Tag{
 		key:      tagKey(key),
 		value:    tagValue(value),
 		keyValue: key + keyValueJoin + value,
 	}
+}
+
+func NewTag(key, value string) (*Tag, error) {
+	if key == "" {
+		return nil, errors.New("empty key")
+	}
+	if value == "" {
+		return nil, errors.New("empty value")
+	}
+	return &Tag{
+		key:      tagKey(key),
+		value:    tagValue(value),
+		keyValue: key + keyValueJoin + value,
+	}, nil
 }
 
 func CreateTags(s ...string) ([]*Tag, error) {
@@ -48,15 +64,21 @@ func CreateTags(s ...string) ([]*Tag, error) {
 		if index == -1 || index+1 >= len(t) {
 			return tags, errors.New("invalid tag: " + t)
 		}
-		tags = append(tags, NewTag(t[:index], t[index+1:]))
+		tags = append(tags, NewTagUnsafe(t[:index], t[index+1:]))
 	}
 	return tags, nil
 }
 
-type tagKey string
-type tagValue string
-type entityStore map[tagKey]map[tagValue]string
-type tagStore map[string]entityStore
+type (
+	tagKey   string
+	tagValue string
+
+	//             "key"      "value"  "key:value"
+	entityStore map[tagKey]map[tagValue]string
+
+	//          "host-a"
+	tagStore map[string]entityStore
+)
 
 type Tagger struct {
 	store tagStore
@@ -75,7 +97,7 @@ func (t *Tagger) Add(entity string, tags ...*Tag) {
 	t.mu.Lock()
 	entityTags, hasEntity := t.store[entity]
 	if !hasEntity {
-		entityTags = make(entityStore)
+		entityTags = make(entityStore, 1)
 	}
 	for _, tag := range tags {
 		if len(entityTags[tag.key]) > 0 {
@@ -90,11 +112,12 @@ func (t *Tagger) Add(entity string, tags ...*Tag) {
 	t.mu.Unlock()
 }
 
+// Update any existing tag key regardless of the value
 func (t *Tagger) Update(entity string, tags ...*Tag) {
 	t.mu.Lock()
 	entityTags, hasEntity := t.store[entity]
 	if !hasEntity {
-		entityTags = make(entityStore)
+		entityTags = make(entityStore, 1)
 	}
 	for _, tag := range tags {
 		entityTags[tag.key] = map[tagValue]string{
@@ -107,7 +130,7 @@ func (t *Tagger) Update(entity string, tags ...*Tag) {
 
 func (t *Tagger) Replace(entity string, tags ...*Tag) {
 	t.mu.Lock()
-	entityTags := make(entityStore)
+	entityTags := make(entityStore, 1)
 	for _, tag := range tags {
 		entityTags[tag.key] = map[tagValue]string{
 			tag.value: tag.keyValue,
@@ -199,13 +222,19 @@ func (t *Tagger) GetIndexed(entity string) map[string]struct{} {
 
 func (t *Tagger) Print() {
 	t.mu.RLock()
-	tags := make([]string, 0, len(t.store))
+	entities := make([]string, 0, len(t.store))
 
 	for entity := range t.store {
-		tags = append(tags, entity)
+		entities = append(entities, entity)
 	}
 	t.mu.RUnlock()
-	for _, entity := range tags {
-		log.Printf("%s: %s", entity, t.Get(entity))
+
+	b := bytes.Buffer{}
+	tagNumber := 0
+	for _, entity := range entities {
+		tags := t.Get(entity)
+		b.WriteString(fmt.Sprintf("  - %q: %q\n", entity, tags))
+		tagNumber += len(tags)
 	}
+	fmt.Printf("entities[%d] -> tags[%d]:\n%s", len(entities), tagNumber, b.String())
 }

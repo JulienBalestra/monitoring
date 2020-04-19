@@ -89,7 +89,7 @@ func main() {
 		Host: hostname,
 	}
 
-	fs.StringArrayVar(&hostTagsStrings, "datadog-host-tags", nil, "datadog host tags")
+	fs.StringSliceVar(&hostTagsStrings, "datadog-host-tags", nil, "datadog host tags")
 	fs.StringVar(&pidFilePath, "pid-file", defaultPIDFilePath, "file to write process id")
 	fs.StringVar(&datadogClientConfig.DatadogAPIKey, datadogAPIKeyFlag, "", "datadog API key to submit series")
 	fs.StringVar(&hostname, hostnameFlag, hostname, "datadog host tag")
