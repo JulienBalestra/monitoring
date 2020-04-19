@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	typeCount = "count"
-	typeGauge = "gauge"
+	TypeCount = "count"
+	TypeGauge = "gauge"
 )
 
 type Metric struct {
@@ -28,7 +28,7 @@ func (m *Gauge) Gauge(chanSeries chan Series) {
 			Points: [][]float64{
 				{float64(metric.Timestamp.Unix()), metric.Value},
 			},
-			Type: typeGauge,
+			Type: TypeGauge,
 			Host: metric.Host,
 			Tags: metric.Tags,
 		}
@@ -43,7 +43,7 @@ func (m *Gauge) GetSeries() []Series {
 			Points: [][]float64{
 				{float64(metric.Timestamp.Unix()), metric.Value},
 			},
-			Type: typeGauge,
+			Type: TypeGauge,
 			Host: metric.Host,
 			Tags: metric.Tags,
 		},
@@ -70,7 +70,7 @@ func (m *Counter) Count(chanSeries chan Series, newMetrics Counter) {
 			Points: [][]float64{
 				{float64(prevMetric.Timestamp.Unix()), metricsValue},
 			},
-			Type:     typeCount,
+			Type:     TypeCount,
 			Interval: math.Round(newMetric.Timestamp.Sub(prevMetric.Timestamp).Seconds()),
 			Host:     newMetric.Host,
 			Tags:     newMetric.Tags,
@@ -95,7 +95,7 @@ func (m *Counter) GetSeries(newMetrics Counter) []Series {
 			Points: [][]float64{
 				{float64(prevMetric.Timestamp.Unix()), metricsValue},
 			},
-			Type:     typeCount,
+			Type:     TypeCount,
 			Interval: math.Round(newMetric.Timestamp.Sub(prevMetric.Timestamp).Seconds()),
 			Host:     newMetric.Host,
 			Tags:     newMetric.Tags,

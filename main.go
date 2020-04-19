@@ -17,6 +17,7 @@ import (
 	"github.com/JulienBalestra/metrics/cmd/version"
 	"github.com/JulienBalestra/metrics/pkg/collector"
 	"github.com/JulienBalestra/metrics/pkg/collector/catalog"
+	datadogCollector "github.com/JulienBalestra/metrics/pkg/collector/datadog"
 	"github.com/JulienBalestra/metrics/pkg/datadog"
 	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"github.com/spf13/cobra"
@@ -86,7 +87,8 @@ func main() {
 	hostname, _ := os.Hostname()
 	hostname = strings.ToLower(hostname)
 	datadogClientConfig := &datadog.Config{
-		Host: hostname,
+		Host:          hostname,
+		ClientMetrics: &datadog.ClientMetrics{},
 	}
 
 	fs.StringSliceVar(&hostTagsStrings, "datadog-host-tags", nil, "datadog host tags")
@@ -96,6 +98,11 @@ func main() {
 	fs.DurationVar(&datadogClientConfig.SendInterval, datadogClientSendInterval, time.Second*35, "datadog client send interval to the API >= "+minimalSendInterval.String())
 
 	collectorCatalog := catalog.GetCollectorCatalog()
+	collectorCatalog[datadogCollector.CollectorName] = func(config *collector.Config) collector.Collector {
+		d := datadogCollector.NewDatadogReporter(config)
+		d.ClientMetrics = datadogClientConfig.ClientMetrics
+		return d
+	}
 	collectionDuration := make(map[string]*time.Duration, len(collectorCatalog))
 	for name := range collectorCatalog {
 		var d time.Duration
@@ -158,7 +165,6 @@ func main() {
 		// not really useful but doesn't hurt either
 		tag.Print()
 
-		datadogClientConfig.Tagger = tag
 		client := datadog.NewClient(datadogClientConfig)
 		waitGroup.Add(1)
 		go func() {

@@ -5,15 +5,15 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/fnv"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
-
-	"github.com/JulienBalestra/metrics/pkg/tagger"
 )
 
 /*
@@ -33,9 +33,6 @@ curl  -X POST -H "Content-type: application/json" \
 const (
 	contentType     = "Content-Type"
 	applicationJson = "application/json"
-
-	clientSentByteMetric   = "client.sent.byte"
-	clientSentSeriesMetric = "client.sent.series"
 )
 
 type Config struct {
@@ -43,8 +40,16 @@ type Config struct {
 
 	DatadogAPIKey string
 
-	Tagger       *tagger.Tagger
-	SendInterval time.Duration
+	SendInterval  time.Duration
+	ClientMetrics *ClientMetrics
+}
+
+type ClientMetrics struct {
+	sync.RWMutex
+
+	SentBytes  float64
+	SentSeries float64
+	SentErrors float64
 }
 
 type Client struct {
@@ -53,12 +58,8 @@ type Client struct {
 	httpClient *http.Client
 	url        string
 
-	ChanSeries chan Series
-
-	// internal self metrics
-	mu         sync.RWMutex
-	sentBytes  float64
-	sentSeries float64
+	ChanSeries    chan Series
+	ClientMetrics *ClientMetrics
 }
 
 func NewClient(conf *Config) *Client {
@@ -70,12 +71,18 @@ func NewClient(conf *Config) *Client {
 		},
 		Timeout: time.Second * 15,
 	}
+	clientMetrics := conf.ClientMetrics
+	if conf.ClientMetrics == nil {
+		clientMetrics = &ClientMetrics{}
+	}
 	return &Client{
 		httpClient: httpClient,
 		conf:       conf,
 
 		url:        "https://api.datadoghq.com/api/v1/series?api_key=" + conf.DatadogAPIKey,
 		ChanSeries: make(chan Series),
+
+		ClientMetrics: clientMetrics,
 	}
 }
 
@@ -149,7 +156,6 @@ func (c *Client) Run(ctx context.Context) {
 	defer ticker.Stop()
 	log.Printf("starting datadog client")
 
-	var counters Counter
 	for {
 		select {
 		case <-ctx.Done():
@@ -181,15 +187,13 @@ func (c *Client) Run(ctx context.Context) {
 				log.Printf("successfully sent %d series", store.Len())
 				failures = 0
 				store.Reset()
-				newCounter := c.GetClientCounter()
-				if counters != nil {
-					for _, s := range counters.GetSeries(newCounter) {
-						store.Aggregate(&s)
-					}
-				}
-				counters = newCounter
 				continue
 			}
+
+			c.ClientMetrics.Lock()
+			c.ClientMetrics.SentErrors++
+			c.ClientMetrics.Unlock()
+
 			failures++
 			log.Printf("failed to send %d series: %v", store.Len(), err)
 			// TODO maybe use a rate limited queue
@@ -204,27 +208,15 @@ func (c *Client) Run(ctx context.Context) {
 	}
 }
 
-func (c *Client) GetClientCounter() Counter {
-	now := time.Now()
-	hostTags := c.conf.Tagger.Get(c.conf.Host)
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return Counter{
-		clientSentByteMetric: &Metric{
-			Name:      clientSentByteMetric,
-			Value:     c.sentBytes,
-			Host:      c.conf.Host,
-			Timestamp: now,
-			Tags:      hostTags,
-		},
-		clientSentSeriesMetric: &Metric{
-			Name:      clientSentSeriesMetric,
-			Value:     c.sentSeries,
-			Host:      c.conf.Host,
-			Timestamp: now,
-			Tags:      hostTags,
-		},
+func (c *Client) hideAPIKey() (string, error) {
+	const end = "***"
+	if c.conf.DatadogAPIKey == "" {
+		return "", errors.New("invalid empty API Key")
 	}
+	if len(c.conf.DatadogAPIKey) < 8 {
+		return "", errors.New("invalid API Key")
+	}
+	return c.conf.DatadogAPIKey[:8] + end, nil
 }
 
 func (c *Client) SendSeries(ctx context.Context, series []Series) error {
@@ -246,18 +238,27 @@ func (c *Client) SendSeries(ctx context.Context, series []Series) error {
 		return err
 	}
 	if resp.StatusCode > 300 {
-		return fmt.Errorf("failed to send series status code: %d", resp.StatusCode)
+		k, err := c.hideAPIKey()
+		if err != nil {
+			return fmt.Errorf("failed to send series status code: %d: %v", resp.StatusCode, err)
+		}
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if err != nil {
+			return fmt.Errorf("failed to send series status code: %d %s: %v", resp.StatusCode, string(bodyBytes), err)
+		}
+		return fmt.Errorf("failed to send series status code: %d api_key=%q %s", resp.StatusCode, k, string(bodyBytes))
 	}
 
 	// internal self metrics/counters
-	c.mu.Lock()
-	c.sentBytes += float64(len(b))
-	c.sentSeries += float64(len(series))
-	c.mu.Unlock()
+	c.ClientMetrics.Lock()
+	c.ClientMetrics.SentBytes += float64(len(b))
+	c.ClientMetrics.SentSeries += float64(len(series))
+	c.ClientMetrics.Unlock()
 	return nil
 }
 
-func (c *Client) MetricClientUp(tags ...string) {
+func (c *Client) MetricClientUp(host string, tags ...string) {
 	c.ChanSeries <- Series{
 		Metric: "client.up",
 		Points: [][]float64{
@@ -266,13 +267,13 @@ func (c *Client) MetricClientUp(tags ...string) {
 				1.0,
 			},
 		},
-		Type: typeGauge,
-		Host: c.conf.Host,
-		Tags: append(c.conf.Tagger.Get(c.conf.Host), tags...),
+		Type: TypeGauge,
+		Host: host,
+		Tags: tags,
 	}
 }
 
-func (c *Client) MetricClientShutdown(ctx context.Context, tags ...string) error {
+func (c *Client) MetricClientShutdown(ctx context.Context, host string, tags ...string) error {
 	return c.SendSeries(ctx, []Series{
 		{
 			Metric: "client.shutdown",
@@ -282,9 +283,9 @@ func (c *Client) MetricClientShutdown(ctx context.Context, tags ...string) error
 					1.0,
 				},
 			},
-			Type: typeGauge,
-			Host: c.conf.Host,
-			Tags: append(c.conf.Tagger.Get(c.conf.Host), tags...),
+			Type: TypeGauge,
+			Host: host,
+			Tags: tags,
 		},
 	})
 }
