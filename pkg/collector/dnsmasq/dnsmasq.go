@@ -123,9 +123,9 @@ func (c *DnsMasq) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, er
 			continue
 		}
 		macAddress = strings.ReplaceAll(macAddress, ":", "-")
-		macAddressTag, ipAddressTag, leaseNameTag := tagger.NewTag("mac", macAddress), tagger.NewTag("ip", ipAddress), tagger.NewTag(exported.LeaseKey, leaseName)
+		macAddressTag, ipAddressTag, leaseNameTag := tagger.NewTagUnsafe("mac", macAddress), tagger.NewTagUnsafe("ip", ipAddress), tagger.NewTagUnsafe(exported.LeaseKey, leaseName)
 		if leaseName == "*" {
-			leaseNameTag = tagger.NewTag(exported.LeaseKey, dhcpWildcardLeaseValue)
+			leaseNameTag = tagger.NewTagUnsafe(exported.LeaseKey, dhcpWildcardLeaseValue)
 			c.conf.Tagger.Update(ipAddress, macAddressTag)
 			c.conf.Tagger.Update(macAddress, ipAddressTag)
 		} else {

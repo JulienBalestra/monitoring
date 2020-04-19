@@ -51,8 +51,8 @@ func (c *Conntrack) parseTCPFields(fields []string, tcpStats map[string]*datadog
 			Name: "network.conntrack.tcp",
 			Host: c.conf.Host,
 			Tags: append(c.conf.Tagger.GetWithDefault(srcIp,
-				tagger.NewTag(exported.LeaseKey, tagger.MissingTagValue),
-				tagger.NewTag(selfExported.DeviceKey, tagger.MissingTagValue),
+				tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
+				tagger.NewTagUnsafe(selfExported.DeviceKey, tagger.MissingTagValue),
 			), "state:"+state, "src_ip:"+srcIp, "dst_port:"+dstPort),
 		}
 		tcpStats[mapKey] = st
@@ -78,8 +78,8 @@ func (c *Conntrack) parseUDPFields(fields []string, udpStats map[string]*datadog
 			Name: "network.conntrack.udp",
 			Host: c.conf.Host,
 			Tags: append(c.conf.Tagger.GetWithDefault(srcIp,
-				tagger.NewTag(exported.LeaseKey, tagger.MissingTagValue),
-				tagger.NewTag(selfExported.DeviceKey, tagger.MissingTagValue),
+				tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
+				tagger.NewTagUnsafe(selfExported.DeviceKey, tagger.MissingTagValue),
 			), "src_ip:"+srcIp, "dst_port:"+dstPort),
 		}
 		udpStats[mapKey] = st
