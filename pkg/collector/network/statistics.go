@@ -29,7 +29,7 @@ type Statistics struct {
 	statisticsFilesToUpdate time.Time
 }
 
-func NewStatisticsReporter(conf *collector.Config) collector.Collector {
+func NewStatistics(conf *collector.Config) collector.Collector {
 	return &Statistics{
 		conf: conf,
 	}

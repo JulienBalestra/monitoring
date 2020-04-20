@@ -69,7 +69,7 @@ type Memory struct {
 	metricsMapping map[string]string
 }
 
-func NewMemoryReporter(conf *collector.Config) collector.Collector {
+func NewMemory(conf *collector.Config) collector.Collector {
 	return &Memory{
 		conf: conf,
 		// TODO this is all the available metrics, some are commented for random reasons

@@ -220,21 +220,31 @@ func (t *Tagger) GetIndexed(entity string) map[string]struct{} {
 	return tags
 }
 
-func (t *Tagger) Print() {
+func (t *Tagger) Stats() (float64, float64, float64) {
 	t.mu.RLock()
-	entities := make([]string, 0, len(t.store))
 
-	for entity := range t.store {
-		entities = append(entities, entity)
+	entities, keys, tags := len(t.store), 0, 0
+	for _, entityTags := range t.store {
+		keys += len(entityTags)
+		for tagKey := range entityTags {
+			tags += len(entityTags[tagKey])
+		}
 	}
 	t.mu.RUnlock()
+	return float64(entities), float64(keys), float64(tags)
+}
+
+func (t *Tagger) Print() {
+	t.mu.RLock()
 
 	b := bytes.Buffer{}
-	tagNumber := 0
-	for _, entity := range entities {
+	entities, tagNumber := 0, len(t.store)
+	for entity := range t.store {
+		// there is a read lock in Get
 		tags := t.Get(entity)
 		b.WriteString(fmt.Sprintf("  - %q: %q\n", entity, tags))
 		tagNumber += len(tags)
 	}
-	fmt.Printf("entities[%d] -> tags[%d]:\n%s", len(entities), tagNumber, b.String())
+	t.mu.RUnlock()
+	fmt.Printf("entities[%d] -> tags[%d]:\n%s", entities, tagNumber, b.String())
 }

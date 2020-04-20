@@ -44,7 +44,7 @@ type DnsMasq struct {
 	dnsGaugeQuestions   map[string]dns.Question
 }
 
-func NewDnsMasqReporter(conf *collector.Config) collector.Collector {
+func NewDnsMasq(conf *collector.Config) collector.Collector {
 	return &DnsMasq{
 		conf: conf,
 		dnsClient: &dns.Client{

@@ -48,6 +48,8 @@ type ClientMetrics struct {
 	SentBytes  float64
 	SentSeries float64
 	SentErrors float64
+
+	StoreAggregations float64
 }
 
 type Client struct {
@@ -106,7 +108,7 @@ func (c *Client) Run(ctx context.Context) {
 
 	ticker := time.NewTicker(c.conf.SendInterval)
 	defer ticker.Stop()
-	log.Printf("starting datadog client")
+	log.Printf("sending metrics every %s", c.conf.SendInterval)
 
 	for {
 		select {
@@ -125,7 +127,10 @@ func (c *Client) Run(ctx context.Context) {
 			return
 
 		case s := <-c.ChanSeries:
-			store.Aggregate(&s)
+			aggregateCount := store.Aggregate(&s)
+			c.ClientMetrics.Lock()
+			c.ClientMetrics.StoreAggregations += float64(aggregateCount)
+			c.ClientMetrics.Unlock()
 
 		case <-ticker.C:
 			if store.Len() == 0 {

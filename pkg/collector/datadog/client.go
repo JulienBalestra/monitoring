@@ -17,29 +17,30 @@ const (
 	clientSentSeriesMetric = clientMetricPrefix + "sent.series"
 
 	clientErrorsMetric = clientMetricPrefix + "errors"
+	clientStoreMetric  = clientMetricPrefix + "store.aggregations"
 )
 
-type Datadog struct {
+type Client struct {
 	conf *collector.Config
 
 	ClientMetrics *datadog.ClientMetrics
 }
 
-func NewDatadogReporter(conf *collector.Config) *Datadog {
-	return &Datadog{
+func NewClient(conf *collector.Config) *Client {
+	return &Client{
 		conf: conf,
 	}
 }
 
-func (c *Datadog) Config() *collector.Config {
+func (c *Client) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Datadog) Name() string {
+func (c *Client) Name() string {
 	return CollectorName
 }
 
-func (c *Datadog) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
+func (c *Client) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
 	var gauges datadog.Gauge
 
 	now := time.Now()
@@ -64,6 +65,13 @@ func (c *Datadog) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, er
 		clientErrorsMetric: &datadog.Metric{
 			Name:      clientErrorsMetric,
 			Value:     c.ClientMetrics.SentErrors,
+			Host:      c.conf.Host,
+			Timestamp: now,
+			Tags:      tags,
+		},
+		clientStoreMetric: &datadog.Metric{
+			Name:      clientStoreMetric,
+			Value:     c.ClientMetrics.StoreAggregations,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,
