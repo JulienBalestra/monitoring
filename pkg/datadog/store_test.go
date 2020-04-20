@@ -159,12 +159,14 @@ func TestNewAggregateStore(t *testing.T) {
 	} {
 		t.Run(n, func(t *testing.T) {
 			s := NewAggregateStore()
+			l := 0
 			for _, se := range tc.series {
-				s.Aggregate(se)
+				l += s.Aggregate(se)
 			}
 
 			r := s.Series()
 			assert.Equal(t, tc.expectedSeries, r)
+			assert.Equal(t, len(tc.series)-len(tc.expectedSeries), l)
 		})
 	}
 }
