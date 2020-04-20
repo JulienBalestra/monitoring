@@ -6,7 +6,8 @@ export DATADOG_HOST_TAGS=location:home,room:living-room
 
 exec /jffs/bin/metrics --pid-file=/tmp/metrics.pid \
     --collector-datadog-client                  90s     \
-    --collector-dnsmasq                         30s     \
+    --collector-dnsmasq                         20s     \
+    --collector-dnsmasq-log                     10s     \
     --collector-load                            15s     \
     --collector-memory                          30s     \
     --collector-network-arp                     30s     \

@@ -10,9 +10,10 @@ import (
 	"github.com/JulienBalestra/metrics/pkg/collector/temperature"
 )
 
-func GetCollectorCatalog() map[string]func(*collector.Config) collector.Collector {
+func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 	return map[string]func(*collector.Config) collector.Collector{
 		dnsmasq.CollectorDnsMasqName:         dnsmasq.NewDnsMasq,
+		dnsmasq.CollectorDnsMasqLogName:      dnsmasq.NewDnsMasqLog,
 		load.CollectorLoadName:               load.NewLoad,
 		memory.CollectorMemoryName:           memory.NewMemory,
 		network.CollectorARPName:             network.NewARP,

@@ -85,6 +85,7 @@ func main() {
 	var hostTagsStrings []string
 	pidFilePath := ""
 	hostname, _ := os.Hostname()
+	timezone := time.Local.String()
 	hostname = strings.ToLower(hostname)
 	datadogClientConfig := &datadog.Config{
 		Host:          hostname,
@@ -93,11 +94,12 @@ func main() {
 
 	fs.StringSliceVar(&hostTagsStrings, "datadog-host-tags", nil, "datadog host tags")
 	fs.StringVar(&pidFilePath, "pid-file", defaultPIDFilePath, "file to write process id")
-	fs.StringVar(&datadogClientConfig.DatadogAPIKey, datadogAPIKeyFlag, "", "datadog API key to submit series")
+	fs.StringVarP(&datadogClientConfig.DatadogAPIKey, datadogAPIKeyFlag, "i", "", "datadog API key to submit series")
 	fs.StringVar(&hostname, hostnameFlag, hostname, "datadog host tag")
+	fs.StringVar(&timezone, "timezone", timezone, "timezone")
 	fs.DurationVar(&datadogClientConfig.SendInterval, datadogClientSendInterval, time.Second*35, "datadog client send interval to the API >= "+minimalSendInterval.String())
 
-	collectorCatalog := catalog.GetCollectorCatalog()
+	collectorCatalog := catalog.CollectorCatalog()
 	collectorCatalog[datadogCollector.CollectorName] = func(config *collector.Config) collector.Collector {
 		d := datadogCollector.NewClient(config)
 		d.ClientMetrics = datadogClientConfig.ClientMetrics
@@ -107,7 +109,7 @@ func main() {
 	for name := range collectorCatalog {
 		var d time.Duration
 		collectionDuration[name] = &d
-		fs.DurationVar(&d, "collector-"+name, defaultCollectionInterval, "collection interval for "+name)
+		fs.DurationVar(&d, "collector-"+name, defaultCollectionInterval, "collection interval/backoff for "+name)
 	}
 
 	root.Flags().AddFlagSet(fs)
@@ -127,7 +129,12 @@ func main() {
 		if hostname == "" {
 			errorStrings = append(errorStrings, fmt.Sprintf("empty hostname, flag --%s to define one", hostnameFlag))
 		}
+		tz, err := time.LoadLocation(timezone)
+		if err != nil {
+			errorStrings = append(errorStrings, err.Error())
+		}
 		if errorStrings == nil {
+			time.Local = tz
 			return nil
 		}
 		return errors.New(strings.Join(errorStrings, "; "))

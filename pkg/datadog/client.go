@@ -182,8 +182,9 @@ func (c *Client) SendSeries(ctx context.Context, series []Series) error {
 		return err
 	}
 
-	// TODO find a good logger to debug this
+	// TODO find a good logger/workflow to debug this
 	//log.Printf("%s", string(b))
+	//return nil
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, bytes.NewBuffer(b))
 	if err != nil {

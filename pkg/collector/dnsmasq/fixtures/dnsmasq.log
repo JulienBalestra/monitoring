@@ -1,0 +1,130 @@
+Jan  1 01:00:19 dnsmasq[865]: started, version 2.81rc4 cachesize 1000
+Jan  1 01:00:19 dnsmasq[865]: compile time options: IPv6 GNU-getopt no-DBus no-UBus no-i18n no-IDN DHCP DHCPv6 no-Lua no-TFTP no-conntrack no-ipset no-auth DNSSEC loop-detect no-inotify no-dumpfile
+Jan  1 01:00:19 dnsmasq-dhcp[865]: DHCP, IP range 192.168.1.100 -- 192.168.1.149, lease time 1d
+Jan  1 01:00:19 dnsmasq[865]: using only locally-known addresses for domain test
+Jan  1 01:00:19 dnsmasq[865]: using only locally-known addresses for domain onion
+Jan  1 01:00:19 dnsmasq[865]: using only locally-known addresses for domain localhost
+Jan  1 01:00:19 dnsmasq[865]: using only locally-known addresses for domain local
+Jan  1 01:00:19 dnsmasq[865]: using only locally-known addresses for domain invalid
+Jan  1 01:00:19 dnsmasq[865]: using only locally-known addresses for domain bind
+Jan  1 01:00:19 dnsmasq[865]: reading /tmp/resolv.dnsmasq
+Jan  1 01:00:19 dnsmasq[865]: using only locally-known addresses for domain test
+Jan  1 01:00:19 dnsmasq[865]: using only locally-known addresses for domain onion
+Jan  1 01:00:19 dnsmasq[865]: using only locally-known addresses for domain localhost
+Jan  1 01:00:19 dnsmasq[865]: using only locally-known addresses for domain local
+Jan  1 01:00:19 dnsmasq[865]: using only locally-known addresses for domain invalid
+Jan  1 01:00:19 dnsmasq[865]: using only locally-known addresses for domain bind
+Jan  1 01:00:19 dnsmasq[865]: using nameserver 8.8.8.8#53
+Jan  1 01:00:19 dnsmasq[865]: read /etc/hosts - 2 addresses
+Jan  1 01:00:20 dnsmasq[865]: exiting on receipt of SIGTERM
+Jan  1 01:00:20 dnsmasq[946]: started, version 2.81rc4 cachesize 1000
+Jan  1 01:00:20 dnsmasq[946]: compile time options: IPv6 GNU-getopt no-DBus no-UBus no-i18n no-IDN DHCP DHCPv6 no-Lua no-TFTP no-conntrack no-ipset no-auth DNSSEC loop-detect no-inotify no-dumpfile
+Jan  1 01:00:20 dnsmasq-dhcp[946]: DHCP, IP range 192.168.1.100 -- 192.168.1.149, lease time 1d
+Jan  1 01:00:20 dnsmasq[946]: using only locally-known addresses for domain test
+Jan  1 01:00:20 dnsmasq[946]: using only locally-known addresses for domain onion
+Jan  1 01:00:20 dnsmasq[946]: using only locally-known addresses for domain localhost
+Jan  1 01:00:20 dnsmasq[946]: using only locally-known addresses for domain local
+Jan  1 01:00:20 dnsmasq[946]: using only locally-known addresses for domain invalid
+Jan  1 01:00:20 dnsmasq[946]: using only locally-known addresses for domain bind
+Jan  1 01:00:20 dnsmasq[946]: reading /tmp/resolv.dnsmasq
+Jan  1 01:00:20 dnsmasq[946]: using only locally-known addresses for domain test
+Jan  1 01:00:20 dnsmasq[946]: using only locally-known addresses for domain onion
+Jan  1 01:00:20 dnsmasq[946]: using only locally-known addresses for domain localhost
+Jan  1 01:00:20 dnsmasq[946]: using only locally-known addresses for domain local
+Jan  1 01:00:20 dnsmasq[946]: using only locally-known addresses for domain invalid
+Jan  1 01:00:20 dnsmasq[946]: using only locally-known addresses for domain bind
+Jan  1 01:00:20 dnsmasq[946]: using nameserver 8.8.8.8#53
+Jan  1 01:00:20 dnsmasq[946]: using nameserver 212.27.40.240#53
+Jan  1 01:00:20 dnsmasq[946]: using nameserver 212.27.40.241#53
+Jan  1 01:00:20 dnsmasq[946]: read /etc/hosts - 2 addresses
+Jan  1 01:00:40 dnsmasq-dhcp[946]: DHCPREQUEST(br0) 192.168.1.147 f0:ef:86:2b:0e:89
+Jan  1 01:00:40 dnsmasq-dhcp[946]: DHCPACK(br0) 192.168.1.147 f0:ef:86:2b:0e:89 Google-Nest-Mini
+Jan  1 01:00:43 dnsmasq-dhcp[946]: DHCPDISCOVER(br0) b4:e6:2d:0a:6b:97
+Jan  1 01:00:43 dnsmasq-dhcp[946]: DHCPOFFER(br0) 192.168.1.135 b4:e6:2d:0a:6b:97
+Jan  1 01:00:43 dnsmasq-dhcp[946]: DHCPREQUEST(br0) 192.168.1.147 f0:ef:86:2b:0e:89
+Jan  1 01:00:43 dnsmasq-dhcp[946]: DHCPACK(br0) 192.168.1.147 f0:ef:86:2b:0e:89 Google-Nest-Mini
+Jan  1 01:00:47 dnsmasq-dhcp[946]: DHCPDISCOVER(br0) 80:c5:f2:07:94:c1
+Jan  1 01:00:47 dnsmasq-dhcp[946]: DHCPOFFER(br0) 192.168.1.117 80:c5:f2:07:94:c1
+Jan  1 01:00:47 dnsmasq-dhcp[946]: DHCPDISCOVER(br0) 80:c5:f2:07:94:c1
+Jan  1 01:00:47 dnsmasq-dhcp[946]: DHCPOFFER(br0) 192.168.1.117 80:c5:f2:07:94:c1
+Jan  1 01:00:47 dnsmasq-dhcp[946]: DHCPREQUEST(br0) 192.168.1.117 80:c5:f2:07:94:c1
+Jan  1 01:00:47 dnsmasq-dhcp[946]: DHCPACK(br0) 192.168.1.117 80:c5:f2:07:94:c1 jbllink
+Jan  1 01:00:47 dnsmasq-dhcp[946]: DHCPREQUEST(br0) 192.168.1.114 60:01:94:4e:dd:8a
+Jan  1 01:00:47 dnsmasq-dhcp[946]: DHCPACK(br0) 192.168.1.114 60:01:94:4e:dd:8a ESP_4EDD8A
+Jan  1 01:00:47 dnsmasq-dhcp[946]: DHCPDISCOVER(br0) 60:01:94:4e:dd:8a
+Jan  1 01:00:47 dnsmasq-dhcp[946]: DHCPOFFER(br0) 192.168.1.114 60:01:94:4e:dd:8a
+Jan  1 01:00:47 dnsmasq-dhcp[946]: DHCPREQUEST(br0) 192.168.1.114 60:01:94:4e:dd:8a
+Jan  1 01:00:47 dnsmasq-dhcp[946]: DHCPACK(br0) 192.168.1.114 60:01:94:4e:dd:8a ESP_4EDD8A
+Jan  1 01:00:47 dnsmasq[946]: query[A] 0.fr.pool.ntp.org from 192.168.1.114
+Jan  1 01:00:47 dnsmasq[946]: forwarded 0.fr.pool.ntp.org to 8.8.8.8
+Jan  1 01:00:47 dnsmasq[946]: reply 0.fr.pool.ntp.org is 151.80.211.8
+Jan  1 01:00:47 dnsmasq[946]: reply 0.fr.pool.ntp.org is 54.37.80.132
+Jan  1 01:00:47 dnsmasq[946]: reply 0.fr.pool.ntp.org is 51.15.191.239
+Jan  1 01:00:47 dnsmasq[946]: reply 0.fr.pool.ntp.org is 37.187.174.185
+Jan  1 01:00:48 dnsmasq[946]: query[A] api.datadoghq.com from 192.168.1.114
+Jan  1 01:00:48 dnsmasq[946]: forwarded api.datadoghq.com to 8.8.8.8
+Jan  1 01:00:48 dnsmasq[946]: reply api.datadoghq.com is <CNAME>
+Jan  1 01:00:48 dnsmasq[946]: reply public-api-endpoint-alb-shard1-2114080350.us-east-1.elb.amazonaws.com is 34.198.29.173
+Jan  1 01:00:48 dnsmasq[946]: reply public-api-endpoint-alb-shard1-2114080350.us-east-1.elb.amazonaws.com is 34.199.187.188
+Jan  1 01:00:48 dnsmasq[946]: reply public-api-endpoint-alb-shard1-2114080350.us-east-1.elb.amazonaws.com is 107.23.26.180
+Jan  1 01:00:48 dnsmasq[946]: reply public-api-endpoint-alb-shard1-2114080350.us-east-1.elb.amazonaws.com is 34.237.116.15
+Jan  1 01:00:48 dnsmasq[946]: reply public-api-endpoint-alb-shard1-2114080350.us-east-1.elb.amazonaws.com is 54.85.85.174
+Jan  1 01:00:48 dnsmasq[946]: reply public-api-endpoint-alb-shard1-2114080350.us-east-1.elb.amazonaws.com is 52.87.88.158
+Jan  1 01:00:48 dnsmasq-dhcp[946]: DHCPDISCOVER(br0) b4:e6:2d:0a:6b:97
+Jan  1 01:00:48 dnsmasq-dhcp[946]: DHCPOFFER(br0) 192.168.1.135 b4:e6:2d:0a:6b:97
+Jan  1 01:00:48 dnsmasq-dhcp[946]: DHCPREQUEST(br0) 192.168.1.135 b4:e6:2d:0a:6b:97
+Jan  1 01:00:48 dnsmasq-dhcp[946]: DHCPACK(br0) 192.168.1.135 b4:e6:2d:0a:6b:97 ESP_0A6B97
+Jan  1 01:00:48 dnsmasq[946]: query[A] connectivitycheck.gstatic.com from 192.168.1.117
+Jan  1 01:00:48 dnsmasq[946]: forwarded connectivitycheck.gstatic.com to 8.8.8.8
+Jan  1 01:00:48 dnsmasq[946]: reply connectivitycheck.gstatic.com is 216.58.201.227
+Jan  1 01:00:48 dnsmasq[946]: query[A] clients3.google.com from 192.168.1.117
+Jan  1 01:00:48 dnsmasq[946]: forwarded clients3.google.com to 8.8.8.8
+Jan  1 01:00:48 dnsmasq[946]: reply clients3.google.com is <CNAME>
+Jan  1 01:00:48 dnsmasq[946]: reply clients.l.google.com is 216.58.215.46
+Jan  1 01:00:52 dnsmasq-dhcp[946]: DHCPDISCOVER(br0) 90:78:b2:5c:07:af
+Jan  1 01:00:52 dnsmasq-dhcp[946]: DHCPOFFER(br0) 192.168.1.148 90:78:b2:5c:07:af
+Jan  1 01:00:52 dnsmasq-dhcp[946]: DHCPREQUEST(br0) 192.168.1.134 b0:2a:43:1e:62:99
+Jan  1 01:00:52 dnsmasq-dhcp[946]: DHCPACK(br0) 192.168.1.134 b0:2a:43:1e:62:99 Chromecast
+Jan  1 01:00:52 dnsmasq-dhcp[946]: DHCPREQUEST(br0) 192.168.1.148 90:78:b2:5c:07:af
+Jan  1 01:00:52 dnsmasq-dhcp[946]: DHCPACK(br0) 192.168.1.148 90:78:b2:5c:07:af Mi9T-MiPhone
+
+Apr 20 21:30:10 dnsmasq[967]: query[A] datadoghq.com from 192.168.1.1
+Apr 20 21:30:10 dnsmasq[967]: query[A] datadoghq.com from 192.168.1.1
+Apr 20 21:34:47 dnsmasq[967]: config insertions.bind is <TXT>
+Apr 20 21:34:47 dnsmasq[967]: query[TXT] hits.bind from 127.0.0.1
+Apr 20 21:34:47 dnsmasq[967]: config hits.bind is <TXT>
+Apr 20 21:34:47 dnsmasq[967]: query[TXT] misses.bind from 127.0.0.1
+Apr 20 21:34:47 dnsmasq[967]: config misses.bind is <TXT>
+Apr 20 21:34:47 dnsmasq[967]: query[TXT] evictions.bind from 127.0.0.1
+Apr 20 21:34:47 dnsmasq[967]: config evictions.bind is <TXT>
+Apr 20 21:34:47 dnsmasq[967]: query[TXT] cachesize.bind from 127.0.0.1
+Apr 20 21:34:47 dnsmasq[967]: config cachesize.bind is <TXT>
+Apr 20 21:35:07 dnsmasq[967]: query[AAAA] api.datadoghq.com from 192.168.1.1
+Apr 20 21:35:07 dnsmasq[967]: cached api.datadoghq.com is <CNAME>
+Apr 20 21:35:07 dnsmasq[967]: forwarded api.datadoghq.com to 8.8.8.8
+Apr 20 21:35:07 dnsmasq[967]: query[A] api.datadoghq.com from 192.168.1.1
+Apr 20 21:35:07 dnsmasq[967]: forwarded api.datadoghq.com to 8.8.8.8
+Apr 20 21:35:07 dnsmasq[967]: reply api.datadoghq.com is <CNAME>
+Apr 20 21:35:07 dnsmasq[967]: reply alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 3.233.147.153
+Apr 20 21:35:07 dnsmasq[967]: reply alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 3.233.147.146
+Apr 20 21:35:07 dnsmasq[967]: reply alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 3.233.147.149
+Apr 20 21:35:07 dnsmasq[967]: reply alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 3.233.147.147
+Apr 20 21:35:07 dnsmasq[967]: reply alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 3.233.147.157
+Apr 20 21:35:07 dnsmasq[967]: reply alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 3.233.147.158
+Apr 20 21:35:07 dnsmasq[967]: reply api.datadoghq.com is <CNAME>
+Apr 20 21:35:07 dnsmasq[967]: reply alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 2600:1f18:24e6:b901:4089:65d8:883a:e3a7
+Apr 20 21:35:07 dnsmasq[967]: reply alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 2600:1f18:24e6:b902:3f22:3efc:6172:19e1
+Apr 20 21:35:07 dnsmasq[967]: reply alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 2600:1f18:24e6:b900:3c9c:6e04:4306:b0df
+Apr 20 21:35:07 dnsmasq[967]: reply alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 2600:1f18:24e6:b901:de5a:5748:5695:65bc
+Apr 20 21:35:07 dnsmasq[967]: reply alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 2600:1f18:24e6:b902:1f5e:9c6e:81fe:b087
+Apr 20 21:35:07 dnsmasq[967]: reply alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 2600:1f18:24e6:b900:875b:dbbf:a9d:9955
+Apr 20 21:35:09 dnsmasq[967]: query[A] api.datadoghq.com from 192.168.1.114
+Apr 20 21:35:09 dnsmasq[967]: cached api.datadoghq.com is <CNAME>
+Apr 20 21:35:09 dnsmasq[967]: cached alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 3.233.147.158
+Apr 20 21:35:09 dnsmasq[967]: cached alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 3.233.147.157
+Apr 20 21:35:09 dnsmasq[967]: cached alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 3.233.147.147
+Apr 20 21:35:09 dnsmasq[967]: cached alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 3.233.147.149
+Apr 20 21:35:09 dnsmasq[967]: cached alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 3.233.147.146
+Apr 20 21:35:09 dnsmasq[967]: cached alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 3.233.147.153
+Apr 20 21:35:10 dnsmasq[967]: query[A] datadoghq.com from 192.168.1.1
+Apr 20 21:35:10 dnsmasq[967]: query[A] datadoghq.com from 192.168.1.1

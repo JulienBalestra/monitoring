@@ -39,6 +39,8 @@ func (c *Statistics) Config() *collector.Config {
 	return c.conf
 }
 
+func (c *Statistics) IsDaemon() bool { return false }
+
 func (c *Statistics) Name() string {
 	return CollectorStatisticsName
 }

@@ -3,6 +3,7 @@ package network
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"strconv"
@@ -20,6 +21,7 @@ const (
 	CollectorConntrackName = "network-conntrack"
 
 	conntrackPath = "/proc/net/ip_conntrack"
+	srcPrefix     = "src="
 )
 
 type Conntrack struct {
@@ -36,14 +38,41 @@ func (c *Conntrack) Config() *collector.Config {
 	return c.conf
 }
 
+func (c *Conntrack) IsDaemon() bool { return false }
+
 func (c *Conntrack) Name() string {
 	return CollectorConntrackName
 }
 
-func (c *Conntrack) parseTCPFields(fields []string, tcpStats map[string]*datadog.Metric) {
+func getPortTag(portField string) (string, error) {
+	const portTagPrefix = "dst_port:"
+	dstPort := strings.TrimPrefix(portField, "dport=")
+	port, err := strconv.Atoi(dstPort)
+	if err != nil {
+		return "", err
+	}
+	if port < 1024 {
+		return portTagPrefix + dstPort, nil
+	}
+	if port < 8191 {
+		return portTagPrefix + "1024-8191", nil
+	}
+	if port < 49151 {
+		return portTagPrefix + "8191-49151", nil
+	}
+	return portTagPrefix + "49152-65535", nil
+}
+
+func (c *Conntrack) parseTCPFields(fields []string, tcpStats map[string]*datadog.Metric) error {
+	if len(fields) < 8 {
+		return errors.New("incorrect tcp fields")
+	}
 	state, srcIp, dstPort := fields[3], fields[4], fields[7]
-	srcIp = strings.TrimPrefix(srcIp, "src=")
-	dstPort = strings.TrimPrefix(dstPort, "dport=")
+	portTag, err := getPortTag(dstPort)
+	if err != nil {
+		return err
+	}
+	srcIp = strings.TrimPrefix(srcIp, srcPrefix)
 	mapKey := srcIp + state + dstPort
 	st, ok := tcpStats[mapKey]
 	if !ok {
@@ -53,24 +82,24 @@ func (c *Conntrack) parseTCPFields(fields []string, tcpStats map[string]*datadog
 			Tags: append(c.conf.Tagger.GetWithDefault(srcIp,
 				tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
 				tagger.NewTagUnsafe(selfExported.DeviceKey, tagger.MissingTagValue),
-			), "state:"+state, "src_ip:"+srcIp, "dst_port:"+dstPort),
+			), "state:"+state, "src_ip:"+srcIp, portTag),
 		}
 		tcpStats[mapKey] = st
 	}
 	st.Value++
+	return nil
 }
 
 func (c *Conntrack) parseUDPFields(fields []string, udpStats map[string]*datadog.Metric) error {
+	if len(fields) < 7 {
+		return errors.New("incorrect udp fields")
+	}
 	srcIp, dstPort := fields[3], fields[6]
-	srcIp = strings.TrimPrefix(srcIp, "src=")
-	dstPort = strings.TrimPrefix(dstPort, "dport=")
-	port, err := strconv.Atoi(dstPort)
+	portTag, err := getPortTag(dstPort)
 	if err != nil {
 		return err
 	}
-	if port > 1024 {
-		dstPort = "gt-1024"
-	}
+	srcIp = strings.TrimPrefix(srcIp, srcPrefix)
 	mapKey := srcIp + dstPort
 	st, ok := udpStats[mapKey]
 	if !ok {
@@ -80,7 +109,7 @@ func (c *Conntrack) parseUDPFields(fields []string, udpStats map[string]*datadog
 			Tags: append(c.conf.Tagger.GetWithDefault(srcIp,
 				tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
 				tagger.NewTagUnsafe(selfExported.DeviceKey, tagger.MissingTagValue),
-			), "src_ip:"+srcIp, "dst_port:"+dstPort),
+			), "src_ip:"+srcIp, portTag),
 		}
 		udpStats[mapKey] = st
 	}
@@ -102,21 +131,20 @@ func (c *Conntrack) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, 
 	udpStats := make(map[string]*datadog.Metric)
 	for {
 		// TODO improve this reader
-		line, _, err := reader.ReadLine()
+		line, err := reader.ReadBytes('\n')
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
 			return counters, gauges, err
 		}
-		s := string(line)
-		fields := strings.Fields(s)
-		if fields[0] == "tcp" {
-			c.parseTCPFields(fields, tcpStats)
-			continue
+		fields := strings.Fields(string(line))
+		switch fields[0] {
+		case "tcp":
+			_ = c.parseTCPFields(fields, tcpStats)
+		case "udp":
+			_ = c.parseUDPFields(fields, udpStats)
 		}
-		// udp
-		_ = c.parseUDPFields(fields, udpStats)
 	}
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
 	now := time.Now()

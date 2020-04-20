@@ -30,6 +30,8 @@ func (c *Temperature) Config() *collector.Config {
 	return c.conf
 }
 
+func (c *Temperature) IsDaemon() bool { return false }
+
 func (c *Temperature) Name() string {
 	return CollectorTemperatureName
 }

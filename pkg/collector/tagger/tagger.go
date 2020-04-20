@@ -26,6 +26,8 @@ func (c *Tagger) Config() *collector.Config {
 	return c.conf
 }
 
+func (c *Tagger) IsDaemon() bool { return false }
+
 func (c *Tagger) Name() string {
 	return CollectorName
 }
