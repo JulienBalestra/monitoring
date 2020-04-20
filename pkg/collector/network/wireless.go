@@ -38,7 +38,7 @@ type Wireless struct {
 	conf *collector.Config
 }
 
-func NewWirelessReporter(conf *collector.Config) collector.Collector {
+func NewWireless(conf *collector.Config) collector.Collector {
 	return &Wireless{
 		conf: conf,
 	}

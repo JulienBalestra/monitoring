@@ -12,5 +12,6 @@ exec /jffs/bin/metrics --pid-file=/tmp/metrics.pid \
     --collector-network-arp                     30s     \
     --collector-network-conntrack               30s     \
     --collector-network-statistics              10s     \
+    --collector-tagger                          90s     \
     --collector-temperature                     60s     \
     --datadog-host-tags=${DATADOG_HOST_TAGS}

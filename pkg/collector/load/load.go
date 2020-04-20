@@ -23,7 +23,7 @@ type Load struct {
 	conf *collector.Config
 }
 
-func NewLoadReporter(conf *collector.Config) collector.Collector {
+func NewLoad(conf *collector.Config) collector.Collector {
 	return &Load{
 		conf: conf,
 	}

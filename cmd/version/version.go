@@ -30,7 +30,7 @@ var (
 
 	// Revision is filled with the VCS (e.g. git) revision being used to build
 	// the program at linking time.
-	Revision = ""
+	Revision = "+unknown"
 )
 
 // DisplayVersion print to stdout the package/version/revision

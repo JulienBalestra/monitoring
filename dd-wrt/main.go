@@ -99,7 +99,7 @@ func main() {
 
 	collectorCatalog := catalog.GetCollectorCatalog()
 	collectorCatalog[datadogCollector.CollectorName] = func(config *collector.Config) collector.Collector {
-		d := datadogCollector.NewDatadogReporter(config)
+		d := datadogCollector.NewClient(config)
 		d.ClientMetrics = datadogClientConfig.ClientMetrics
 		return d
 	}
@@ -116,9 +116,10 @@ func main() {
 		if datadogClientConfig.DatadogAPIKey == "" {
 			datadogClientConfig.DatadogAPIKey = os.Getenv("DATADOG_API_KEY")
 			if datadogClientConfig.DatadogAPIKey == "" {
-				errorStrings = append(errorStrings, fmt.Sprintf("flag --%s must be set to a datadog API key", datadogAPIKeyFlag))
+				errorStrings = append(errorStrings, fmt.Sprintf("flag --%s or envvar DATADOG_API_KEY must be set to a datadog API key", datadogAPIKeyFlag))
+			} else {
+				log.Printf("using environment variable DATADOG_API_KEY")
 			}
-			log.Printf("using environment variable DATADOG_API_KEY")
 		}
 		if datadogClientConfig.SendInterval < minimalSendInterval {
 			errorStrings = append(errorStrings, fmt.Sprintf("flag --%s must be greater or equal to %s", datadogClientSendInterval, minimalSendInterval))

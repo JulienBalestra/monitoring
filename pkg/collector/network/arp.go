@@ -34,7 +34,7 @@ type ARP struct {
 	conf *collector.Config
 }
 
-func NewARPReporter(conf *collector.Config) collector.Collector {
+func NewARP(conf *collector.Config) collector.Collector {
 	return &ARP{
 		conf: conf,
 	}

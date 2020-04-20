@@ -26,7 +26,7 @@ type Conntrack struct {
 	conf *collector.Config
 }
 
-func NewConntrackReporter(conf *collector.Config) collector.Collector {
+func NewConntrack(conf *collector.Config) collector.Collector {
 	return &Conntrack{
 		conf: conf,
 	}

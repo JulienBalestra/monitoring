@@ -20,7 +20,7 @@ type Temperature struct {
 	conf *collector.Config
 }
 
-func NewTemperatureReporter(conf *collector.Config) collector.Collector {
+func NewTemperature(conf *collector.Config) collector.Collector {
 	return &Temperature{
 		conf: conf,
 	}
