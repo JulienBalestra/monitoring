@@ -3,7 +3,12 @@ version: 2
 templates:
   base: &base
     docker:
-    - image: golang:1.13.4
+      # image built from github.com/JulienBalestra/metrics/.circleci/Dockerfile, the tag represent the timestamp
+      # when the following command has been run:
+      # docker build ${GOPATH}/JulienBalestra/metrics/.circleci/Dockerfile -t julienbalestra/metrics:$(date +%s)
+      # docker push !$
+      # -> go get binaries like golint/goimports : go mod files are updated
+    - image: julienbalestra/metrics:1587406751
 
 jobs:
   fmt:
@@ -16,7 +21,6 @@ jobs:
     <<: *base
     steps:
     - checkout
-    - run: go get golang.org/x/tools/cmd/goimports
     - run: make verify-import
 
   vet:
@@ -29,7 +33,6 @@ jobs:
     <<: *base
     steps:
     - checkout
-    - run: go get golang.org/x/lint/golint
     - run: make lint
 
   test:
