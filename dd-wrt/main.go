@@ -206,16 +206,17 @@ func main() {
 				}(c)
 			}
 		}
-		tsTag := "ts:" + strconv.FormatInt(time.Now().Unix(), 10)
-		revisionTag := "commit:" + version.Revision[:8]
-		client.MetricClientUp(hostname, tsTag, revisionTag)
+		tags := append(tag.GetUnstable(hostname),
+			"ts:"+strconv.FormatInt(time.Now().Unix(), 10),
+			"commit:"+version.Revision[:8],
+		)
+		client.MetricClientUp(hostname, tags...)
 		<-ctx.Done()
 
 		ctxShutdown, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		_ = client.MetricClientShutdown(ctxShutdown, hostname, tsTag, revisionTag)
+		_ = client.MetricClientShutdown(ctxShutdown, hostname, tags...)
 		cancel()
 		waitGroup.Wait()
-		log.Printf("program exit")
 		return nil
 	}
 	exitCode := 0
@@ -223,5 +224,6 @@ func main() {
 	if err != nil {
 		exitCode = 1
 	}
+	log.Printf("program exit %d", exitCode)
 	os.Exit(exitCode)
 }
