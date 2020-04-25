@@ -1,0 +1,1033 @@
+{
+  "title": "network",
+  "description": "",
+  "widgets": [
+    {
+      "id": 6399225703517872,
+      "definition": {
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "id": 7606344338239104,
+            "definition": {
+              "type": "query_value",
+              "requests": [
+                {
+                  "q": "avg:network.statistics.rx_bytes{device:vlan2,$location}.as_rate()",
+                  "aggregator": "avg"
+                }
+              ],
+              "title": "WAN",
+              "autoscale": true,
+              "precision": 0
+            }
+          },
+          {
+            "id": 7534467030170978,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.statistics.rx_bytes{device:vlan2,$location}.as_rate()",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "-sum:network.statistics.tx_bytes{device:vlan2,$location}.as_rate()",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "markers": [
+                {
+                  "value": "y = 0",
+                  "display_type": "info dashed"
+                }
+              ],
+              "title": "WAN",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 7285787522514418,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.statistics.rx_bytes{$location} by {device}.as_rate()",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "-sum:network.statistics.tx_bytes{$location} by {device}.as_rate()",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "markers": [
+                {
+                  "value": "y = 0",
+                  "display_type": "info dashed"
+                }
+              ],
+              "title": "network.statistics.rx_bytes, network.statistics.tx_bytes",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 2242856509024464,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.statistics.rx_packets{$location} by {device}.as_rate()",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "-sum:network.statistics.tx_packets{$location} by {device}.as_rate()",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "markers": [
+                {
+                  "value": "y = 0",
+                  "display_type": "info dashed"
+                }
+              ],
+              "title": "network.statistics.rx_packets, network.statistics.tx_packets",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 2769403381778962,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.statistics.rx_crc_errors{$location} by {device}.as_rate()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "warm",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "Sum of network.statistics.rx_crc_errors over * by device",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 2610295235684518,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "avg:network.wireless.noise{$location} by {device}",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "Avg of network.wireless.noise over * by device",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          }
+        ],
+        "title": "network"
+      }
+    },
+    {
+      "id": 6120135618666158,
+      "definition": {
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "id": 3842788352053024,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.conntrack.tcp{state:established,$location} by {lease,src_ip}",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "established by src, lease",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 8827473701387838,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.conntrack.tcp{state:established,$location} by {dst_port}",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "established by port",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 5285548284360768,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.conntrack.tcp{$location} by {state}",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "by state",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          }
+        ],
+        "title": "conntrack TCP"
+      }
+    },
+    {
+      "id": 257165044699568,
+      "definition": {
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "id": 8016424363997044,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.conntrack.udp{$location} by {lease,src_ip}",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "Sum of network.conntrack.udp over * by lease,src_ip",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 6583873611859996,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.conntrack.udp{$location} by {dst_port}",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "Sum of network.conntrack.udp over * by dst_port",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          }
+        ],
+        "title": "conntrack UDP"
+      }
+    },
+    {
+      "id": 1047305051080478,
+      "definition": {
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "id": 550912637719132,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "count_not_null(sum:dnsmasq.dhcp.lease{$location} by {mac,ip})",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "dashed",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "count_not_null(sum:network.arp{device:br0,!lease:unknown,$location} by {mac,ip})",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "dnsmasq.dhcp.lease, network.arp",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 8190856268895682,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.arp{device:br0,!lease:unknown,$location} by {lease}",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "Sum of network.arp over device:br0,!lease:unknown by lease",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 5003775673011798,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.arp{lease:unknown,device:br0,$location} by {ip,mac}",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "Sum of network.arp over lease:unknown,device:br0 by ip,mac",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 1722850690616394,
+            "definition": {
+              "type": "toplist",
+              "requests": [
+                {
+                  "q": "top(avg:dnsmasq.dhcp.lease{$location} by {lease,ip,mac}, 50, 'last', 'desc')"
+                }
+              ],
+              "title": "Avg of dnsmasq.dhcp.lease over * by lease,ip,mac"
+            }
+          },
+          {
+            "id": 3544822815551850,
+            "definition": {
+              "type": "query_table",
+              "requests": [
+                {
+                  "q": "top(avg:dnsmasq.dhcp.lease{$location} by {lease,ip}, 50, 'last', 'desc')",
+                  "aggregator": "min",
+                  "limit": 25,
+                  "order": "desc"
+                }
+              ],
+              "title": "Avg of dnsmasq.dhcp.lease over * by lease,ip"
+            }
+          }
+        ],
+        "title": "dhcp"
+      }
+    },
+    {
+      "id": 1050558413801162,
+      "definition": {
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "id": 1499092262269264,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:dnsmasq.dns.query{$location} by {type}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "query by type",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 3133650074209904,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:dnsmasq.dns.query{$location} by {domain}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "query by domain",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 8295169249191466,
+            "definition": {
+              "type": "toplist",
+              "requests": [
+                {
+                  "q": "top(sum:dnsmasq.dns.query{$location} by {domain}.as_count(), 10, 'area', 'desc')"
+                }
+              ],
+              "title": "query by domain"
+            }
+          },
+          {
+            "id": 2834623607128486,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:dnsmasq.dns.cache.insertion{$location} by {host}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "sum:dnsmasq.dns.cache.hit{$location} by {host}.as_count()+sum:dnsmasq.dns.cache.miss{$location} by {host}.as_count()",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "warm",
+                    "line_type": "dashed",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "dnsmasq.dns.cache.insertion, dnsmasq.dns.cache.hit",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 2072699050171888,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "avg:dnsmasq.dns.cache.hit{$location}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "-avg:dnsmasq.dns.cache.miss{$location}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "dnsmasq.dns.cache.hit, dnsmasq.dns.cache.miss",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 3172974600917824,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:dnsmasq.dns.cache.insertion{$location}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "-sum:dnsmasq.dns.cache.eviction{$location}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "markers": [
+                {
+                  "value": "y < 0",
+                  "display_type": "warning dashed"
+                }
+              ],
+              "title": "dnsmasq.dns.cache.insertion, dnsmasq.dns.cache.eviction",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 8633940806846714,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "avg:dnsmasq.dns.cache.size{$location} by {host}",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "Avg of dnsmasq.dns.cache.size over * by host",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          }
+        ],
+        "title": "dns"
+      }
+    },
+    {
+      "id": 5946262116187626,
+      "definition": {
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "id": 5024270251325386,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "avg:load.1{$location}",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "avg:load.5{$location}",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "dashed",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "avg:load.10{$location}",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "dotted",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "load.1, load.5, load.10",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 8384657807668250,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "avg:cpu.temperature{$location}",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "Avg of cpu.temperature over *",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 8746479227153496,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "avg:memory.free{$location}",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "avg:memory.total{$location}",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "dotted",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "markers": [
+                {
+                  "value": "y = 0",
+                  "display_type": "error dashed",
+                  "label": " OOM "
+                }
+              ],
+              "title": "memory.free, memory.total",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          }
+        ],
+        "title": "system"
+      }
+    },
+    {
+      "id": 3524343132757052,
+      "definition": {
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "id": 2184333389484010,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "avg:client.up{$location} by {ts,host,commit}",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "cool",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "-avg:client.shutdown{$location} by {ts,host,commit}",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "warm",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "markers": [
+                {
+                  "value": "y = 0",
+                  "display_type": "info dashed"
+                }
+              ],
+              "title": "client.up, client.shutdown",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 4966163730966380,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:client.store.aggregations{$location}.as_count()",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "warm",
+                    "line_type": "dashed",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "sum:client.sent.series{$location}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "client.store.aggregations, client.sent.series",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 4349577795860202,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:client.sent.bytes{$location}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "Sum of client.sent.bytes over *",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 5312593259430600,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "avg:client.errors{$location}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "Avg of client.errors over *",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 6649796268914842,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "avg:tagger.tags{$location}",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "warm",
+                    "line_type": "dashed",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "avg:tagger.keys{$location}",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "cool",
+                    "line_type": "dashed",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "avg:tagger.entities{$location}",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "warm",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "tagger.tags, tagger.keys, tagger.entities",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          }
+        ],
+        "title": "telemetry"
+      }
+    }
+  ],
+  "template_variables": [
+    {
+      "name": "location",
+      "default": "home",
+      "prefix": "location"
+    }
+  ],
+  "layout_type": "ordered",
+  "is_read_only": false,
+  "notify_list": [],
+  "id": "9w4-qud-5bg"
+}
