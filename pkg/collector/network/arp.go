@@ -44,6 +44,8 @@ func (c *ARP) Config() *collector.Config {
 	return c.conf
 }
 
+func (c *ARP) IsDaemon() bool { return false }
+
 func (c *ARP) Name() string {
 	return CollectorARPName
 }

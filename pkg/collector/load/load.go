@@ -33,6 +33,8 @@ func (c *Load) Config() *collector.Config {
 	return c.conf
 }
 
+func (c *Load) IsDaemon() bool { return false }
+
 func (c *Load) Name() string {
 	return CollectorLoadName
 }

@@ -121,6 +121,8 @@ func (c *Memory) Config() *collector.Config {
 	return c.conf
 }
 
+func (c *Memory) IsDaemon() bool { return false }
+
 func (c *Memory) Name() string {
 	return CollectorMemoryName
 }

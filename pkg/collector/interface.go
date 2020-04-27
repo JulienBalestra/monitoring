@@ -27,16 +27,23 @@ type Collector interface {
 	Config() *Config
 	Collect(context.Context) (datadog.Counter, datadog.Gauge, error)
 	Name() string
+	IsDaemon() bool
 }
 
 func RunCollection(ctx context.Context, c Collector) {
 	config := c.Config()
 
+	if c.IsDaemon() {
+		log.Printf("collecting metrics every %s: %s", config.CollectInterval.String(), c.Name())
+		_, _, _ = c.Collect(ctx)
+		return
+	}
+
 	ticker := time.NewTicker(config.CollectInterval)
 	defer ticker.Stop()
 	log.Printf("collecting metrics every %s: %s", config.CollectInterval.String(), c.Name())
 
-	var counters datadog.Counter
+	prevCounters := make(datadog.Counter)
 	for {
 		select {
 		case <-ctx.Done():
@@ -50,11 +57,8 @@ func RunCollection(ctx context.Context, c Collector) {
 				continue
 			}
 			gauges.Gauge(config.SeriesCh)
-			if counters != nil {
-				counters.Count(config.SeriesCh, newCounters)
-			}
-			counters = newCounters
-			log.Printf("successfully run collection: %d counters, %d gauges: %s", len(counters), len(gauges), c.Name())
+			prevCounters = prevCounters.Count(config.SeriesCh, newCounters)
+			log.Printf("successfully run collection: %d counters, %d gauges: %s", len(prevCounters), len(gauges), c.Name())
 		}
 	}
 }

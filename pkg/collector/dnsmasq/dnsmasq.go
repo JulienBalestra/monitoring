@@ -85,6 +85,8 @@ func NewDnsMasq(conf *collector.Config) collector.Collector {
 	}
 }
 
+func (c *DnsMasq) IsDaemon() bool { return false }
+
 func (c *DnsMasq) Config() *collector.Config {
 	return c.conf
 }

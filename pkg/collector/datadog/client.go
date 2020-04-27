@@ -32,6 +32,8 @@ func NewClient(conf *collector.Config) *Client {
 	}
 }
 
+func (c *Client) IsDaemon() bool { return false }
+
 func (c *Client) Config() *collector.Config {
 	return c.conf
 }

@@ -48,6 +48,8 @@ func (c *Wireless) Config() *collector.Config {
 	return c.conf
 }
 
+func (c *Wireless) IsDaemon() bool { return false }
+
 func (c *Wireless) Name() string {
 	return CollectorWirelessName
 }
@@ -68,7 +70,7 @@ func (c *Wireless) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, e
 	counters = make(datadog.Counter, 1)
 	for {
 		// TODO improve this reader
-		line, _, err := reader.ReadLine()
+		line, err := reader.ReadBytes('\n')
 		if err != nil {
 			if err == io.EOF {
 				break
