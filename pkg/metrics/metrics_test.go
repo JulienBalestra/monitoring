@@ -1,4 +1,4 @@
-package datadog
+package metrics
 
 import (
 	"testing"
@@ -11,20 +11,20 @@ import (
 func TestMetricCount(t *testing.T) {
 	now := time.Now()
 	for name, tc := range map[string]struct {
-		prevMetric *Metric
-		newMetric  *Metric
+		prevMetric *Sample
+		newMetric  *Sample
 		exp        *Series
 		err        bool
 	}{
 		"1": {
-			&Metric{
+			&Sample{
 				Name:      "metric",
 				Value:     1,
 				Timestamp: now,
 				Host:      "host",
 				Tags:      []string{},
 			},
-			&Metric{
+			&Sample{
 				Name:      "metric",
 				Value:     2,
 				Timestamp: now.Add(time.Second),
@@ -44,14 +44,14 @@ func TestMetricCount(t *testing.T) {
 			false,
 		},
 		"1:tags": {
-			&Metric{
+			&Sample{
 				Name:      "metric",
 				Value:     1,
 				Timestamp: now,
 				Host:      "host",
 				Tags:      []string{},
 			},
-			&Metric{
+			&Sample{
 				Name:      "metric",
 				Value:     2,
 				Timestamp: now.Add(time.Second),
@@ -71,14 +71,14 @@ func TestMetricCount(t *testing.T) {
 			false,
 		},
 		"0": {
-			&Metric{
+			&Sample{
 				Name:      "metric",
 				Value:     1,
 				Timestamp: now,
 				Host:      "host",
 				Tags:      []string{},
 			},
-			&Metric{
+			&Sample{
 				Name:      "metric",
 				Value:     1,
 				Timestamp: now.Add(time.Second),
@@ -98,6 +98,36 @@ func TestMetricCount(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.Equal(t, tc.exp, s)
+			assert.Equal(t, tc.prevMetric.Hash(), tc.prevMetric.Hash())
+		})
+	}
+}
+
+func TestMetricHash(t *testing.T) {
+	now := time.Now()
+	for name, tc := range map[string]struct {
+		one *Sample
+		two *Sample
+	}{
+		"1": {
+			&Sample{
+				Name:      "metric",
+				Value:     1,
+				Timestamp: now,
+				Host:      "host",
+				Tags:      []string{"one", "two"},
+			},
+			&Sample{
+				Name:      "metric",
+				Value:     1,
+				Timestamp: now,
+				Host:      "host",
+				Tags:      []string{"two", "one"},
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.one.Hash(), tc.two.Hash())
 		})
 	}
 }

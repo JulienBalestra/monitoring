@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/metrics"
 )
 
 const (
@@ -13,12 +13,14 @@ const (
 )
 
 type Tagger struct {
-	conf *collector.Config
+	conf     *collector.Config
+	measures *metrics.Measures
 }
 
 func NewTagger(conf *collector.Config) collector.Collector {
 	return &Tagger{
-		conf: conf,
+		conf:     conf,
+		measures: metrics.NewMeasures(conf.SeriesCh),
 	}
 }
 
@@ -32,36 +34,31 @@ func (c *Tagger) Name() string {
 	return CollectorName
 }
 
-func (c *Tagger) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
-	var counters datadog.Counter
-	var gauges datadog.Gauge
-
+func (c *Tagger) Collect(_ context.Context) error {
 	now := time.Now()
 	tags := c.conf.Tagger.Get(c.conf.Host)
 
 	entities, keys, tagsNumber := c.conf.Tagger.Stats()
-	gauges = append(gauges,
-		&datadog.Metric{
-			Name:      "tagger.entities",
-			Value:     entities,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      tags,
-		},
-		&datadog.Metric{
-			Name:      "tagger.keys",
-			Value:     keys,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      tags,
-		},
-		&datadog.Metric{
-			Name:      "tagger.tags",
-			Value:     tagsNumber,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      tags,
-		},
-	)
-	return counters, gauges, nil
+	c.measures.Gauge(&metrics.Sample{
+		Name:      "tagger.entities",
+		Value:     entities,
+		Timestamp: now,
+		Host:      c.conf.Host,
+		Tags:      tags,
+	})
+	c.measures.Gauge(&metrics.Sample{
+		Name:      "tagger.keys",
+		Value:     keys,
+		Timestamp: now,
+		Host:      c.conf.Host,
+		Tags:      tags,
+	})
+	c.measures.Gauge(&metrics.Sample{
+		Name:      "tagger.tags",
+		Value:     tagsNumber,
+		Timestamp: now,
+		Host:      c.conf.Host,
+		Tags:      tags,
+	})
+	return nil
 }

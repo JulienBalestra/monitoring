@@ -6,6 +6,7 @@ import (
 
 	"github.com/JulienBalestra/metrics/pkg/collector"
 	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/metrics"
 )
 
 const (
@@ -24,11 +25,13 @@ type Client struct {
 	conf *collector.Config
 
 	ClientMetrics *datadog.ClientMetrics
+	measures      *metrics.Measures
 }
 
 func NewClient(conf *collector.Config) *Client {
 	return &Client{
-		conf: conf,
+		conf:     conf,
+		measures: metrics.NewMeasures(conf.SeriesCh),
 	}
 }
 
@@ -42,41 +45,43 @@ func (c *Client) Name() string {
 	return CollectorName
 }
 
-func (c *Client) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
-	var gauges datadog.Gauge
-
+func (c *Client) Collect(_ context.Context) error {
 	now := time.Now()
-	tags := c.conf.Tagger.Get(c.conf.Host)
+	tags := c.conf.Tagger.GetUnstable(c.conf.Host)
 	c.ClientMetrics.RLock()
-	defer c.ClientMetrics.RUnlock()
-	return datadog.Counter{
-		clientSentByteMetric: &datadog.Metric{
+	samples := []*metrics.Sample{
+		{
 			Name:      clientSentByteMetric,
 			Value:     c.ClientMetrics.SentBytes,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,
 		},
-		clientSentSeriesMetric: &datadog.Metric{
+		{
 			Name:      clientSentSeriesMetric,
 			Value:     c.ClientMetrics.SentSeries,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,
 		},
-		clientErrorsMetric: &datadog.Metric{
+		{
 			Name:      clientErrorsMetric,
 			Value:     c.ClientMetrics.SentErrors,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,
 		},
-		clientStoreMetric: &datadog.Metric{
+		{
 			Name:      clientStoreMetric,
 			Value:     c.ClientMetrics.StoreAggregations,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,
 		},
-	}, gauges, nil
+	}
+	c.ClientMetrics.RUnlock()
+	for _, s := range samples {
+		_ = c.measures.Count(s)
+	}
+	return nil
 }

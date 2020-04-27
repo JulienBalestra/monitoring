@@ -1,6 +1,7 @@
-package datadog
+package metrics
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -163,8 +164,10 @@ func TestNewAggregateStore(t *testing.T) {
 			for _, se := range tc.series {
 				l += s.Aggregate(se)
 			}
-
 			r := s.Series()
+			sort.Slice(r, func(i, j int) bool {
+				return len(r[i].Tags) < len(r[j].Tags)
+			})
 			assert.Equal(t, tc.expectedSeries, r)
 			assert.Equal(t, len(tc.series)-len(tc.expectedSeries), l)
 		})

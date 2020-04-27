@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/JulienBalestra/metrics/pkg/metrics"
 )
 
 /*
@@ -34,7 +36,8 @@ const (
 )
 
 type Config struct {
-	Host string
+	Host     string
+	ChanSize int
 
 	DatadogAPIKey string
 
@@ -58,7 +61,7 @@ type Client struct {
 	httpClient *http.Client
 	url        string
 
-	ChanSeries    chan Series
+	ChanSeries    chan metrics.Series
 	ClientMetrics *ClientMetrics
 }
 
@@ -75,28 +78,22 @@ func NewClient(conf *Config) *Client {
 	if conf.ClientMetrics == nil {
 		clientMetrics = &ClientMetrics{}
 	}
+	if conf.SendInterval == 0 {
+		conf.SendInterval = time.Minute
+	}
 	return &Client{
 		httpClient: httpClient,
 		conf:       conf,
 
 		url:        "https://api.datadoghq.com/api/v1/series?api_key=" + conf.DatadogAPIKey,
-		ChanSeries: make(chan Series),
+		ChanSeries: make(chan metrics.Series, conf.ChanSize),
 
 		ClientMetrics: clientMetrics,
 	}
 }
 
 type Payload struct {
-	Series []Series `json:"series"`
-}
-
-type Series struct {
-	Metric   string      `json:"metric"`
-	Points   [][]float64 `json:"points"`
-	Type     string      `json:"type"`
-	Interval float64     `json:"interval,omitempty"`
-	Host     string      `json:"host"`
-	Tags     []string    `json:"tags"`
+	Series []metrics.Series `json:"series"`
 }
 
 func (c *Client) Run(ctx context.Context) {
@@ -104,7 +101,7 @@ func (c *Client) Run(ctx context.Context) {
 	const shutdownTimeout = 5 * time.Second
 	failures, failuresDropThreshold := 0, 300/int(c.conf.SendInterval.Seconds())
 
-	store := NewAggregateStore()
+	store := metrics.NewAggregateStore()
 
 	ticker := time.NewTicker(c.conf.SendInterval)
 	defer ticker.Stop()
@@ -176,7 +173,7 @@ func (c *Client) hideAPIKey() (string, error) {
 	return c.conf.DatadogAPIKey[:8] + end, nil
 }
 
-func (c *Client) SendSeries(ctx context.Context, series []Series) error {
+func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error {
 	b, err := json.Marshal(Payload{Series: series})
 	if err != nil {
 		return err
@@ -217,7 +214,7 @@ func (c *Client) SendSeries(ctx context.Context, series []Series) error {
 }
 
 func (c *Client) MetricClientUp(host string, tags ...string) {
-	c.ChanSeries <- Series{
+	c.ChanSeries <- metrics.Series{
 		Metric: "client.up",
 		Points: [][]float64{
 			{
@@ -225,14 +222,14 @@ func (c *Client) MetricClientUp(host string, tags ...string) {
 				1.0,
 			},
 		},
-		Type: TypeGauge,
+		Type: metrics.TypeGauge,
 		Host: host,
 		Tags: tags,
 	}
 }
 
 func (c *Client) MetricClientShutdown(ctx context.Context, host string, tags ...string) error {
-	return c.SendSeries(ctx, []Series{
+	return c.SendSeries(ctx, []metrics.Series{
 		{
 			Metric: "client.shutdown",
 			Points: [][]float64{
@@ -241,7 +238,7 @@ func (c *Client) MetricClientShutdown(ctx context.Context, host string, tags ...
 					1.0,
 				},
 			},
-			Type: TypeGauge,
+			Type: metrics.TypeGauge,
 			Host: host,
 			Tags: tags,
 		},
