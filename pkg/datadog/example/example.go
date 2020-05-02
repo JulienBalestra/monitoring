@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/metrics"
 )
 
 func main() {
@@ -18,7 +19,7 @@ func main() {
 		SendInterval:  time.Second * 60,
 	})
 
-	series := []datadog.Series{
+	series := []metrics.Series{
 		{
 			Metric: "custom.metrics",
 			Points: [][]float64{
@@ -31,7 +32,7 @@ func main() {
 					2,
 				},
 			},
-			Type: datadog.TypeGauge,
+			Type: metrics.TypeGauge,
 			// take leverage of the tagger to manage tags
 			// import "github.com/JulienBalestra/metrics/pkg/tagger"
 			Host: "my-host",

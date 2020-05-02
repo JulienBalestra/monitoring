@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/metrics"
 )
 
 const (
@@ -23,7 +23,8 @@ type statisticFile struct {
 }
 
 type Statistics struct {
-	conf *collector.Config
+	conf     *collector.Config
+	measures *metrics.Measures
 
 	statisticsFiles         map[string]*statisticFile
 	statisticsFilesToUpdate time.Time
@@ -31,7 +32,8 @@ type Statistics struct {
 
 func NewStatistics(conf *collector.Config) collector.Collector {
 	return &Statistics{
-		conf: conf,
+		conf:     conf,
+		measures: metrics.NewMeasures(conf.SeriesCh),
 	}
 }
 
@@ -45,16 +47,12 @@ func (c *Statistics) Name() string {
 	return CollectorStatisticsName
 }
 
-func (c *Statistics) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
-	var counters datadog.Counter
-	var gauges datadog.Gauge
-
+func (c *Statistics) Collect(_ context.Context) error {
 	statistics, err := c.getStatisticsFiles()
 	if err != nil {
-		return counters, gauges, err
+		return err
 	}
 
-	counters = make(datadog.Counter)
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
 	now := time.Now()
 	for metricPath, statistic := range statistics {
@@ -69,16 +67,15 @@ func (c *Statistics) Collect(_ context.Context) (datadog.Counter, datadog.Gauge,
 			log.Printf("failed to parse metrics from statistics %s: %v", metricPath, err)
 			continue
 		}
-		m := &datadog.Metric{
+		_ = c.measures.Count(&metrics.Sample{
 			Name:      "network.statistics." + statistic.fileName,
 			Value:     i,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      append(hostTags, "device:"+statistic.deviceName),
-		}
-		counters[metricPath] = m
+		})
 	}
-	return counters, gauges, nil
+	return nil
 }
 
 func (c *Statistics) getStatisticsFiles() (map[string]*statisticFile, error) {

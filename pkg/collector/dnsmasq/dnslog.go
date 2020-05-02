@@ -11,11 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
-	"github.com/JulienBalestra/metrics/pkg/tagger"
-
 	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
+	"github.com/JulienBalestra/metrics/pkg/metrics"
+	"github.com/JulienBalestra/metrics/pkg/tagger"
 )
 
 const (
@@ -27,7 +26,8 @@ const (
 )
 
 type Log struct {
-	conf *collector.Config
+	conf     *collector.Config
+	measures *metrics.Measures
 
 	firstSep, secondSep, thirdSep []byte
 	startTailing                  time.Time
@@ -36,7 +36,9 @@ type Log struct {
 
 func newLog(conf *collector.Config) *Log {
 	return &Log{
-		conf:      conf,
+		conf:     conf,
+		measures: metrics.NewMeasures(conf.SeriesCh),
+
 		firstSep:  []byte("]: query["),
 		secondSep: []byte("] "),
 		thirdSep:  []byte{' '},
@@ -58,7 +60,7 @@ func (c *Log) Name() string {
 	return CollectorDnsMasqLogName
 }
 
-func (c *Log) Collect(ctx context.Context) (datadog.Counter, datadog.Gauge, error) {
+func (c *Log) Collect(ctx context.Context) error {
 	lineCh := make(chan []byte)
 	defer close(lineCh)
 
@@ -74,36 +76,45 @@ func (c *Log) Collect(ctx context.Context) (datadog.Counter, datadog.Gauge, erro
 				err := c.tail(ctx, lineCh, dnsmasqLogPath)
 				if err != nil {
 					log.Printf("failed tailing: %v", err)
-					time.Sleep(time.Second * 5)
+					wait, cancel := context.WithTimeout(ctx, time.Second*5)
+					<-wait.Done()
+					cancel()
 				}
 			}
 		}
 	}()
-
-	// 127.0.0.1 can do dns query
-	c.conf.Tagger.Update("127.0.0.1", tagger.NewTagUnsafe(exported.LeaseKey, "localhost"))
+	c.year = time.Now().Format("2006")
 	c.startTailing = time.Now()
-	ticker := time.NewTicker(c.conf.CollectInterval)
+	samples := make(map[string]*metrics.Sample)
 
+	ticker := time.NewTicker(c.conf.CollectInterval)
 	defer ticker.Stop()
-	prevCounters := make(datadog.Counter)
-	newCounters := make(datadog.Counter)
 	for {
 		select {
 		case <-ctx.Done():
 			wg.Wait()
 			log.Printf("end of collection: %s", c.Name())
-			return nil, nil, nil
+			return nil
 
 		case <-ticker.C:
-			prevCounters.Count(c.conf.SeriesCh, newCounters)
-			prevCounters = newCounters.Copy()
-			log.Printf("successfully run collection: %d counters, 0 gauges: %s", len(newCounters), c.Name())
-			c.year = time.Now().Format("2006")
-			c.startTailing = time.Now()
+			if len(samples) == 0 {
+				continue
+			}
+			var err error
+			for _, sample := range samples {
+				err = c.measures.Incr(sample)
+				if err == nil {
+					continue
+				}
+				log.Printf("failed to run collection %s: %v", c.Name(), err)
+			}
+			if err == nil {
+				log.Printf("successfully run collection: %s", c.Name())
+			}
+			samples = make(map[string]*metrics.Sample)
 
 		case line := <-lineCh:
-			c.processLine(newCounters, line)
+			c.processLine(samples, line)
 		}
 	}
 }
@@ -119,6 +130,9 @@ func (c *Log) tail(ctx context.Context, ch chan []byte, f string) error {
 	if err != nil {
 		return err
 	}
+
+	// 127.0.0.1 can do dns query
+	c.conf.Tagger.Update("127.0.0.1", tagger.NewTagUnsafe(exported.LeaseKey, "localhost"))
 
 	// TODO fix this reader
 	reader := bufio.NewReaderSize(file, 1024*6)
@@ -137,12 +151,14 @@ func (c *Log) tail(ctx context.Context, ch chan []byte, f string) error {
 			if err != io.EOF {
 				return err
 			}
-			time.Sleep(time.Second)
+			wait, cancel := context.WithTimeout(ctx, time.Second)
+			<-wait.Done()
+			cancel()
 		}
 	}
 }
 
-func (c *Log) processLine(counters datadog.Counter, line []byte) {
+func (c *Log) processLine(counters map[string]*metrics.Sample, line []byte) {
 	beginQueryType := bytes.Index(line, c.firstSep)
 	if beginQueryType == -1 {
 		return
@@ -194,8 +210,8 @@ func (c *Log) processLine(counters datadog.Counter, line []byte) {
 	ipAddress := strings.TrimRight(string(line[endOfquery+6:]), "\n")
 	key := queryType + domain + ipAddress
 	leaseTag := tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue)
-	tags := append(c.conf.Tagger.GetWithDefault(ipAddress, leaseTag),
-		c.conf.Tagger.Get(c.conf.Host)...)
+	tags := append(c.conf.Tagger.GetUnstableWithDefault(ipAddress, leaseTag),
+		c.conf.Tagger.GetUnstable(c.conf.Host)...)
 	tags = append(tags, "domain:"+domain, "type:"+queryType)
 	m, ok := counters[key]
 	if ok {
@@ -204,11 +220,12 @@ func (c *Log) processLine(counters datadog.Counter, line []byte) {
 		m.Tags = tags
 		return
 	}
-	counters[key] = &datadog.Metric{
+	counters[key] = &metrics.Sample{
 		Name:      "dnsmasq.dns.query",
 		Value:     1,
 		Timestamp: t,
 		Host:      c.conf.Host,
 		Tags:      tags,
 	}
+	return
 }

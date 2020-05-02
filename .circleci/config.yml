@@ -47,6 +47,12 @@ jobs:
     - checkout
     - run: make amd64
 
+  example:
+    <<: *base
+    steps:
+    - checkout
+    - run: go build -o /dev/null pkg/datadog/example/example.go
+
 workflows:
   version: 2
   workflow:
@@ -57,3 +63,4 @@ workflows:
     - lint
     - test
     - build-amd64
+    - example

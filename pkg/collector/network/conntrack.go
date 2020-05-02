@@ -13,7 +13,7 @@ import (
 	"github.com/JulienBalestra/metrics/pkg/collector"
 	"github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
 	selfExported "github.com/JulienBalestra/metrics/pkg/collector/network/exported"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/metrics"
 	"github.com/JulienBalestra/metrics/pkg/tagger"
 )
 
@@ -25,12 +25,14 @@ const (
 )
 
 type Conntrack struct {
-	conf *collector.Config
+	conf     *collector.Config
+	measures *metrics.Measures
 }
 
 func NewConntrack(conf *collector.Config) collector.Collector {
 	return &Conntrack{
-		conf: conf,
+		conf:     conf,
+		measures: metrics.NewMeasures(conf.SeriesCh),
 	}
 }
 
@@ -63,7 +65,7 @@ func getPortTag(portField string) (string, error) {
 	return portTagPrefix + "49152-65535", nil
 }
 
-func (c *Conntrack) parseTCPFields(fields []string, tcpStats map[string]*datadog.Metric) error {
+func (c *Conntrack) parseTCPFields(fields []string, tcpStats map[string]*metrics.Sample) error {
 	if len(fields) < 8 {
 		return errors.New("incorrect tcp fields")
 	}
@@ -76,7 +78,7 @@ func (c *Conntrack) parseTCPFields(fields []string, tcpStats map[string]*datadog
 	mapKey := srcIp + state + dstPort
 	st, ok := tcpStats[mapKey]
 	if !ok {
-		st = &datadog.Metric{
+		st = &metrics.Sample{
 			Name: "network.conntrack.tcp",
 			Host: c.conf.Host,
 			Tags: append(c.conf.Tagger.GetWithDefault(srcIp,
@@ -90,7 +92,7 @@ func (c *Conntrack) parseTCPFields(fields []string, tcpStats map[string]*datadog
 	return nil
 }
 
-func (c *Conntrack) parseUDPFields(fields []string, udpStats map[string]*datadog.Metric) error {
+func (c *Conntrack) parseUDPFields(fields []string, udpStats map[string]*metrics.Sample) error {
 	if len(fields) < 7 {
 		return errors.New("incorrect udp fields")
 	}
@@ -103,7 +105,7 @@ func (c *Conntrack) parseUDPFields(fields []string, udpStats map[string]*datadog
 	mapKey := srcIp + dstPort
 	st, ok := udpStats[mapKey]
 	if !ok {
-		st = &datadog.Metric{
+		st = &metrics.Sample{
 			Name: "network.conntrack.udp",
 			Host: c.conf.Host,
 			Tags: append(c.conf.Tagger.GetWithDefault(srcIp,
@@ -117,18 +119,15 @@ func (c *Conntrack) parseUDPFields(fields []string, udpStats map[string]*datadog
 	return nil
 }
 
-func (c *Conntrack) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
-	var counters datadog.Counter
-	var gauges datadog.Gauge
-
+func (c *Conntrack) Collect(_ context.Context) error {
 	file, err := os.Open(conntrackPath)
 	if err != nil {
-		return counters, gauges, err
+		return err
 	}
 	defer file.Close()
 	reader := bufio.NewReader(file)
-	tcpStats := make(map[string]*datadog.Metric)
-	udpStats := make(map[string]*datadog.Metric)
+	tcpStats := make(map[string]*metrics.Sample)
+	udpStats := make(map[string]*metrics.Sample)
 	for {
 		// TODO improve this reader
 		line, err := reader.ReadBytes('\n')
@@ -136,7 +135,7 @@ func (c *Conntrack) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, 
 			if err == io.EOF {
 				break
 			}
-			return counters, gauges, err
+			return err
 		}
 		fields := strings.Fields(string(line))
 		switch fields[0] {
@@ -151,12 +150,12 @@ func (c *Conntrack) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, 
 	for _, st := range tcpStats {
 		st.Timestamp = now
 		st.Tags = append(st.Tags, hostTags...)
-		gauges = append(gauges, st)
+		c.measures.Gauge(st)
 	}
 	for _, st := range udpStats {
 		st.Timestamp = now
 		st.Tags = append(st.Tags, hostTags...)
-		gauges = append(gauges, st)
+		c.measures.Gauge(st)
 	}
-	return counters, gauges, nil
+	return nil
 }

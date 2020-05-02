@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,13 +25,13 @@ import (
 	"github.com/spf13/pflag"
 )
 
-func notifySystemSignals(ctx context.Context, cancel context.CancelFunc) {
+func notifySignals(ctx context.Context, cancel context.CancelFunc, tag *tagger.Tagger) {
 	signals := make(chan os.Signal)
 	defer close(signals)
 	defer signal.Stop(signals)
 	defer signal.Reset()
 
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2)
 	for {
 		select {
 		case <-ctx.Done():
@@ -39,27 +40,15 @@ func notifySystemSignals(ctx context.Context, cancel context.CancelFunc) {
 
 		case sig := <-signals:
 			log.Printf("signal %s received", sig)
-			cancel()
-		}
-	}
-}
+			switch sig {
+			case syscall.SIGUSR1:
+				tag.Print()
+			case syscall.SIGUSR2:
+				_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 2)
 
-func notifyUSRSignals(ctx context.Context, tag *tagger.Tagger) {
-	signals := make(chan os.Signal)
-	defer close(signals)
-	defer signal.Stop(signals)
-	defer signal.Reset()
-
-	signal.Notify(signals, syscall.SIGUSR1)
-	for {
-		select {
-		case <-ctx.Done():
-			log.Printf("end of USR signal handling")
-			return
-
-		case sig := <-signals:
-			log.Printf("signal %s received", sig)
-			tag.Print()
+			default:
+				cancel()
+			}
 		}
 	}
 }
@@ -155,23 +144,16 @@ func main() {
 		ctx, cancel := context.WithCancel(context.TODO())
 		waitGroup := &sync.WaitGroup{}
 
-		waitGroup.Add(1)
-		go func() {
-			notifySystemSignals(ctx, cancel)
-			waitGroup.Done()
-		}()
-
 		tag := tagger.NewTagger()
 		tag.Add(hostname, hostTags...)
+		// not really useful but doesn't hurt either
+		tag.Print()
 
 		waitGroup.Add(1)
 		go func() {
-			notifyUSRSignals(ctx, tag)
+			notifySignals(ctx, cancel, tag)
 			waitGroup.Done()
 		}()
-
-		// not really useful but doesn't hurt either
-		tag.Print()
 
 		client := datadog.NewClient(datadogClientConfig)
 		waitGroup.Add(1)

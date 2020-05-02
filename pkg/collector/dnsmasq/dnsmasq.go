@@ -12,7 +12,7 @@ import (
 
 	"github.com/JulienBalestra/metrics/pkg/collector"
 	"github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/metrics"
 	"github.com/JulienBalestra/metrics/pkg/tagger"
 	"github.com/miekg/dns"
 )
@@ -37,7 +37,8 @@ const (
 */
 
 type DnsMasq struct {
-	conf *collector.Config
+	conf     *collector.Config
+	measures *metrics.Measures
 
 	dnsClient           *dns.Client
 	dnsCounterQuestions map[string]dns.Question
@@ -46,7 +47,9 @@ type DnsMasq struct {
 
 func NewDnsMasq(conf *collector.Config) collector.Collector {
 	return &DnsMasq{
-		conf: conf,
+		conf:     conf,
+		measures: metrics.NewMeasures(conf.SeriesCh),
+
 		dnsClient: &dns.Client{
 			Timeout:      time.Second,
 			DialTimeout:  time.Second,
@@ -95,18 +98,15 @@ func (c *DnsMasq) Name() string {
 	return CollectorDnsMasqName
 }
 
-func (c *DnsMasq) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
-	var counters datadog.Counter
-	var gauges datadog.Gauge
-
+func (c *DnsMasq) Collect(_ context.Context) error {
 	b, err := ioutil.ReadFile(dnsmasqPath)
 	if err != nil {
-		return counters, gauges, err
+		return err
 	}
 
 	lines := strings.Split(string(b[:len(b)-1]), "\n")
 	if len(lines) == 0 {
-		return counters, gauges, nil
+		return nil
 	}
 	now := time.Now()
 	timestampSeconds := float64(now.Unix())
@@ -135,8 +135,7 @@ func (c *DnsMasq) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, er
 			c.conf.Tagger.Update(ipAddress, leaseNameTag, macAddressTag)
 			c.conf.Tagger.Update(macAddress, ipAddressTag, leaseNameTag)
 		}
-
-		gauges = append(gauges, &datadog.Metric{
+		c.measures.Gauge(&metrics.Sample{
 			Name:      "dnsmasq.dhcp.lease",
 			Value:     leaseStarted - timestampSeconds,
 			Timestamp: now,
@@ -145,28 +144,13 @@ func (c *DnsMasq) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, er
 		})
 	}
 
-	counters = make(datadog.Counter, len(c.dnsCounterQuestions))
 	for metricName, dnsQuestion := range c.dnsCounterQuestions {
 		v, err := c.queryDnsmasqMetric(&dnsQuestion)
 		if err != nil {
 			log.Printf("failed to query dnsmasq for %s: %v", dnsQuestion.Name, err)
 			continue
 		}
-		counters[metricName] = &datadog.Metric{
-			Name:      metricName,
-			Value:     v,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      hostTags,
-		}
-	}
-	for metricName, dnsQuestion := range c.dnsGaugeQuestions {
-		v, err := c.queryDnsmasqMetric(&dnsQuestion)
-		if err != nil {
-			log.Printf("failed to query dnsmasq for %s: %v", dnsQuestion.Name, err)
-			continue
-		}
-		gauges = append(gauges, &datadog.Metric{
+		_ = c.measures.Count(&metrics.Sample{
 			Name:      metricName,
 			Value:     v,
 			Timestamp: now,
@@ -174,7 +158,21 @@ func (c *DnsMasq) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, er
 			Tags:      hostTags,
 		})
 	}
-	return counters, gauges, nil
+	for metricName, dnsQuestion := range c.dnsGaugeQuestions {
+		v, err := c.queryDnsmasqMetric(&dnsQuestion)
+		if err != nil {
+			log.Printf("failed to query dnsmasq for %s: %v", dnsQuestion.Name, err)
+			continue
+		}
+		c.measures.Gauge(&metrics.Sample{
+			Name:      metricName,
+			Value:     v,
+			Timestamp: now,
+			Host:      c.conf.Host,
+			Tags:      hostTags,
+		})
+	}
+	return nil
 }
 
 func (c *DnsMasq) queryDnsmasqMetric(question *dns.Question) (float64, error) {

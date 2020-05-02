@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/metrics"
 )
 
 const (
@@ -35,12 +35,14 @@ Inter-| sta-|   Quality        |   Discarded packets               | Missed | WE
 */
 
 type Wireless struct {
-	conf *collector.Config
+	conf     *collector.Config
+	measures *metrics.Measures
 }
 
 func NewWireless(conf *collector.Config) collector.Collector {
 	return &Wireless{
-		conf: conf,
+		conf:     conf,
+		measures: metrics.NewMeasures(conf.SeriesCh),
 	}
 }
 
@@ -54,20 +56,16 @@ func (c *Wireless) Name() string {
 	return CollectorWirelessName
 }
 
-func (c *Wireless) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
-	var counters datadog.Counter
-	var gauges datadog.Gauge
-
+func (c *Wireless) Collect(_ context.Context) error {
 	file, err := os.Open(wirelessPath)
 	if err != nil {
-		return counters, gauges, err
+		return err
 	}
 	defer file.Close()
 	reader := bufio.NewReader(file)
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
 	now := time.Now()
 	l := 0
-	counters = make(datadog.Counter, 1)
 	for {
 		// TODO improve this reader
 		line, err := reader.ReadBytes('\n')
@@ -75,7 +73,7 @@ func (c *Wireless) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, e
 			if err == io.EOF {
 				break
 			}
-			return counters, gauges, err
+			return err
 		}
 		if l < 2 {
 			l++
@@ -98,28 +96,26 @@ func (c *Wireless) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, e
 			log.Printf("failed to parse noise: %v", err)
 			continue
 		}
-		gauges = append(gauges,
-			&datadog.Metric{
-				Name:      wirelessMetricPrefix + "noise",
-				Value:     noiseV,
-				Timestamp: now,
-				Host:      c.conf.Host,
-				Tags:      tags,
-			},
-		)
+		c.measures.Gauge(&metrics.Sample{
+			Name:      wirelessMetricPrefix + "noise",
+			Value:     noiseV,
+			Timestamp: now,
+			Host:      c.conf.Host,
+			Tags:      tags,
+		})
 
 		discardRetryV, err := strconv.ParseFloat(discardRetry, 10)
 		if err != nil {
 			log.Printf("failed to parse discard/retry: %v", err)
 			continue
 		}
-		counters[wirelessDiscardRetryMetric+device] = &datadog.Metric{
+		_ = c.measures.Count(&metrics.Sample{
 			Name:      wirelessDiscardRetryMetric,
 			Value:     discardRetryV,
 			Timestamp: now,
 			Host:      c.conf.Host,
 			Tags:      tags,
-		}
+		})
 	}
-	return counters, gauges, nil
+	return nil
 }

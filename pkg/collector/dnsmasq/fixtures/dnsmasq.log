@@ -127,4 +127,4 @@ Apr 20 21:35:09 dnsmasq[967]: cached alb-api-public-shard1-1447546466.us-east-1.
 Apr 20 21:35:09 dnsmasq[967]: cached alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 3.233.147.146
 Apr 20 21:35:09 dnsmasq[967]: cached alb-api-public-shard1-1447546466.us-east-1.elb.amazonaws.com is 3.233.147.153
 Apr 20 21:35:10 dnsmasq[967]: query[A] datadoghq.com from 192.168.1.1
-Apr 20 21:35:10 dnsmasq[967]: query[A] datadoghq.com from 192.168.1.1
+Apr 20 21:35:11 dnsmasq[967]: query[A] datadoghq.com from 192.168.1.1

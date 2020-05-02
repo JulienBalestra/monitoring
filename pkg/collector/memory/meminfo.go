@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/metrics"
 )
 
 const (
@@ -65,21 +65,23 @@ VmallocChunk:          0 kB
 */
 
 type Memory struct {
-	conf           *collector.Config
-	metricsMapping map[string]string
+	conf     *collector.Config
+	mapping  map[string]string
+	measures *metrics.Measures
 }
 
 func NewMemory(conf *collector.Config) collector.Collector {
 	return &Memory{
-		conf: conf,
+		conf:     conf,
+		measures: metrics.NewMeasures(conf.SeriesCh),
 		// TODO this is all the available metrics, some are commented for random reasons
-		metricsMapping: map[string]string{
-			"MemTotal":     memoryMetricPrefix + "total",
-			"MemFree":      memoryMetricPrefix + "free",
-			"MemShared":    memoryMetricPrefix + "shared",
-			"Buffers":      memoryMetricPrefix + "buffer",
-			"Cached":       memoryMetricPrefix + "cached",
-			"SwapCached":   memoryMetricPrefix + "swap.cached",
+		mapping: map[string]string{
+			"MemTotal":  memoryMetricPrefix + "total",
+			"MemFree":   memoryMetricPrefix + "free",
+			"MemShared": memoryMetricPrefix + "shared",
+			"Buffers":   memoryMetricPrefix + "buffer",
+			"Cached":    memoryMetricPrefix + "cached",
+			//"SwapCached":   memoryMetricPrefix + "swap.cached",
 			"Active":       memoryMetricPrefix + "active",
 			"Inactive":     memoryMetricPrefix + "inactive",
 			"MemAvailable": memoryMetricPrefix + "available",
@@ -93,9 +95,9 @@ func NewMemory(conf *collector.Config) collector.Collector {
 			//"HighFree":       memoryMetricPrefix + "high.free",
 			//"LowTotal":       memoryMetricPrefix + "low.total",
 			//"LowFree":        memoryMetricPrefix + "low.free",
-			"SwapTotal": memoryMetricPrefix + "swap.total",
-			"SwapFree":  memoryMetricPrefix + "swap.free",
-			"Dirty":     memoryMetricPrefix + "dirty",
+			//"SwapTotal": memoryMetricPrefix + "swap.total",
+			//"SwapFree":  memoryMetricPrefix + "swap.free",
+			"Dirty": memoryMetricPrefix + "dirty",
 			//"Writeback":      memoryMetricPrefix + "writeback",
 			//"AnonPages":      memoryMetricPrefix + "anon.pages",
 			//"Mapped":         memoryMetricPrefix + "mapped",
@@ -127,18 +129,15 @@ func (c *Memory) Name() string {
 	return CollectorMemoryName
 }
 
-func (c *Memory) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
-	var counters datadog.Counter
-	var gauges datadog.Gauge
-
+func (c *Memory) Collect(_ context.Context) error {
 	b, err := ioutil.ReadFile(memInfoPath)
 	if err != nil {
-		return counters, gauges, err
+		return err
 	}
 
 	lines := strings.Split(string(b[:len(b)-1]), "\n")
 	if len(lines) == 0 {
-		return counters, gauges, nil
+		return nil
 	}
 	now := time.Now()
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
@@ -150,10 +149,8 @@ func (c *Memory) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, err
 			continue
 		}
 		metricCandidate := raw[0][:len(raw[0])-1]
-		metricName := c.metricsMapping[metricCandidate] // remove the trailing ":"
+		metricName := c.mapping[metricCandidate] // remove the trailing ":"
 		if metricName == "" {
-			// TODO keep this in debug
-			//log.Printf("ignoring insupported meminfo metric %q", metricCandidate)
 			continue
 		}
 		value, err := strconv.ParseFloat(raw[1], 10)
@@ -162,7 +159,7 @@ func (c *Memory) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, err
 			continue
 		}
 
-		gauges = append(gauges, &datadog.Metric{
+		c.measures.Gauge(&metrics.Sample{
 			Name:      metricName,
 			Value:     value * 1000, // reported in kB
 			Timestamp: now,
@@ -170,6 +167,5 @@ func (c *Memory) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, err
 			Tags:      hostTags,
 		})
 	}
-
-	return counters, gauges, nil
+	return nil
 }

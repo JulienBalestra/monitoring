@@ -9,7 +9,7 @@ import (
 
 	"github.com/JulienBalestra/metrics/pkg/collector"
 	exportedTags "github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
+	"github.com/JulienBalestra/metrics/pkg/metrics"
 	"github.com/JulienBalestra/metrics/pkg/tagger"
 )
 
@@ -31,12 +31,14 @@ IP address       HW type     Flags       HW address            Mask     Device
 */
 
 type ARP struct {
-	conf *collector.Config
+	conf     *collector.Config
+	measures *metrics.Measures
 }
 
 func NewARP(conf *collector.Config) collector.Collector {
 	return &ARP{
-		conf: conf,
+		conf:     conf,
+		measures: metrics.NewMeasures(conf.SeriesCh),
 	}
 }
 
@@ -50,18 +52,15 @@ func (c *ARP) Name() string {
 	return CollectorARPName
 }
 
-func (c *ARP) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error) {
-	var counters datadog.Counter
-	var gauges datadog.Gauge
-
+func (c *ARP) Collect(_ context.Context) error {
 	b, err := ioutil.ReadFile(arpPath)
 	if err != nil {
-		return counters, gauges, err
+		return err
 	}
 
 	lines := strings.Split(string(b[:len(b)-1]), "\n")
 	if len(lines) == 0 {
-		return counters, gauges, nil
+		return nil
 	}
 	now := time.Now()
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
@@ -82,9 +81,9 @@ func (c *ARP) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error)
 		c.conf.Tagger.Update(macAddress, ipAddressTag, deviceTag)
 
 		// we rely on dnsmasq tags collection to make this available
-		tags := append(hostTags, c.conf.Tagger.GetWithDefault(macAddress, tagger.NewTagUnsafe(exportedTags.LeaseKey, tagger.MissingTagValue))...)
+		tags := append(hostTags, c.conf.Tagger.GetUnstableWithDefault(macAddress, tagger.NewTagUnsafe(exportedTags.LeaseKey, tagger.MissingTagValue))...)
 		tags = append(tags, deviceTag.String(), macAddressTag.String())
-		gauges = append(gauges, &datadog.Metric{
+		c.measures.Gauge(&metrics.Sample{
 			Name:      "network.arp",
 			Value:     1,
 			Timestamp: now,
@@ -92,6 +91,5 @@ func (c *ARP) Collect(_ context.Context) (datadog.Counter, datadog.Gauge, error)
 			Tags:      tags,
 		})
 	}
-
-	return counters, gauges, nil
+	return nil
 }
