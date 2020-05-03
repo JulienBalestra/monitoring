@@ -131,3 +131,50 @@ func TestMetricHash(t *testing.T) {
 		})
 	}
 }
+
+func TestGaugeDeviation(t *testing.T) {
+	now := time.Now()
+	for name, tc := range map[string]struct {
+		sample    *Sample
+		deviation bool
+		maxAge    time.Duration
+		len       int
+	}{
+		"true:0:2": {
+			&Sample{
+				Name:      "metric",
+				Value:     1,
+				Timestamp: now,
+				Host:      "host",
+				Tags:      []string{"one", "two"},
+			},
+			true,
+			0,
+			2,
+		},
+		"false:0:1": {
+			&Sample{
+				Name:      "metric",
+				Value:     1,
+				Timestamp: now,
+				Host:      "host",
+				Tags:      []string{"one", "two"},
+			},
+			false,
+			time.Hour,
+			1,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			ch := make(chan Series, 10)
+			defer close(ch)
+			m := NewMeasures(ch)
+			assert.True(t, m.GaugeDeviation(tc.sample, tc.maxAge))
+			assert.Equal(t, tc.deviation, m.GaugeDeviation(tc.sample, tc.maxAge))
+			assert.Len(t, ch, tc.len, ch)
+			// 0 will discard the deviation
+			assert.True(t, m.GaugeDeviation(tc.sample, 0))
+			assert.Len(t, ch, tc.len+1, ch)
+		})
+	}
+}

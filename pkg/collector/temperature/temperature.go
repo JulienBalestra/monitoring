@@ -53,13 +53,12 @@ func (c *Temperature) Collect(_ context.Context) error {
 	}
 	t /= 10
 
-	c.measures.Gauge(&metrics.Sample{
+	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:      "cpu.temperature",
 		Value:     t,
 		Timestamp: time.Now(),
 		Host:      c.conf.Host,
 		Tags:      c.conf.Tagger.Get(c.conf.Host),
-	},
-	)
+	}, c.conf.CollectInterval*3)
 	return nil
 }

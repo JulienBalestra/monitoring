@@ -31,8 +31,9 @@ type Sample struct {
 }
 
 type Measures struct {
-	counter map[uint64]*Sample
-	ch      chan Series
+	counter   map[uint64]*Sample
+	deviation map[uint64]*Sample
+	ch        chan Series
 }
 
 func (s *Sample) Count(newMetric *Sample) (*Series, error) {
@@ -74,21 +75,33 @@ func (s *Sample) Hash() uint64 {
 
 func NewMeasures(ch chan Series) *Measures {
 	return &Measures{
-		counter: make(map[uint64]*Sample),
-		ch:      ch,
+		counter:   make(map[uint64]*Sample),
+		deviation: make(map[uint64]*Sample),
+		ch:        ch,
 	}
 }
 
-func (m *Measures) Gauge(metric *Sample) {
+func (m *Measures) Gauge(newSample *Sample) {
 	m.ch <- Series{
-		Metric: metric.Name,
+		Metric: newSample.Name,
 		Points: [][]float64{
-			{float64(metric.Timestamp.Unix()), metric.Value},
+			{float64(newSample.Timestamp.Unix()), newSample.Value},
 		},
 		Type: TypeGauge,
-		Host: metric.Host,
-		Tags: metric.Tags,
+		Host: newSample.Host,
+		Tags: newSample.Tags,
 	}
+}
+
+func (m *Measures) GaugeDeviation(newSample *Sample, maxAge time.Duration) bool {
+	h := newSample.Hash()
+	oldSample, ok := m.counter[h]
+	if ok && newSample.Value == oldSample.Value && time.Since(oldSample.Timestamp) < maxAge {
+		return false
+	}
+	m.counter[h] = newSample
+	m.Gauge(newSample)
+	return true
 }
 
 func (m *Measures) Incr(newSample *Sample) error {

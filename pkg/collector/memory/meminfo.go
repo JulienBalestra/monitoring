@@ -159,13 +159,13 @@ func (c *Memory) Collect(_ context.Context) error {
 			continue
 		}
 
-		c.measures.Gauge(&metrics.Sample{
+		c.measures.GaugeDeviation(&metrics.Sample{
 			Name:      metricName,
 			Value:     value * 1000, // reported in kB
 			Timestamp: now,
 			Host:      c.conf.Host,
 			Tags:      hostTags,
-		})
+		}, c.conf.CollectInterval*3)
 	}
 	return nil
 }
