@@ -2,6 +2,7 @@ package network
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"io"
 	"io/ioutil"
@@ -79,10 +80,11 @@ func (c *Wireless) Collect(_ context.Context) error {
 			l++
 			continue
 		}
-		fields := strings.Fields(string(line))
-		device, noise, discardRetry := fields[0], fields[4], fields[8]
+		fields := bytes.Fields(line)
+		//                                    eth1:
+		//                                        ^
+		device, noise, discardRetry := string(fields[0][:len(fields[0])-1]), string(fields[4]), string(fields[8])
 
-		device = strings.TrimSuffix(device, ":")
 		deviceMac, err := ioutil.ReadFile(sysClassPath + device + "/address")
 		if err != nil {
 			log.Printf("failed to parse device: %v", err)
@@ -96,13 +98,13 @@ func (c *Wireless) Collect(_ context.Context) error {
 			log.Printf("failed to parse noise: %v", err)
 			continue
 		}
-		c.measures.Gauge(&metrics.Sample{
+		c.measures.GaugeDeviation(&metrics.Sample{
 			Name:      wirelessMetricPrefix + "noise",
 			Value:     noiseV,
 			Timestamp: now,
 			Host:      c.conf.Host,
 			Tags:      tags,
-		})
+		}, c.conf.CollectInterval*3)
 
 		discardRetryV, err := strconv.ParseFloat(discardRetry, 10)
 		if err != nil {

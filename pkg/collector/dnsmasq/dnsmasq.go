@@ -164,13 +164,13 @@ func (c *DnsMasq) Collect(_ context.Context) error {
 			log.Printf("failed to query dnsmasq for %s: %v", dnsQuestion.Name, err)
 			continue
 		}
-		c.measures.Gauge(&metrics.Sample{
+		c.measures.GaugeDeviation(&metrics.Sample{
 			Name:      metricName,
 			Value:     v,
 			Timestamp: now,
 			Host:      c.conf.Host,
 			Tags:      hostTags,
-		})
+		}, time.Minute*30)
 	}
 	return nil
 }

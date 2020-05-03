@@ -33,12 +33,15 @@ IP address       HW type     Flags       HW address            Mask     Device
 type ARP struct {
 	conf     *collector.Config
 	measures *metrics.Measures
+	leaseTag *tagger.Tag
 }
 
 func NewARP(conf *collector.Config) collector.Collector {
 	return &ARP{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.SeriesCh),
+
+		leaseTag: tagger.NewTagUnsafe(exportedTags.LeaseKey, tagger.MissingTagValue),
 	}
 }
 
@@ -81,15 +84,15 @@ func (c *ARP) Collect(_ context.Context) error {
 		c.conf.Tagger.Update(macAddress, ipAddressTag, deviceTag)
 
 		// we rely on dnsmasq tags collection to make this available
-		tags := append(hostTags, c.conf.Tagger.GetUnstableWithDefault(macAddress, tagger.NewTagUnsafe(exportedTags.LeaseKey, tagger.MissingTagValue))...)
+		tags := append(hostTags, c.conf.Tagger.GetUnstableWithDefault(macAddress, c.leaseTag)...)
 		tags = append(tags, deviceTag.String(), macAddressTag.String())
-		c.measures.Gauge(&metrics.Sample{
+		c.measures.GaugeDeviation(&metrics.Sample{
 			Name:      "network.arp",
 			Value:     1,
 			Timestamp: now,
 			Host:      c.conf.Host,
 			Tags:      tags,
-		})
+		}, c.conf.CollectInterval*3)
 	}
 	return nil
 }

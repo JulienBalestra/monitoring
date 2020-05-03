@@ -39,26 +39,26 @@ func (c *Tagger) Collect(_ context.Context) error {
 	tags := c.conf.Tagger.Get(c.conf.Host)
 
 	entities, keys, tagsNumber := c.conf.Tagger.Stats()
-	c.measures.Gauge(&metrics.Sample{
+	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:      "tagger.entities",
 		Value:     entities,
 		Timestamp: now,
 		Host:      c.conf.Host,
 		Tags:      tags,
-	})
-	c.measures.Gauge(&metrics.Sample{
+	}, c.conf.CollectInterval*3)
+	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:      "tagger.keys",
 		Value:     keys,
 		Timestamp: now,
 		Host:      c.conf.Host,
 		Tags:      tags,
-	})
-	c.measures.Gauge(&metrics.Sample{
+	}, c.conf.CollectInterval*3)
+	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:      "tagger.tags",
 		Value:     tagsNumber,
 		Timestamp: now,
 		Host:      c.conf.Host,
 		Tags:      tags,
-	})
+	}, c.conf.CollectInterval*3)
 	return nil
 }
