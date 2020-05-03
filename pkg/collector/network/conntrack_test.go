@@ -53,7 +53,7 @@ func TestNewConntrack(t *testing.T) {
 	assert.Equal(t, "udp", stats[key].protocol)
 
 	// TCP
-	key = "tcp443ESTABLISHED192.168.1.101"
+	key = "tcp443replied192.168.1.101"
 	assert.Equal(t, 38., stats[key].sPackets)
 	assert.Equal(t, 5399., stats[key].sBytes)
 
@@ -61,7 +61,7 @@ func TestNewConntrack(t *testing.T) {
 	assert.Equal(t, 11558., stats[key].dBytes)
 
 	assert.Equal(t, "443", stats[key].destinationPortRange)
-	assert.Equal(t, "ESTABLISHED", stats[key].state)
+	assert.Equal(t, "replied", stats[key].state)
 	assert.Equal(t, "tcp", stats[key].protocol)
 
 	// ICMP

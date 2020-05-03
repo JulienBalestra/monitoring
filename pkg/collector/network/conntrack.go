@@ -103,10 +103,11 @@ func (c *Conntrack) parseFields(stats map[string]*conntrackRecord, line []byte) 
 	switch line[0] {
 	case 't':
 		protocol = "tcp"
-		state = string(fields[0])
 		if bytes.Equal(fields[7], c.unrepliedBytes) {
+			state = "unreplied"
 			srcIpIndex, sPacketsIndex, sBytesIndex, dPacketIndex, dBytesIndex = 1, 5, 6, 12, 13
 		} else {
+			state = "replied"
 			srcIpIndex, sPacketsIndex, sBytesIndex, dPacketIndex, dBytesIndex = 1, 5, 6, 11, 12
 		}
 		dstPortRange, err = getPortRange(string(fields[4][6:]))
