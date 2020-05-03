@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/JulienBalestra/metrics/pkg/metrics"
+	"github.com/JulienBalestra/monitoring/pkg/metrics"
 )
 
 /*

@@ -4,9 +4,9 @@ through an optional Cobra command.
 
 To properly use it, add to go build the following flag:
 	-ldflags '-s -w \
-	-X github.com/JulienBalestra/metrics/cmd/version.Version=$(VERSION) \
-	-X github.com/JulienBalestra/metrics/cmd/version.Revision=$(REVISION) \
-	-X github.com/JulienBalestra/metrics/cmd/version.Package=$(PROJECT)'
+	-X github.com/JulienBalestra/monitoring/cmd/version.Version=$(VERSION) \
+	-X github.com/JulienBalestra/monitoring/cmd/version.Revision=$(REVISION) \
+	-X github.com/JulienBalestra/monitoring/cmd/version.Package=$(PROJECT)'
 
 
 */
@@ -23,7 +23,7 @@ import (
 var (
 	// Package is filled at linking time
 	// This could be statically set and doesn't need the ldflags
-	Package = "github.com/JulienBalestra/metrics"
+	Package = "github.com/JulienBalestra/monitoring"
 
 	// Version holds the complete version number. Filled in at linking time.
 	Version = "0.0.0+unknown"

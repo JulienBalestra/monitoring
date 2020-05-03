@@ -1,4 +1,4 @@
-# metrics project
+# monitoring project
 
 Intend to provide monitoring tools.
 

@@ -1,10 +1,10 @@
-TARGET=metrics
+TARGET=monitoring
 REVISION=$(shell git rev-parse HEAD)
 VERSION=
 
 VERSION_FLAGS=-ldflags '-s -w \
-    -X github.com/JulienBalestra/metrics/cmd/version.Version=$(VERSION) \
-    -X github.com/JulienBalestra/metrics/cmd/version.Revision=$(REVISION)'
+    -X github.com/JulienBalestra/monitoring/cmd/version.Version=$(VERSION) \
+    -X github.com/JulienBalestra/monitoring/cmd/version.Revision=$(REVISION)'
 
 arm:
 	GOARCH=arm GOARM=5 go build -o $(TARGET)-arm $(VERSION_FLAGS) .

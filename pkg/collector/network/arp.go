@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JulienBalestra/metrics/pkg/collector"
-	exportedTags "github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
-	"github.com/JulienBalestra/metrics/pkg/metrics"
-	"github.com/JulienBalestra/metrics/pkg/tagger"
+	"github.com/JulienBalestra/monitoring/pkg/collector"
+	exportedTags "github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
+	"github.com/JulienBalestra/monitoring/pkg/metrics"
+	"github.com/JulienBalestra/monitoring/pkg/tagger"
 )
 
 const (

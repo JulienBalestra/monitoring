@@ -1,4 +1,4 @@
-module github.com/JulienBalestra/metrics
+module github.com/JulienBalestra/monitoring
 
 go 1.13
 
