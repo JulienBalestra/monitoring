@@ -190,6 +190,53 @@
       }
     },
     {
+      "id": 6120135618666158,
+      "definition": {
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "id": 1413741540036256,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.conntrack.rx_bytes{$location} by {lease,protocol}.as_rate()",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "-sum:network.conntrack.tx_bytes{$location} by {lease,protocol}.as_rate()",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "network.conntrack.rx_bytes, network.conntrack.tx_bytes",
+              "time": {},
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          }
+        ],
+        "title": "conntrack"
+      }
+    },
+    {
       "id": 7085020805057324,
       "definition": {
         "type": "group",
@@ -251,59 +298,6 @@
           }
         ],
         "title": "wireless"
-      }
-    },
-    {
-      "id": 6120135618666158,
-      "definition": {
-        "type": "group",
-        "layout_type": "ordered",
-        "widgets": [
-          {
-            "id": 1413741540036256,
-            "definition": {
-              "type": "timeseries",
-              "requests": [
-                {
-                  "q": "sum:network.conntrack.rx_bytes{$location} by {lease,protocol}.as_rate()",
-                  "display_type": "area",
-                  "style": {
-                    "palette": "dog_classic",
-                    "line_type": "solid",
-                    "line_width": "normal"
-                  }
-                },
-                {
-                  "q": "-sum:network.conntrack.tx_bytes{$location} by {lease,protocol}.as_rate()",
-                  "display_type": "area",
-                  "style": {
-                    "palette": "dog_classic",
-                    "line_type": "solid",
-                    "line_width": "normal"
-                  }
-                }
-              ],
-              "yaxis": {
-                "label": "",
-                "scale": "linear",
-                "min": "auto",
-                "max": "auto",
-                "include_zero": true
-              },
-              "markers": [
-                {
-                  "value": "y = 0",
-                  "display_type": "info bold"
-                }
-              ],
-              "title": "network.conntrack.rx_bytes, network.conntrack.tx_bytes",
-              "time": {},
-              "show_legend": false,
-              "legend_size": "0"
-            }
-          }
-        ],
-        "title": "conntrack"
       }
     },
     {
