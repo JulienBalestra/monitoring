@@ -1,13 +1,13 @@
 package catalog
 
 import (
-	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/collector/dnsmasq"
-	"github.com/JulienBalestra/metrics/pkg/collector/load"
-	"github.com/JulienBalestra/metrics/pkg/collector/memory"
-	"github.com/JulienBalestra/metrics/pkg/collector/network"
-	"github.com/JulienBalestra/metrics/pkg/collector/tagger"
-	"github.com/JulienBalestra/metrics/pkg/collector/temperature"
+	"github.com/JulienBalestra/monitoring/pkg/collector"
+	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq"
+	"github.com/JulienBalestra/monitoring/pkg/collector/load"
+	"github.com/JulienBalestra/monitoring/pkg/collector/memory"
+	"github.com/JulienBalestra/monitoring/pkg/collector/network"
+	"github.com/JulienBalestra/monitoring/pkg/collector/tagger"
+	"github.com/JulienBalestra/monitoring/pkg/collector/temperature"
 )
 
 func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {

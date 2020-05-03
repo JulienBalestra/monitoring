@@ -1,4 +1,4 @@
-# metrics project
+# dd-wrt
 
 Intend to setup and monitor a dd-wrt router.
 

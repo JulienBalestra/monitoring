@@ -1,8 +1,8 @@
 #!/bin/sh
 
-LOG_DIR=/var/log/metrics
+LOG_DIR=/var/log/monitoring
 
 mkdir -pv ${LOG_DIR}
 cd ${LOG_DIR}
 mv -v nohup.out nohup.out.old
-exec nohup /jffs/bin/metrics.sh
+exec nohup /jffs/bin/monitoring.sh

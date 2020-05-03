@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/JulienBalestra/metrics/pkg/datadog"
-	"github.com/JulienBalestra/metrics/pkg/metrics"
+	"github.com/JulienBalestra/monitoring/pkg/datadog"
+	"github.com/JulienBalestra/monitoring/pkg/metrics"
 )
 
 func main() {
@@ -34,7 +34,7 @@ func main() {
 			},
 			Type: metrics.TypeGauge,
 			// take leverage of the tagger to manage tags
-			// import "github.com/JulienBalestra/metrics/pkg/tagger"
+			// import "github.com/JulienBalestra/monitoring/pkg/tagger"
 			Host: "my-host",
 			Tags: []string{"role:web", "tier:frontend"},
 		},

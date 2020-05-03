@@ -18,7 +18,7 @@
                   "aggregator": "avg"
                 }
               ],
-              "title": "WAN",
+              "title": "Download WAN",
               "autoscale": true,
               "precision": 0
             }
@@ -155,7 +155,16 @@
               "type": "timeseries",
               "requests": [
                 {
-                  "q": "sum:network.statistics.rx_crc_errors{$location} by {device}.as_rate()",
+                  "q": "sum:network.statistics.rx_crc_errors{$location} by {device}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "warm",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "-sum:network.statistics.tx_crc_errors{$location} by {device}.as_count()",
                   "display_type": "bars",
                   "style": {
                     "palette": "warm",
@@ -175,7 +184,17 @@
               "show_legend": false,
               "legend_size": "0"
             }
-          },
+          }
+        ],
+        "title": "network"
+      }
+    },
+    {
+      "id": 7085020805057324,
+      "definition": {
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
           {
             "id": 2610295235684518,
             "definition": {
@@ -202,9 +221,36 @@
               "show_legend": false,
               "legend_size": "0"
             }
+          },
+          {
+            "id": 404702579415962,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "avg:network.wireless.discard.retry{$location}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "warm",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "Avg of network.wireless.discard.retry over $location",
+              "show_legend": false,
+              "legend_size": "0"
+            }
           }
         ],
-        "title": "network"
+        "title": "wireless"
       }
     },
     {
@@ -214,12 +260,21 @@
         "layout_type": "ordered",
         "widgets": [
           {
-            "id": 3842788352053024,
+            "id": 1413741540036256,
             "definition": {
               "type": "timeseries",
               "requests": [
                 {
-                  "q": "sum:network.conntrack.tcp{state:established,$location} by {lease,src_ip}",
+                  "q": "sum:network.conntrack.rx_bytes{$location} by {lease,protocol}.as_rate()",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "-sum:network.conntrack.tx_bytes{$location} by {lease,protocol}.as_rate()",
                   "display_type": "area",
                   "style": {
                     "palette": "dog_classic",
@@ -235,131 +290,20 @@
                 "max": "auto",
                 "include_zero": true
               },
-              "title": "established by src, lease",
-              "show_legend": false,
-              "legend_size": "0"
-            }
-          },
-          {
-            "id": 8827473701387838,
-            "definition": {
-              "type": "timeseries",
-              "requests": [
+              "markers": [
                 {
-                  "q": "sum:network.conntrack.tcp{state:established,$location} by {dst_port}",
-                  "display_type": "area",
-                  "style": {
-                    "palette": "dog_classic",
-                    "line_type": "solid",
-                    "line_width": "normal"
-                  }
+                  "value": "y = 0",
+                  "display_type": "info bold"
                 }
               ],
-              "yaxis": {
-                "label": "",
-                "scale": "linear",
-                "min": "auto",
-                "max": "auto",
-                "include_zero": true
-              },
-              "title": "established by port",
-              "show_legend": false,
-              "legend_size": "0"
-            }
-          },
-          {
-            "id": 5285548284360768,
-            "definition": {
-              "type": "timeseries",
-              "requests": [
-                {
-                  "q": "sum:network.conntrack.tcp{$location} by {state}",
-                  "display_type": "area",
-                  "style": {
-                    "palette": "dog_classic",
-                    "line_type": "solid",
-                    "line_width": "normal"
-                  }
-                }
-              ],
-              "yaxis": {
-                "label": "",
-                "scale": "linear",
-                "min": "auto",
-                "max": "auto",
-                "include_zero": true
-              },
-              "title": "by state",
+              "title": "network.conntrack.rx_bytes, network.conntrack.tx_bytes",
+              "time": {},
               "show_legend": false,
               "legend_size": "0"
             }
           }
         ],
-        "title": "conntrack TCP"
-      }
-    },
-    {
-      "id": 257165044699568,
-      "definition": {
-        "type": "group",
-        "layout_type": "ordered",
-        "widgets": [
-          {
-            "id": 8016424363997044,
-            "definition": {
-              "type": "timeseries",
-              "requests": [
-                {
-                  "q": "sum:network.conntrack.udp{$location} by {lease,src_ip}",
-                  "display_type": "area",
-                  "style": {
-                    "palette": "dog_classic",
-                    "line_type": "solid",
-                    "line_width": "normal"
-                  }
-                }
-              ],
-              "yaxis": {
-                "label": "",
-                "scale": "linear",
-                "min": "auto",
-                "max": "auto",
-                "include_zero": true
-              },
-              "title": "Sum of network.conntrack.udp over * by lease,src_ip",
-              "show_legend": false,
-              "legend_size": "0"
-            }
-          },
-          {
-            "id": 6583873611859996,
-            "definition": {
-              "type": "timeseries",
-              "requests": [
-                {
-                  "q": "sum:network.conntrack.udp{$location} by {dst_port}",
-                  "display_type": "area",
-                  "style": {
-                    "palette": "dog_classic",
-                    "line_type": "solid",
-                    "line_width": "normal"
-                  }
-                }
-              ],
-              "yaxis": {
-                "label": "",
-                "scale": "linear",
-                "min": "auto",
-                "max": "auto",
-                "include_zero": true
-              },
-              "title": "Sum of network.conntrack.udp over * by dst_port",
-              "show_legend": false,
-              "legend_size": "0"
-            }
-          }
-        ],
-        "title": "conntrack UDP"
+        "title": "conntrack"
       }
     },
     {
@@ -544,7 +488,7 @@
                 "max": "auto",
                 "include_zero": true
               },
-              "title": "query by domain",
+              "title": "query by domain (+) / uniq (-)",
               "show_legend": false,
               "legend_size": "0"
             }
@@ -555,7 +499,7 @@
               "type": "toplist",
               "requests": [
                 {
-                  "q": "top(sum:dnsmasq.dns.query{$location} by {domain}.as_count(), 10, 'area', 'desc')"
+                  "q": "top(sum:dnsmasq.dns.query{$location} by {domain}.as_count(), 10, 'l2norm', 'desc')"
                 }
               ],
               "title": "query by domain"

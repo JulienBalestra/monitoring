@@ -3,12 +3,10 @@ version: 2
 templates:
   base: &base
     docker:
-      # image built from github.com/JulienBalestra/metrics/.circleci/Dockerfile, the tag represent the timestamp
-      # when the following command has been run:
-      # docker build ${GOPATH}/JulienBalestra/metrics/.circleci/Dockerfile -t julienbalestra/metrics:$(date +%s)
-      # docker push !$
-      # -> go get binaries like golint/goimports : go mod files are updated
-    - image: julienbalestra/metrics:1587406751
+      # TS=$(date +%s)
+      # docker build ${GOPATH}/src/github.com/JulienBalestra/monitoring/.circleci/ -t julienbalestra/monitoring:${TS}
+      # docker push julienbalestra/monitoring:${TS}
+    - image: julienbalestra/monitoring:1588509437
 
 jobs:
   fmt:

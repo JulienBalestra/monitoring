@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
-	"github.com/JulienBalestra/metrics/pkg/metrics"
-	"github.com/JulienBalestra/metrics/pkg/tagger"
+	"github.com/JulienBalestra/monitoring/pkg/collector"
+	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
+	"github.com/JulienBalestra/monitoring/pkg/metrics"
+	"github.com/JulienBalestra/monitoring/pkg/tagger"
 )
 
 const (
@@ -22,7 +22,8 @@ const (
 
 	dnsmasqLogPath = "/tmp/dnsmasq.log"
 
-	dnsmasqDateFormat = "2006Jan 2 15:04:05"
+	dnsmasqDateFormat  = "2006Jan 2 15:04:05"
+	dnsmasqQueryMetric = "dnsmasq.dns.query"
 )
 
 type Log struct {
@@ -32,6 +33,14 @@ type Log struct {
 	firstSep, secondSep, thirdSep []byte
 	startTailing                  time.Time
 	year                          string
+	leaseTag                      *tagger.Tag
+}
+
+type dnsQuery struct {
+	queryType string
+	domain    string
+	ipAddress string
+	count     float64
 }
 
 func newLog(conf *collector.Config) *Log {
@@ -43,6 +52,7 @@ func newLog(conf *collector.Config) *Log {
 		secondSep: []byte("] "),
 		thirdSep:  []byte{' '},
 		year:      time.Now().Format("2006"),
+		leaseTag:  tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
 	}
 }
 
@@ -58,6 +68,19 @@ func (c *Log) Config() *collector.Config {
 
 func (c *Log) Name() string {
 	return CollectorDnsMasqLogName
+}
+
+func (c *Log) queryToSample(query *dnsQuery) *metrics.Sample {
+	tags := append(c.conf.Tagger.GetUnstableWithDefault(query.ipAddress, c.leaseTag),
+		c.conf.Tagger.GetUnstable(c.conf.Host)...)
+	tags = append(tags, "domain:"+query.domain, "type:"+query.queryType)
+	return &metrics.Sample{
+		Name:      dnsmasqQueryMetric,
+		Value:     query.count,
+		Timestamp: time.Now(),
+		Host:      c.conf.Host,
+		Tags:      tags,
+	}
 }
 
 func (c *Log) Collect(ctx context.Context) error {
@@ -85,7 +108,7 @@ func (c *Log) Collect(ctx context.Context) error {
 	}()
 	c.year = time.Now().Format("2006")
 	c.startTailing = time.Now()
-	samples := make(map[string]*metrics.Sample)
+	queries := make(map[string]*dnsQuery)
 
 	ticker := time.NewTicker(c.conf.CollectInterval)
 	defer ticker.Stop()
@@ -97,12 +120,12 @@ func (c *Log) Collect(ctx context.Context) error {
 			return nil
 
 		case <-ticker.C:
-			if len(samples) == 0 {
+			if len(queries) == 0 {
 				continue
 			}
 			var err error
-			for _, sample := range samples {
-				err = c.measures.Incr(sample)
+			for _, query := range queries {
+				err = c.measures.Incr(c.queryToSample(query))
 				if err == nil {
 					continue
 				}
@@ -111,10 +134,10 @@ func (c *Log) Collect(ctx context.Context) error {
 			if err == nil {
 				log.Printf("successfully run collection: %s", c.Name())
 			}
-			samples = make(map[string]*metrics.Sample)
+			queries = make(map[string]*dnsQuery)
 
 		case line := <-lineCh:
-			c.processLine(samples, line)
+			c.processLine(queries, line)
 		}
 	}
 }
@@ -158,7 +181,7 @@ func (c *Log) tail(ctx context.Context, ch chan []byte, f string) error {
 	}
 }
 
-func (c *Log) processLine(counters map[string]*metrics.Sample, line []byte) {
+func (c *Log) processLine(counters map[string]*dnsQuery, line []byte) {
 	beginQueryType := bytes.Index(line, c.firstSep)
 	if beginQueryType == -1 {
 		return
@@ -209,23 +232,15 @@ func (c *Log) processLine(counters map[string]*metrics.Sample, line []byte) {
 	//     ^
 	ipAddress := strings.TrimRight(string(line[endOfquery+6:]), "\n")
 	key := queryType + domain + ipAddress
-	leaseTag := tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue)
-	tags := append(c.conf.Tagger.GetUnstableWithDefault(ipAddress, leaseTag),
-		c.conf.Tagger.GetUnstable(c.conf.Host)...)
-	tags = append(tags, "domain:"+domain, "type:"+queryType)
 	m, ok := counters[key]
 	if ok {
-		m.Timestamp = t
-		m.Value++
-		m.Tags = tags
+		m.count++
 		return
 	}
-	counters[key] = &metrics.Sample{
-		Name:      "dnsmasq.dns.query",
-		Value:     1,
-		Timestamp: t,
-		Host:      c.conf.Host,
-		Tags:      tags,
+	counters[key] = &dnsQuery{
+		queryType: queryType,
+		domain:    domain,
+		ipAddress: ipAddress,
+		count:     1,
 	}
-	return
 }

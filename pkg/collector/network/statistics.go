@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/metrics"
+	"github.com/JulienBalestra/monitoring/pkg/collector"
+	"github.com/JulienBalestra/monitoring/pkg/metrics"
 )
 
 const (

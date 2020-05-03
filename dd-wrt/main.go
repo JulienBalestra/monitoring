@@ -15,14 +15,23 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/JulienBalestra/metrics/cmd/version"
-	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/collector/catalog"
-	datadogCollector "github.com/JulienBalestra/metrics/pkg/collector/datadog"
-	"github.com/JulienBalestra/metrics/pkg/datadog"
-	"github.com/JulienBalestra/metrics/pkg/tagger"
+	"github.com/JulienBalestra/monitoring/cmd/version"
+	"github.com/JulienBalestra/monitoring/pkg/collector"
+	"github.com/JulienBalestra/monitoring/pkg/collector/catalog"
+	datadogCollector "github.com/JulienBalestra/monitoring/pkg/collector/datadog"
+	"github.com/JulienBalestra/monitoring/pkg/datadog"
+	"github.com/JulienBalestra/monitoring/pkg/tagger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+)
+
+const (
+	datadogAPIKeyFlag         = "datadog-api-key"
+	datadogClientSendInterval = "datadog-client-send-interval"
+	hostnameFlag              = "hostname"
+	defaultCollectionInterval = time.Second * 30
+	minimalSendInterval       = time.Second * 10
+	defaultPIDFilePath        = "/tmp/monitoring.pid"
 )
 
 func notifySignals(ctx context.Context, cancel context.CancelFunc, tag *tagger.Tagger) {
@@ -53,20 +62,11 @@ func notifySignals(ctx context.Context, cancel context.CancelFunc, tag *tagger.T
 	}
 }
 
-const (
-	datadogAPIKeyFlag         = "datadog-api-key"
-	datadogClientSendInterval = "datadog-client-send-interval"
-	hostnameFlag              = "hostname"
-	defaultCollectionInterval = time.Second * 30
-	minimalSendInterval       = time.Second * 10
-	defaultPIDFilePath        = "/tmp/metrics.pid"
-)
-
 func main() {
 	root := &cobra.Command{
-		Short: "metrics for dd-wrt routers",
-		Long:  "metrics for dd-wrt routers, disable any collector with --collector-${collector}=0s",
-		Use:   "metrics",
+		Short: "monitoring app for dd-wrt routers",
+		Long:  "monitoring app for dd-wrt routers, disable any collector with --collector-${collector}=0s",
+		Use:   "monitoring",
 	}
 	root.AddCommand(version.NewCommand())
 	fs := &pflag.FlagSet{}
@@ -199,6 +199,7 @@ func main() {
 		_ = client.MetricClientShutdown(ctxShutdown, hostname, tags...)
 		cancel()
 		waitGroup.Wait()
+		log.Print("program exit")
 		return nil
 	}
 	exitCode := 0
@@ -206,6 +207,5 @@ func main() {
 	if err != nil {
 		exitCode = 1
 	}
-	log.Printf("program exit %d", exitCode)
 	os.Exit(exitCode)
 }

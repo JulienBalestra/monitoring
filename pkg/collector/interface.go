@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/JulienBalestra/metrics/pkg/metrics"
+	"github.com/JulienBalestra/monitoring/pkg/metrics"
 
-	"github.com/JulienBalestra/metrics/pkg/tagger"
+	"github.com/JulienBalestra/monitoring/pkg/tagger"
 )
 
 type Config struct {

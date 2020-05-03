@@ -2,37 +2,50 @@ package network
 
 import (
 	"bufio"
+	"bytes"
 	"context"
-	"errors"
 	"io"
+	"log"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
-	"github.com/JulienBalestra/metrics/pkg/collector"
-	"github.com/JulienBalestra/metrics/pkg/collector/dnsmasq/exported"
-	selfExported "github.com/JulienBalestra/metrics/pkg/collector/network/exported"
-	"github.com/JulienBalestra/metrics/pkg/metrics"
-	"github.com/JulienBalestra/metrics/pkg/tagger"
+	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
+	selfExported "github.com/JulienBalestra/monitoring/pkg/collector/network/exported"
+	"github.com/JulienBalestra/monitoring/pkg/tagger"
+
+	"github.com/JulienBalestra/monitoring/pkg/collector"
+	"github.com/JulienBalestra/monitoring/pkg/metrics"
 )
 
 const (
 	CollectorConntrackName = "network-conntrack"
 
 	conntrackPath = "/proc/net/ip_conntrack"
-	srcPrefix     = "src="
 )
 
 type Conntrack struct {
 	conf     *collector.Config
 	measures *metrics.Measures
+
+	conntrackPath string
+
+	tagLease, tagDevice *tagger.Tag
+	unrepliedBytes      []byte
 }
 
 func NewConntrack(conf *collector.Config) collector.Collector {
+	return newConntrack(conf)
+}
+
+func newConntrack(conf *collector.Config) *Conntrack {
 	return &Conntrack{
-		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		conf:           conf,
+		measures:       metrics.NewMeasures(conf.SeriesCh),
+		conntrackPath:  conntrackPath,
+		tagLease:       tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
+		tagDevice:      tagger.NewTagUnsafe(selfExported.DeviceKey, tagger.MissingTagValue),
+		unrepliedBytes: []byte("[UNREPLIED]"),
 	}
 }
 
@@ -46,88 +59,131 @@ func (c *Conntrack) Name() string {
 	return CollectorConntrackName
 }
 
-func getPortTag(portField string) (string, error) {
-	const portTagPrefix = "dst_port:"
-	dstPort := strings.TrimPrefix(portField, "dport=")
+func getPortRange(dstPort string) (string, error) {
 	port, err := strconv.Atoi(dstPort)
 	if err != nil {
 		return "", err
 	}
 	if port < 1024 {
-		return portTagPrefix + dstPort, nil
+		return dstPort, nil
 	}
 	if port < 8191 {
-		return portTagPrefix + "1024-8191", nil
+		return "1024-8191", nil
 	}
 	if port < 49151 {
-		return portTagPrefix + "8191-49151", nil
+		return "8191-49151", nil
 	}
-	return portTagPrefix + "49152-65535", nil
+	return "49152-65535", nil
 }
 
-func (c *Conntrack) parseTCPFields(fields []string, tcpStats map[string]*metrics.Sample) error {
-	if len(fields) < 8 {
-		return errors.New("incorrect tcp fields")
+type conntrackRecord struct {
+	sourceIpAddress      string
+	destinationPortRange string
+
+	sBytes   float64
+	dBytes   float64
+	sPackets float64
+	dPackets float64
+
+	protocol string
+	state    string
+}
+
+func (c *Conntrack) parseFields(stats map[string]*conntrackRecord, line []byte) error {
+	var err error
+	var protocol, state, dstPortRange string
+	var srcIpIndex, sPacketsIndex, sBytesIndex, dPacketIndex, dBytesIndex int
+
+	// tcp      6 3 CLOSE
+	//              ^
+	index := bytes.IndexFunc(line[9:], func(r rune) bool {
+		return (r >= 'A' && r <= 'Z') || r == 's'
+	})
+	fields := bytes.Fields(line[index+9:])
+	switch line[0] {
+	case 't':
+		protocol = "tcp"
+		state = string(fields[0])
+		if bytes.Equal(fields[7], c.unrepliedBytes) {
+			srcIpIndex, sPacketsIndex, sBytesIndex, dPacketIndex, dBytesIndex = 1, 5, 6, 12, 13
+		} else {
+			srcIpIndex, sPacketsIndex, sBytesIndex, dPacketIndex, dBytesIndex = 1, 5, 6, 11, 12
+		}
+		dstPortRange, err = getPortRange(string(fields[4][6:]))
+		if err != nil {
+			return err
+		}
+	case 'u':
+		protocol = "udp"
+		if bytes.Equal(fields[6], c.unrepliedBytes) {
+			state = "unreplied"
+			srcIpIndex, sPacketsIndex, sBytesIndex, dPacketIndex, dBytesIndex = 0, 4, 5, 11, 12
+		} else {
+			state = "replied"
+			srcIpIndex, sPacketsIndex, sBytesIndex, dPacketIndex, dBytesIndex = 0, 4, 5, 10, 11
+		}
+		s := string(fields[3][6:])
+		dstPortRange, err = getPortRange(s)
+		if err != nil {
+			return err
+		}
+	case 'i':
+		protocol = "icmp"
+		//      type=8
+		//           ^
+		state = string(fields[2][5:])
+		dstPortRange = "-1"
+		srcIpIndex, sPacketsIndex, sBytesIndex, dPacketIndex, dBytesIndex = 0, 5, 6, 12, 13
 	}
-	state, srcIp, dstPort := fields[3], fields[4], fields[7]
-	portTag, err := getPortTag(dstPort)
+	//                       src=127.0.0.1
+	//                           ^
+	srcIp := string(fields[srcIpIndex][4:])
+	key := protocol + dstPortRange + state + srcIp
+	conn, ok := stats[key]
+	if !ok {
+		conn = &conntrackRecord{
+			sourceIpAddress:      srcIp,
+			destinationPortRange: dstPortRange,
+			state:                state,
+			protocol:             protocol,
+		}
+	}
+	//                                         packets=119
+	//                                                 ^
+	sPackets, err := strconv.ParseFloat(string(fields[sPacketsIndex][8:]), 10)
 	if err != nil {
 		return err
 	}
-	srcIp = strings.TrimPrefix(srcIp, srcPrefix)
-	mapKey := srcIp + state + dstPort
-	st, ok := tcpStats[mapKey]
-	if !ok {
-		st = &metrics.Sample{
-			Name: "network.conntrack.tcp",
-			Host: c.conf.Host,
-			Tags: append(c.conf.Tagger.GetWithDefault(srcIp,
-				tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
-				tagger.NewTagUnsafe(selfExported.DeviceKey, tagger.MissingTagValue),
-			), "state:"+state, "src_ip:"+srcIp, portTag),
-		}
-		tcpStats[mapKey] = st
-	}
-	st.Value++
-	return nil
-}
-
-func (c *Conntrack) parseUDPFields(fields []string, udpStats map[string]*metrics.Sample) error {
-	if len(fields) < 7 {
-		return errors.New("incorrect udp fields")
-	}
-	srcIp, dstPort := fields[3], fields[6]
-	portTag, err := getPortTag(dstPort)
+	//                                       bytes=7180
+	//                                             ^
+	sBytes, err := strconv.ParseFloat(string(fields[sBytesIndex][6:]), 10)
 	if err != nil {
 		return err
 	}
-	srcIp = strings.TrimPrefix(srcIp, srcPrefix)
-	mapKey := srcIp + dstPort
-	st, ok := udpStats[mapKey]
-	if !ok {
-		st = &metrics.Sample{
-			Name: "network.conntrack.udp",
-			Host: c.conf.Host,
-			Tags: append(c.conf.Tagger.GetWithDefault(srcIp,
-				tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
-				tagger.NewTagUnsafe(selfExported.DeviceKey, tagger.MissingTagValue),
-			), "src_ip:"+srcIp, portTag),
-		}
-		udpStats[mapKey] = st
+	dPackets, err := strconv.ParseFloat(string(fields[dPacketIndex][8:]), 10)
+	if err != nil {
+		return err
 	}
-	st.Value++
+	dBytes, err := strconv.ParseFloat(string(fields[dBytesIndex][6:]), 10)
+	if err != nil {
+		return err
+	}
+	conn.sPackets += sPackets
+	conn.sBytes += sBytes
+	conn.dPackets += dPackets
+	conn.dBytes += dBytes
+	stats[key] = conn
 	return nil
 }
 
 func (c *Conntrack) Collect(_ context.Context) error {
-	file, err := os.Open(conntrackPath)
+	file, err := os.Open(c.conntrackPath)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 	reader := bufio.NewReader(file)
-	tcpStats := make(map[string]*metrics.Sample)
-	udpStats := make(map[string]*metrics.Sample)
+	stats := make(map[string]*conntrackRecord)
 	for {
 		// TODO improve this reader
 		line, err := reader.ReadBytes('\n')
@@ -137,25 +193,56 @@ func (c *Conntrack) Collect(_ context.Context) error {
 			}
 			return err
 		}
-		fields := strings.Fields(string(line))
-		switch fields[0] {
-		case "tcp":
-			_ = c.parseTCPFields(fields, tcpStats)
-		case "udp":
-			_ = c.parseUDPFields(fields, udpStats)
+		err = c.parseFields(stats, line)
+		if err != nil {
+			log.Printf("failed to parse conntrack record: %s %v", string(line), err)
 		}
 	}
-	hostTags := c.conf.Tagger.Get(c.conf.Host)
+	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
 	now := time.Now()
-	for _, st := range tcpStats {
-		st.Timestamp = now
-		st.Tags = append(st.Tags, hostTags...)
-		c.measures.Gauge(st)
-	}
-	for _, st := range udpStats {
-		st.Timestamp = now
-		st.Tags = append(st.Tags, hostTags...)
-		c.measures.Gauge(st)
+	for _, record := range stats {
+		tags := append(hostTags,
+			c.conf.Tagger.GetUnstableWithDefault(record.sourceIpAddress,
+				c.tagLease,
+				c.tagDevice,
+			)...)
+		tags = append(tags,
+			"protocol:"+record.protocol,
+			"state:"+record.state,
+			"dport:"+record.destinationPortRange,
+			"ip:"+record.sourceIpAddress,
+		)
+		// TX: src client --> NAT --> dst server
+		_ = c.measures.Count(&metrics.Sample{
+			Name:      "network.conntrack.tx_packets",
+			Value:     record.sPackets,
+			Timestamp: now,
+			Host:      c.conf.Host,
+			Tags:      tags,
+		})
+		_ = c.measures.Count(&metrics.Sample{
+			Name:      "network.conntrack.tx_bytes",
+			Value:     record.sBytes,
+			Timestamp: now,
+			Host:      c.conf.Host,
+			Tags:      tags,
+		})
+
+		// RX: src client <-- NAT <-- dst server
+		_ = c.measures.Count(&metrics.Sample{
+			Name:      "network.conntrack.rx_packets",
+			Value:     record.dPackets,
+			Timestamp: now,
+			Host:      c.conf.Host,
+			Tags:      tags,
+		})
+		_ = c.measures.Count(&metrics.Sample{
+			Name:      "network.conntrack.rx_bytes",
+			Value:     record.dBytes,
+			Timestamp: now,
+			Host:      c.conf.Host,
+			Tags:      tags,
+		})
 	}
 	return nil
 }
