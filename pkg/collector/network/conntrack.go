@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"log"
 	"os"
@@ -103,12 +104,13 @@ func (c *Conntrack) parseFields(stats map[string]*conntrackRecord, line []byte) 
 	switch line[0] {
 	case 't':
 		protocol = "tcp"
+		srcIpIndex, sPacketsIndex, sBytesIndex = 1, 5, 6
 		if bytes.Equal(fields[7], c.unrepliedBytes) {
 			state = "unreplied"
-			srcIpIndex, sPacketsIndex, sBytesIndex, dPacketIndex, dBytesIndex = 1, 5, 6, 12, 13
+			dPacketIndex, dBytesIndex = 12, 13
 		} else {
 			state = "replied"
-			srcIpIndex, sPacketsIndex, sBytesIndex, dPacketIndex, dBytesIndex = 1, 5, 6, 11, 12
+			dPacketIndex, dBytesIndex = 11, 12
 		}
 		dstPortRange, err = getPortRange(string(fields[4][6:]))
 		if err != nil {
@@ -116,12 +118,13 @@ func (c *Conntrack) parseFields(stats map[string]*conntrackRecord, line []byte) 
 		}
 	case 'u':
 		protocol = "udp"
+		srcIpIndex, sPacketsIndex, sBytesIndex = 0, 4, 5
 		if bytes.Equal(fields[6], c.unrepliedBytes) {
 			state = "unreplied"
-			srcIpIndex, sPacketsIndex, sBytesIndex, dPacketIndex, dBytesIndex = 0, 4, 5, 11, 12
+			dPacketIndex, dBytesIndex = 11, 12
 		} else {
 			state = "replied"
-			srcIpIndex, sPacketsIndex, sBytesIndex, dPacketIndex, dBytesIndex = 0, 4, 5, 10, 11
+			dPacketIndex, dBytesIndex = 10, 11
 		}
 		s := string(fields[3][6:])
 		dstPortRange, err = getPortRange(s)
@@ -130,11 +133,18 @@ func (c *Conntrack) parseFields(stats map[string]*conntrackRecord, line []byte) 
 		}
 	case 'i':
 		protocol = "icmp"
-		//      type=8
-		//           ^
-		state = string(fields[2][5:])
-		dstPortRange = "-1"
-		srcIpIndex, sPacketsIndex, sBytesIndex, dPacketIndex, dBytesIndex = 0, 5, 6, 12, 13
+		srcIpIndex, sPacketsIndex, sBytesIndex = 0, 5, 6
+		dstPortRange = string(fields[2][5:])
+		if bytes.Equal(fields[7], c.unrepliedBytes) {
+			state = "unreplied"
+			dPacketIndex, dBytesIndex = 13, 14
+		} else {
+			state = "replied"
+			dPacketIndex, dBytesIndex = 12, 13
+		}
+	}
+	if len(fields) < dBytesIndex {
+		return errors.New("invalid len of parsed conntrack line: " + strconv.Itoa(len(fields)))
 	}
 	//                       src=127.0.0.1
 	//                           ^
