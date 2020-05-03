@@ -20,4 +20,4 @@ exec /jffs/bin/monitoring \
     --collector-network-wireless=30s \
     --collector-tagger=2m \
     --collector-temperature=2m \
-    --collector-wl=30s
+    --collector-wl=15s
