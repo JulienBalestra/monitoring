@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"hash/fnv"
 	"strconv"
 	"sync"
 )
@@ -39,20 +38,18 @@ func (st *AggregateStore) Aggregate(series ...*Series) int {
 	matchingSeries := 0
 	st.mu.Lock()
 	for _, s := range series {
-		h := fnv.New64()
-		_, _ = h.Write([]byte(s.Metric))
-		_, _ = h.Write([]byte(s.Host))
-		_, _ = h.Write([]byte(s.Type))
-		_, _ = h.Write([]byte(strconv.FormatInt(int64(s.Interval), 10)))
+		h := hashNew()
+		h = hashAdd(h, s.Metric)
+		h = hashAdd(h, s.Host)
+		h = hashAdd(h, s.Type)
+		h = hashAdd(h, strconv.FormatInt(int64(s.Interval), 10))
 
 		for _, tag := range s.Tags {
-			_, _ = h.Write([]byte(tag))
+			h = hashAdd(h, tag)
 		}
-		hash := h.Sum64()
-
-		existing, ok := st.store[hash]
+		existing, ok := st.store[h]
 		if !ok {
-			st.store[hash] = s
+			st.store[h] = s
 			continue
 		}
 		matchingSeries++

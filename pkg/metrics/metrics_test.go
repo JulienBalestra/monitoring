@@ -178,3 +178,14 @@ func TestGaugeDeviation(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkSampleHash(b *testing.B) {
+	s := &Sample{
+		Name:      "metric",
+		Value:     1,
+		Timestamp: time.Now(),
+		Host:      "host",
+		Tags:      []string{"one", "two"},
+	}
+	s.Hash()
+}
