@@ -135,6 +135,7 @@ func (c *Log) Collect(ctx context.Context) error {
 				log.Printf("successfully run collection: %s", c.Name())
 			}
 			queries = make(map[string]*dnsQuery)
+			c.measures.Purge()
 
 		case line := <-lineCh:
 			c.processLine(queries, line)

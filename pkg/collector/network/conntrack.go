@@ -255,5 +255,6 @@ func (c *Conntrack) Collect(_ context.Context) error {
 			Tags:      tags,
 		})
 	}
+	c.measures.Purge()
 	return nil
 }

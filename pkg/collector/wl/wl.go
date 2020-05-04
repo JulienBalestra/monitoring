@@ -197,5 +197,6 @@ func (c *WL) Collect(ctx context.Context) error {
 			c.measures.GaugeDeviation(s, c.conf.CollectInterval*3)
 		}
 	}
+	c.measures.Purge()
 	return nil
 }

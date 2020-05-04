@@ -94,5 +94,6 @@ func (c *ARP) Collect(_ context.Context) error {
 			Tags:      tags,
 		}, c.conf.CollectInterval*3)
 	}
+	c.measures.Purge()
 	return nil
 }

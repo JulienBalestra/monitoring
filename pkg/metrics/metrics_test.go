@@ -175,6 +175,10 @@ func TestGaugeDeviation(t *testing.T) {
 			// 0 will discard the deviation
 			assert.True(t, m.GaugeDeviation(tc.sample, 0))
 			assert.Len(t, ch, tc.len+1, ch)
+			m.maxAge = 0
+			m.Purge()
+			assert.True(t, m.GaugeDeviation(tc.sample, time.Hour*24))
+			assert.False(t, m.GaugeDeviation(tc.sample, time.Hour*24))
 		})
 	}
 }
