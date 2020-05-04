@@ -34,6 +34,9 @@ type Measures struct {
 	counter   map[uint64]*Sample
 	deviation map[uint64]*Sample
 	ch        chan Series
+
+	purge  time.Time
+	maxAge time.Duration
 }
 
 func (s *Sample) Count(newMetric *Sample) (*Series, error) {
@@ -78,7 +81,26 @@ func NewMeasures(ch chan Series) *Measures {
 		counter:   make(map[uint64]*Sample),
 		deviation: make(map[uint64]*Sample),
 		ch:        ch,
+		purge:     time.Now(),
+		maxAge:    time.Hour * 48,
 	}
+}
+
+func (m *Measures) Purge() {
+	if time.Since(m.purge) < m.maxAge {
+		return
+	}
+	for key, sample := range m.counter {
+		if time.Since(sample.Timestamp) > m.maxAge {
+			delete(m.counter, key)
+		}
+	}
+	for key, sample := range m.deviation {
+		if time.Since(sample.Timestamp) > m.maxAge {
+			delete(m.counter, key)
+		}
+	}
+	m.purge = time.Now()
 }
 
 func (m *Measures) Gauge(newSample *Sample) {

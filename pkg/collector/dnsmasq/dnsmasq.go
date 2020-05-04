@@ -172,6 +172,7 @@ func (c *DnsMasq) Collect(_ context.Context) error {
 			Tags:      hostTags,
 		}, time.Minute*30)
 	}
+	c.measures.Purge()
 	return nil
 }
 
