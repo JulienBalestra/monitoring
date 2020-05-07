@@ -6,7 +6,7 @@ templates:
       # TS=$(date +%s)
       # docker build ${GOPATH}/src/github.com/JulienBalestra/monitoring/.circleci/ -t julienbalestra/monitoring:${TS}
       # docker push julienbalestra/monitoring:${TS}
-    - image: julienbalestra/monitoring:1588509437
+    - image: julienbalestra/monitoring:1588964514
 
 jobs:
   fmt:
@@ -39,6 +39,12 @@ jobs:
     - checkout
     - run: make test
 
+  ineffassign:
+    <<: *base
+    steps:
+    - checkout
+    - run: make ineffassign
+
   build-amd64:
     <<: *base
     steps:
@@ -60,5 +66,6 @@ workflows:
     - vet
     - lint
     - test
+    - ineffassign
     - build-amd64
     - example

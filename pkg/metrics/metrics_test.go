@@ -70,7 +70,7 @@ func TestMetricCount(t *testing.T) {
 			},
 			false,
 		},
-		"0": {
+		"-1": {
 			&Sample{
 				Name:      "metric",
 				Value:     1,
@@ -80,7 +80,7 @@ func TestMetricCount(t *testing.T) {
 			},
 			&Sample{
 				Name:      "metric",
-				Value:     1,
+				Value:     0,
 				Timestamp: now.Add(time.Second),
 				Host:      "host",
 				Tags:      []string{"1:1"},

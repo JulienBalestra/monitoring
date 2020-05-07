@@ -3,6 +3,8 @@ package metrics
 import (
 	"strconv"
 	"sync"
+
+	"github.com/JulienBalestra/monitoring/pkg/fnv"
 )
 
 type AggregateStore struct {
@@ -38,14 +40,14 @@ func (st *AggregateStore) Aggregate(series ...*Series) int {
 	matchingSeries := 0
 	st.mu.Lock()
 	for _, s := range series {
-		h := hashNew()
-		h = hashAdd(h, s.Metric)
-		h = hashAdd(h, s.Host)
-		h = hashAdd(h, s.Type)
-		h = hashAdd(h, strconv.FormatInt(int64(s.Interval), 10))
+		h := fnv.NewHash()
+		h = fnv.AddString(h, s.Metric)
+		h = fnv.AddString(h, s.Host)
+		h = fnv.AddString(h, s.Type)
+		h = fnv.AddString(h, strconv.FormatInt(int64(s.Interval), 10))
 
 		for _, tag := range s.Tags {
-			h = hashAdd(h, tag)
+			h = fnv.AddString(h, tag)
 		}
 		existing, ok := st.store[h]
 		if !ok {

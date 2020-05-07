@@ -1,8 +1,8 @@
 #!/bin/sh
 
-LOG_DIR=/var/log/monitoring
+LOG_DIR=/tmp/mnt/sda2/log
 
 mkdir -pv ${LOG_DIR}
 cd ${LOG_DIR}
 mv -v nohup.out nohup.out.old
-exec nohup /jffs/bin/monitoring.sh
+exec nohup /tmp/mnt/sda2/monitoring.sh
