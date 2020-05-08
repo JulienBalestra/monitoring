@@ -6,7 +6,7 @@ kill $(cat ${PID_FILE})
 export DATADOG_API_KEY="fake-api-key********************"
 export DATADOG_HOST_TAGS=location:home,room:living-room
 
-exec /jffs/bin/monitoring \
+exec /tmp/mnt/sda2/monitoring \
     --pid-file=${PID_FILE} \
     --datadog-host-tags=${DATADOG_HOST_TAGS} \
     --collector-datadog-client=2m \

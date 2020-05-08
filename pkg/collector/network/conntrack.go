@@ -1,15 +1,12 @@
 package network
 
 import (
-	"bufio"
-	"bytes"
 	"context"
-	"errors"
-	"io"
 	"log"
-	"os"
 	"strconv"
 	"time"
+
+	"github.com/JulienBalestra/monitoring/pkg/conntrack"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
 	selfExported "github.com/JulienBalestra/monitoring/pkg/collector/network/exported"
@@ -22,7 +19,8 @@ import (
 const (
 	CollectorConntrackName = "network-conntrack"
 
-	conntrackPath = "/proc/net/ip_conntrack"
+	conntrackPath              = "/proc/net/ip_conntrack"
+	deadlineTolerationDuration = time.Second * 5
 )
 
 type Conntrack struct {
@@ -32,7 +30,6 @@ type Conntrack struct {
 	conntrackPath string
 
 	tagLease, tagDevice *tagger.Tag
-	unrepliedBytes      []byte
 }
 
 func NewConntrack(conf *collector.Config) collector.Collector {
@@ -41,12 +38,11 @@ func NewConntrack(conf *collector.Config) collector.Collector {
 
 func newConntrack(conf *collector.Config) *Conntrack {
 	return &Conntrack{
-		conf:           conf,
-		measures:       metrics.NewMeasures(conf.SeriesCh),
-		conntrackPath:  conntrackPath,
-		tagLease:       tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
-		tagDevice:      tagger.NewTagUnsafe(selfExported.DeviceKey, tagger.MissingTagValue),
-		unrepliedBytes: []byte("[UNREPLIED]"),
+		conf:          conf,
+		measures:      metrics.NewMeasures(conf.SeriesCh),
+		conntrackPath: conntrackPath,
+		tagLease:      tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
+		tagDevice:     tagger.NewTagUnsafe(selfExported.DeviceKey, tagger.MissingTagValue),
 	}
 }
 
@@ -54,207 +50,150 @@ func (c *Conntrack) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Conntrack) IsDaemon() bool { return false }
+func (c *Conntrack) IsDaemon() bool { return true }
 
 func (c *Conntrack) Name() string {
 	return CollectorConntrackName
 }
 
-func getPortRange(dstPort string) (string, error) {
-	port, err := strconv.Atoi(dstPort)
-	if err != nil {
-		return "", err
-	}
+func getPortRange(port int) string {
 	if port < 1024 {
-		return dstPort, nil
+		return strconv.Itoa(port)
 	}
 	if port < 8191 {
-		return "1024-8191", nil
+		return "1024-8191"
 	}
 	if port < 49151 {
-		return "8191-49151", nil
+		return "8191-49151"
 	}
-	return "49152-65535", nil
+	return "49152-65535"
 }
 
-type conntrackRecord struct {
-	sourceIpAddress      string
+func (c *Conntrack) measureCount(s *metrics.Sample) {
+	err := c.measures.Count(s)
+	if err != nil {
+		log.Printf("failed to count %s: %v", s.String(), err)
+	}
+}
+
+type aggregation struct {
+	toBytes              float64
+	fromBytes            float64
+	protocol             string
 	destinationPortRange string
-
-	sBytes   float64
-	dBytes   float64
-	sPackets float64
-	dPackets float64
-
-	protocol string
-	state    string
+	sourceIP             string
+	Timestamp            time.Time
 }
 
-func (c *Conntrack) parseFields(stats map[string]*conntrackRecord, line []byte) error {
-	var err error
-	var protocol, state, dstPortRange string
-	var srcIpIndex, sPacketsIndex, sBytesIndex, dPacketIndex, dBytesIndex int
-
-	// tcp      6 3 CLOSE
-	//              ^
-	index := bytes.IndexFunc(line[9:], func(r rune) bool {
-		return (r >= 'A' && r <= 'Z') || r == 's'
-	})
-	fields := bytes.Fields(line[index+9:])
-	switch line[0] {
-	case 't':
-		protocol = "tcp"
-		srcIpIndex, sPacketsIndex, sBytesIndex = 1, 5, 6
-		if bytes.Equal(fields[7], c.unrepliedBytes) {
-			state = "unreplied"
-			dPacketIndex, dBytesIndex = 12, 13
-		} else {
-			state = "replied"
-			dPacketIndex, dBytesIndex = 11, 12
-		}
-		dstPortRange, err = getPortRange(string(fields[4][6:]))
-		if err != nil {
-			return err
-		}
-	case 'u':
-		protocol = "udp"
-		srcIpIndex, sPacketsIndex, sBytesIndex = 0, 4, 5
-		if bytes.Equal(fields[6], c.unrepliedBytes) {
-			state = "unreplied"
-			dPacketIndex, dBytesIndex = 11, 12
-		} else {
-			state = "replied"
-			dPacketIndex, dBytesIndex = 10, 11
-		}
-		s := string(fields[3][6:])
-		dstPortRange, err = getPortRange(s)
-		if err != nil {
-			return err
-		}
-	case 'i':
-		protocol = "icmp"
-		srcIpIndex, sPacketsIndex, sBytesIndex = 0, 5, 6
-		dstPortRange = string(fields[2][5:])
-		if bytes.Equal(fields[7], c.unrepliedBytes) {
-			state = "unreplied"
-			dPacketIndex, dBytesIndex = 13, 14
-		} else {
-			state = "replied"
-			dPacketIndex, dBytesIndex = 12, 13
-		}
-	}
-	if len(fields) < dBytesIndex {
-		return errors.New("invalid len of parsed conntrack line: " + strconv.Itoa(len(fields)))
-	}
-	//                       src=127.0.0.1
-	//                           ^
-	srcIp := string(fields[srcIpIndex][4:])
-	key := protocol + dstPortRange + state + srcIp
-	conn, ok := stats[key]
-	if !ok {
-		conn = &conntrackRecord{
-			sourceIpAddress:      srcIp,
-			destinationPortRange: dstPortRange,
-			state:                state,
-			protocol:             protocol,
-		}
-	}
-	//                                         packets=119
-	//                                                 ^
-	sPackets, err := strconv.ParseFloat(string(fields[sPacketsIndex][8:]), 10)
-	if err != nil {
-		return err
-	}
-	//                                       bytes=7180
-	//                                             ^
-	sBytes, err := strconv.ParseFloat(string(fields[sBytesIndex][6:]), 10)
-	if err != nil {
-		return err
-	}
-	dPackets, err := strconv.ParseFloat(string(fields[dPacketIndex][8:]), 10)
-	if err != nil {
-		return err
-	}
-	dBytes, err := strconv.ParseFloat(string(fields[dBytesIndex][6:]), 10)
-	if err != nil {
-		return err
-	}
-	conn.sPackets += sPackets
-	conn.sBytes += sBytes
-	conn.dPackets += dPackets
-	conn.dBytes += dBytes
-	stats[key] = conn
-	return nil
-}
-
-func (c *Conntrack) Collect(_ context.Context) error {
-	file, err := os.Open(c.conntrackPath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	reader := bufio.NewReader(file)
-	stats := make(map[string]*conntrackRecord)
-	for {
-		// TODO improve this reader
-		line, err := reader.ReadBytes('\n')
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-		err = c.parseFields(stats, line)
-		if err != nil {
-			log.Printf("failed to parse conntrack record: %s %v", string(line), err)
-		}
-	}
-	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
-	now := time.Now()
-	for _, record := range stats {
-		tags := append(hostTags,
-			c.conf.Tagger.GetUnstableWithDefault(record.sourceIpAddress,
-				c.tagLease,
-				c.tagDevice,
-			)...)
-		tags = append(tags,
-			"protocol:"+record.protocol,
-			"state:"+record.state,
-			"dport:"+record.destinationPortRange,
-			"ip:"+record.sourceIpAddress,
-		)
-		// TX: src client --> NAT --> dst server
-		_ = c.measures.Count(&metrics.Sample{
-			Name:      "network.conntrack.tx_packets",
-			Value:     record.sPackets,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      tags,
-		})
-		_ = c.measures.Count(&metrics.Sample{
-			Name:      "network.conntrack.tx_bytes",
-			Value:     record.sBytes,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      tags,
-		})
-
-		// RX: src client <-- NAT <-- dst server
-		_ = c.measures.Count(&metrics.Sample{
-			Name:      "network.conntrack.rx_packets",
-			Value:     record.dPackets,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      tags,
-		})
-		_ = c.measures.Count(&metrics.Sample{
+func (c *Conntrack) aggregationToSamples(now time.Time, aggr *aggregation) (*metrics.Sample, *metrics.Sample) {
+	tags := append(c.conf.Tagger.GetUnstable(c.conf.Host),
+		c.conf.Tagger.GetUnstableWithDefault(aggr.sourceIP,
+			c.tagLease,
+			c.tagDevice,
+		)...)
+	tags = append(tags,
+		"protocol:"+aggr.protocol,
+		"dport:"+aggr.destinationPortRange,
+		"ip:"+aggr.sourceIP,
+	)
+	return &metrics.Sample{
 			Name:      "network.conntrack.rx_bytes",
-			Value:     record.dBytes,
+			Value:     aggr.toBytes,
 			Timestamp: now,
 			Host:      c.conf.Host,
 			Tags:      tags,
-		})
+		},
+		&metrics.Sample{
+			Name:      "network.conntrack.tx_bytes",
+			Value:     aggr.fromBytes,
+			Timestamp: now,
+			Host:      c.conf.Host,
+			Tags:      tags,
+		}
+}
+
+func (c *Conntrack) Collect(ctx context.Context) error {
+	after := time.After(0)
+
+	records := make(map[uint64]*conntrack.Record)
+	aggregations := make(map[string]*aggregation)
+
+	ticker := time.NewTicker(c.conf.CollectInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+
+		case <-ticker.C:
+			now := time.Now()
+			for _, aggr := range aggregations {
+				tx, rx := c.aggregationToSamples(now, aggr)
+				_, _ = c.measures.Count(tx), c.measures.Count(rx)
+			}
+			c.measures.Purge()
+			for h, record := range records {
+				if time.Since(record.Deadline) > deadlineTolerationDuration {
+					delete(records, h)
+				}
+			}
+			for key, value := range aggregations {
+				if time.Since(value.Timestamp) > metrics.CountMaxAgeSample {
+					delete(aggregations, key)
+				}
+			}
+
+		case <-after:
+			newRecords, closestDeadline, err := conntrack.GetConntrackRecords(conntrackPath)
+			if err != nil {
+				continue
+			}
+			closestDeadlineIn := closestDeadline.Sub(time.Now())
+			if closestDeadlineIn < deadlineTolerationDuration {
+				closestDeadlineIn = deadlineTolerationDuration
+			}
+			after = time.After(closestDeadlineIn)
+			now := time.Now()
+
+			for h, newRecord := range newRecords {
+				switch newRecord.Protocol {
+				case conntrack.ProtocolTCP:
+					if newRecord.State != conntrack.StateEstablished {
+						continue
+					}
+				default:
+					if newRecord.State != conntrack.StateReplied {
+						continue
+					}
+				}
+				portRange := getPortRange(newRecord.From.Quad.DestinationPort)
+				aKey := newRecord.Protocol + newRecord.From.Quad.Source + portRange
+
+				aggr, ok := aggregations[aKey]
+				if !ok {
+					aggr = &aggregation{
+						protocol:             newRecord.Protocol,
+						destinationPortRange: portRange,
+						sourceIP:             newRecord.From.Quad.Source,
+						toBytes:              newRecord.To.Bytes,
+						fromBytes:            newRecord.From.Bytes,
+						Timestamp:            now,
+					}
+					aggregations[aKey] = aggr
+					records[h] = newRecord
+					continue
+				}
+				existing, ok := records[h]
+				if ok && time.Since(existing.Deadline) < deadlineTolerationDuration {
+					aggr.toBytes += newRecord.To.Bytes - existing.To.Bytes
+					aggr.fromBytes += newRecord.From.Bytes - existing.From.Bytes
+				} else {
+					aggr.toBytes += newRecord.To.Bytes
+					aggr.fromBytes += newRecord.From.Bytes
+				}
+				aggr.Timestamp = now
+				records[h] = newRecord
+			}
+		}
 	}
-	c.measures.Purge()
-	return nil
 }

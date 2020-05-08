@@ -1,4 +1,4 @@
-package metrics
+package fnv
 
 // borrow from https://github.com/prometheus/client_golang
 
@@ -9,16 +9,19 @@ const (
 	prime64  = 1099511628211
 )
 
-// hashNew initializies a new fnv64a hash value.
-func hashNew() uint64 {
+func NewHash() uint64 {
 	return offset64
 }
 
-// hashAdd adds a string to a fnv64a hash value, returning the updated hash.
-func hashAdd(h uint64, s string) uint64 {
+func AddString(h uint64, s string) uint64 {
 	for i := 0; i < len(s); i++ {
-		h ^= uint64(s[i])
-		h *= prime64
+		h = Add(h, uint64(s[i]))
 	}
+	return h
+}
+
+func Add(h, i uint64) uint64 {
+	h ^= i
+	h *= prime64
 	return h
 }

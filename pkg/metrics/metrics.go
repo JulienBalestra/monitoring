@@ -2,14 +2,18 @@ package metrics
 
 import (
 	"fmt"
-	"hash/fnv"
+	"math"
 	"sort"
 	"time"
+
+	"github.com/JulienBalestra/monitoring/pkg/fnv"
 )
 
 const (
 	TypeCount = "count"
 	TypeGauge = "gauge"
+
+	CountMaxAgeSample = time.Hour * 48
 )
 
 type Series struct {
@@ -45,17 +49,18 @@ func (s *Sample) Count(newMetric *Sample) (*Series, error) {
 		return nil, fmt.Errorf("invalid interval for %q <-> %q : %.2f", s, newMetric, interval)
 	}
 	metricsValue := newMetric.Value - s.Value
-	// count must be > 0
-	if metricsValue <= 0 {
-		return nil, fmt.Errorf("invalid value for %q <-> %q : %.2f", s, newMetric, metricsValue)
+	// There is a logic error that should never happen
+	if metricsValue < 0 {
+		return nil, fmt.Errorf("invalid value %.2f for %q <-> %q", metricsValue, s, newMetric)
 	}
 	return &Series{
 		Metric: newMetric.Name,
 		Points: [][]float64{
 			{float64(newMetric.Timestamp.Unix()), metricsValue},
 		},
-		Type:     TypeCount,
-		Interval: interval,
+		Type: TypeCount,
+		// Datadog resolution is at the second
+		Interval: math.Round(interval),
 		Host:     newMetric.Host,
 		Tags:     newMetric.Tags,
 	}, nil
@@ -66,14 +71,14 @@ func (s *Sample) String() string {
 }
 
 func (s *Sample) Hash() uint64 {
-	h := fnv.New64()
-	_, _ = h.Write([]byte(s.Name))
-	_, _ = h.Write([]byte(s.Host))
+	h := fnv.NewHash()
+	h = fnv.AddString(h, s.Name)
+	h = fnv.AddString(h, s.Host)
 	sort.Strings(s.Tags)
 	for _, tag := range s.Tags {
-		_, _ = h.Write([]byte(tag))
+		h = fnv.AddString(h, tag)
 	}
-	return h.Sum64()
+	return h
 }
 
 func NewMeasures(ch chan Series) *Measures {
@@ -82,7 +87,7 @@ func NewMeasures(ch chan Series) *Measures {
 		deviation: make(map[uint64]*Sample),
 		ch:        ch,
 		purge:     time.Now(),
-		maxAge:    time.Hour * 48,
+		maxAge:    CountMaxAgeSample,
 	}
 }
 
@@ -101,6 +106,12 @@ func (m *Measures) Purge() {
 		}
 	}
 	m.purge = time.Now()
+}
+
+func (m *Measures) Delete(sample *Sample) {
+	h := sample.Hash()
+	delete(m.deviation, h)
+	delete(m.counter, h)
 }
 
 func (m *Measures) Gauge(newSample *Sample) {

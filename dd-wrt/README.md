@@ -20,13 +20,27 @@ ssh-add -L
 
 ### configuration list
 
-In the **service** tab, under the **dnsmasq** section, there is a text box for __Additional Dnsmasq Options__:
+**service** / **dnsmasq**
+
+There is a text box for __Additional Dnsmasq Options__:
 ```text
 server=8.8.8.8
 server=8.8.4.4
 log-queries
 log-facility=/tmp/dnsmasq.log
 ```
+
+**service** / **USB**:
+
+Core USB Support - Enable
+USB Storage Support - Enable 
+
+
+**command**:
+
+```shell script
+/tmp/mnt/sda2/monitoring.startup
+``` 
 
 
 ## build
