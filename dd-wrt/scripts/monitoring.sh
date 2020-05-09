@@ -4,6 +4,7 @@ PID_FILE=/tmp/monitoring.pid
 kill $(cat ${PID_FILE})
 
 export DATADOG_API_KEY="fake-api-key********************"
+export DATADOG_APP_KEY="fake-app-key********************"
 export DATADOG_HOST_TAGS=location:home,room:living-room
 
 exec /tmp/mnt/sda2/monitoring \

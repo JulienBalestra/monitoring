@@ -27,6 +27,7 @@ import (
 
 const (
 	datadogAPIKeyFlag         = "datadog-api-key"
+	datadogAPPKeyFlag         = "datadog-app-key"
 	datadogClientSendInterval = "datadog-client-send-interval"
 	hostnameFlag              = "hostname"
 	defaultCollectionInterval = time.Second * 30
@@ -62,6 +63,18 @@ func notifySignals(ctx context.Context, cancel context.CancelFunc, tag *tagger.T
 	}
 }
 
+func setDatadogKeys(key *string, flag, envvar string) error {
+	if *key != "" {
+		return nil
+	}
+	*key = os.Getenv(envvar)
+	if *key == "" {
+		return fmt.Errorf("flag --%s or envvar %s must be set to a datadog key", flag, envvar)
+	}
+	log.Printf("using environment variable %s", envvar)
+	return nil
+}
+
 func main() {
 	root := &cobra.Command{
 		Short: "monitoring app for dd-wrt routers",
@@ -83,7 +96,8 @@ func main() {
 
 	fs.StringSliceVar(&hostTagsStrings, "datadog-host-tags", nil, "datadog host tags")
 	fs.StringVar(&pidFilePath, "pid-file", defaultPIDFilePath, "file to write process id")
-	fs.StringVarP(&datadogClientConfig.DatadogAPIKey, datadogAPIKeyFlag, "i", "", "datadog API key to submit series")
+	fs.StringVarP(&datadogClientConfig.DatadogAPIKey, datadogAPIKeyFlag, "i", "", "datadog API key")
+	fs.StringVarP(&datadogClientConfig.DatadogAPPKey, datadogAPPKeyFlag, "p", "", "datadog APP key")
 	fs.StringVar(&hostname, hostnameFlag, hostname, "datadog host tag")
 	fs.StringVar(&timezone, "timezone", timezone, "timezone")
 	fs.DurationVar(&datadogClientConfig.SendInterval, datadogClientSendInterval, time.Second*35, "datadog client send interval to the API >= "+minimalSendInterval.String())
@@ -104,13 +118,13 @@ func main() {
 	root.Flags().AddFlagSet(fs)
 	root.PreRunE = func(cmd *cobra.Command, args []string) error {
 		var errorStrings []string
-		if datadogClientConfig.DatadogAPIKey == "" {
-			datadogClientConfig.DatadogAPIKey = os.Getenv("DATADOG_API_KEY")
-			if datadogClientConfig.DatadogAPIKey == "" {
-				errorStrings = append(errorStrings, fmt.Sprintf("flag --%s or envvar DATADOG_API_KEY must be set to a datadog API key", datadogAPIKeyFlag))
-			} else {
-				log.Printf("using environment variable DATADOG_API_KEY")
-			}
+		err := setDatadogKeys(&datadogClientConfig.DatadogAPIKey, datadogAPIKeyFlag, "DATADOG_API_KEY")
+		if err != nil {
+			errorStrings = append(errorStrings, err.Error())
+		}
+		err = setDatadogKeys(&datadogClientConfig.DatadogAPPKey, datadogAPPKeyFlag, "DATADOG_APP_KEY")
+		if err != nil {
+			errorStrings = append(errorStrings, err.Error())
 		}
 		if datadogClientConfig.SendInterval < minimalSendInterval {
 			errorStrings = append(errorStrings, fmt.Sprintf("flag --%s must be greater or equal to %s", datadogClientSendInterval, minimalSendInterval))
@@ -130,7 +144,8 @@ func main() {
 	}
 
 	root.RunE = func(cmd *cobra.Command, args []string) error {
-		hostTags, err := tagger.CreateTags(hostTagsStrings...)
+		// validate host tags
+		_, err := tagger.CreateTags(hostTagsStrings...)
 		if err != nil {
 			return err
 		}
@@ -145,10 +160,6 @@ func main() {
 		waitGroup := &sync.WaitGroup{}
 
 		tag := tagger.NewTagger()
-		tag.Add(hostname, hostTags...)
-		// not really useful but doesn't hurt either
-		tag.Print()
-
 		waitGroup.Add(1)
 		go func() {
 			notifySignals(ctx, cancel, tag)
@@ -156,6 +167,11 @@ func main() {
 		}()
 
 		client := datadog.NewClient(datadogClientConfig)
+		err = client.UpdateHostTags(ctx, hostTagsStrings)
+		if err != nil {
+			return err
+		}
+
 		waitGroup.Add(1)
 		go func() {
 			client.Run(ctx)
