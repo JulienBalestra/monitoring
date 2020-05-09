@@ -34,6 +34,8 @@ type Log struct {
 	startTailing                  time.Time
 	year                          string
 	leaseTag                      *tagger.Tag
+
+	ignoreDomains map[string]struct{}
 }
 
 type dnsQuery struct {
@@ -53,6 +55,15 @@ func newLog(conf *collector.Config) *Log {
 		thirdSep:  []byte{' '},
 		year:      time.Now().Format("2006"),
 		leaseTag:  tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
+
+		// these domains are ignored and not submitted as metrics
+		ignoreDomains: map[string]struct{}{
+			hitsQueryBind:       {},
+			missesQueryBind:     {},
+			insertionsQueryBind: {},
+			evictionsQueryBind:  {},
+			cachesizeQueryBind:  {},
+		},
 	}
 }
 
@@ -183,6 +194,20 @@ func (c *Log) tail(ctx context.Context, ch chan []byte, f string) error {
 }
 
 func (c *Log) processLine(counters map[string]*dnsQuery, line []byte) {
+	// minimal len of a dnsquery
+	if len(line) < 53 {
+		return
+	}
+	// Apr 20 21:35:07
+	// 2006Apr 20 21:35:07
+	t, err := time.Parse(dnsmasqDateFormat, c.year+string(line[:15]))
+	if err != nil {
+		log.Printf("failed to parse date in line: %q %v", string(line), err)
+		return
+	}
+	if !c.startTailing.Before(t) {
+		return
+	}
 	beginQueryType := bytes.Index(line, c.firstSep)
 	if beginQueryType == -1 {
 		return
@@ -218,15 +243,8 @@ func (c *Log) processLine(counters map[string]*dnsQuery, line []byte) {
 	//	  ^ ? return -1 so adding 1 == 0
 	eventualDot := bytes.LastIndexByte(line[endQueryType:lastQueryDot], '.')
 	domain := string(line[endQueryType+eventualDot+1 : endOfquery])
-	s := string(line[:15])
-	// Apr 20 21:35:07
-	// 2006Apr 20 21:35:07
-	t, err := time.Parse(dnsmasqDateFormat, c.year+s)
-	if err != nil {
-		log.Printf("failed to parse date in line: %q %v", string(line), err)
-		return
-	}
-	if !c.startTailing.Before(t) {
+	_, ok := c.ignoreDomains[domain]
+	if ok {
 		return
 	}
 	// from 192.168.1.1\n

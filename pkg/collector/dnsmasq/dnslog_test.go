@@ -24,6 +24,7 @@ func TestLogCollect(t *testing.T) {
 		CollectInterval: time.Second,
 		SeriesCh:        make(chan metrics.Series, 10),
 	})
+	c.ignoreDomains = make(map[string]struct{})
 
 	c.conf.Tagger.Add("192.168.1.1", tagger.NewTagUnsafe("lease", "host-a"))
 	c.conf.Tagger.Add("192.168.1.114", tagger.NewTagUnsafe("lease", "host-b"))
@@ -35,7 +36,7 @@ func TestLogCollect(t *testing.T) {
 	for _, line := range lines {
 		c.processLine(queries, line)
 	}
-	assert.Len(t, queries, 7)
+	assert.Len(t, queries, 8)
 	assert.Equal(t, 5., queries["Adatadoghq.com192.168.1.1"].count)
 	assert.Equal(t, 1., queries["AAAAdatadoghq.com192.168.1.1"].count)
 	assert.Equal(t, 1., queries["Adatadoghq.com192.168.1.114"].count)
@@ -43,6 +44,7 @@ func TestLogCollect(t *testing.T) {
 	assert.Equal(t, 1., queries["TXTmisses.bind127.0.0.1"].count)
 	assert.Equal(t, 1., queries["TXTevictions.bind127.0.0.1"].count)
 	assert.Equal(t, 1., queries["TXTcachesize.bind127.0.0.1"].count)
+	assert.Equal(t, 1., queries["Aa.b1.1.1.1"].count)
 	for _, query := range queries {
 		require.NoError(t, c.measures.Count(c.queryToSample(query)), query)
 		assert.Len(t, c.conf.SeriesCh, 0)
