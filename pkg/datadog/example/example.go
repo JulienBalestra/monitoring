@@ -16,6 +16,7 @@ func main() {
 	c := datadog.NewClient(&datadog.Config{
 		Host:          "my-host",
 		DatadogAPIKey: "fake-api-key********************",
+		DatadogAPPKey: "fake-app-key********************",
 		SendInterval:  time.Second * 60,
 	})
 
@@ -36,12 +37,17 @@ func main() {
 			// take leverage of the tagger to manage tags
 			// import "github.com/JulienBalestra/monitoring/pkg/tagger"
 			Host: "my-host",
-			Tags: []string{"role:web", "tier:frontend"},
+			Tags: []string{"code:200"},
 		},
 	}
 
 	// synchronously
+	// https://docs.datadoghq.com/api/v1/metrics/#submit-metrics
 	_ = c.SendSeries(ctx, series)
+
+	// add some host tags to series associated to this host
+	// https://docs.datadoghq.com/api/v1/tags/#update-host-tags
+	_ = c.UpdateHostTags(ctx, []string{"role:web", "tier:frontend"})
 
 	// in background
 	waitGroup := sync.WaitGroup{}
