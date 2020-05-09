@@ -40,6 +40,7 @@ type Config struct {
 	ChanSize int
 
 	DatadogAPIKey string
+	DatadogAPPKey string
 
 	SendInterval  time.Duration
 	ClientMetrics *ClientMetrics
@@ -58,8 +59,8 @@ type ClientMetrics struct {
 type Client struct {
 	conf *Config
 
-	httpClient *http.Client
-	url        string
+	httpClient             *http.Client
+	seriesURL, hostTagsURL string
 
 	ChanSeries    chan metrics.Series
 	ClientMetrics *ClientMetrics
@@ -85,8 +86,9 @@ func NewClient(conf *Config) *Client {
 		httpClient: httpClient,
 		conf:       conf,
 
-		url:        "https://api.datadoghq.com/api/v1/series?api_key=" + conf.DatadogAPIKey,
-		ChanSeries: make(chan metrics.Series, conf.ChanSize),
+		seriesURL:   "https://api.datadoghq.com/api/v1/series?api_key=" + conf.DatadogAPIKey,
+		hostTagsURL: "https://api.datadoghq.com/api/v1/tags/hosts/" + conf.Host,
+		ChanSeries:  make(chan metrics.Series, conf.ChanSize),
 
 		ClientMetrics: clientMetrics,
 	}
@@ -94,6 +96,50 @@ func NewClient(conf *Config) *Client {
 
 type Payload struct {
 	Series []metrics.Series `json:"series"`
+}
+
+type HostTags struct {
+	Host string   `json:"host"`
+	Tags []string `json:"tags"`
+}
+
+func (c *Client) UpdateHostTags(ctx context.Context, tags []string) error {
+	var buff bytes.Buffer
+	err := json.NewEncoder(&buff).Encode(&HostTags{
+		Host: c.conf.Host,
+		Tags: tags,
+	})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.hostTagsURL, &buff)
+	if err != nil {
+		return err
+	}
+	req.Header.Set(contentType, applicationJson)
+	req.Header.Set("DD-API-KEY", c.conf.DatadogAPIKey)
+	req.Header.Set("DD-APPLICATION-KEY", c.conf.DatadogAPPKey)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode > 300 {
+		apiKey, err := hideKey(c.conf.DatadogAPIKey)
+		if err != nil {
+			return fmt.Errorf("failed to update host tags status code: %d: %v", resp.StatusCode, err)
+		}
+		appKey, err := hideKey(c.conf.DatadogAPPKey)
+		if err != nil {
+			return fmt.Errorf("failed to update host tags status code: %d: %v", resp.StatusCode, err)
+		}
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if err != nil {
+			return fmt.Errorf("failed to update host tags status code: %d %s: %v", resp.StatusCode, string(bodyBytes), err)
+		}
+		return fmt.Errorf("failed to update host tags status code: %d APP=%q API=%q %s", resp.StatusCode, appKey, apiKey, string(bodyBytes))
+	}
+	return nil
 }
 
 func (c *Client) Run(ctx context.Context) {
@@ -162,15 +208,15 @@ func (c *Client) Run(ctx context.Context) {
 	}
 }
 
-func (c *Client) hideAPIKey() (string, error) {
+func hideKey(key string) (string, error) {
 	const end = "***"
-	if c.conf.DatadogAPIKey == "" {
-		return "", errors.New("invalid empty API Key")
+	if key == "" {
+		return "", errors.New("invalid empty API/APP Key")
 	}
-	if len(c.conf.DatadogAPIKey) < 8 {
-		return "", errors.New("invalid API Key")
+	if len(key) < 8 {
+		return "", errors.New("invalid API/APP Key")
 	}
-	return c.conf.DatadogAPIKey[:8] + end, nil
+	return key[:8] + end, nil
 }
 
 func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error {
@@ -183,7 +229,7 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 	//log.Printf("%s", string(b))
 	//return nil
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, bytes.NewBuffer(b))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.seriesURL, bytes.NewBuffer(b))
 	if err != nil {
 		return err
 	}
@@ -193,7 +239,7 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 		return err
 	}
 	if resp.StatusCode > 300 {
-		k, err := c.hideAPIKey()
+		k, err := hideKey(c.conf.DatadogAPIKey)
 		if err != nil {
 			return fmt.Errorf("failed to send series status code: %d: %v", resp.StatusCode, err)
 		}

@@ -82,12 +82,16 @@ func (s *Sample) Hash() uint64 {
 }
 
 func NewMeasures(ch chan Series) *Measures {
+	return NewMeasuresWithMaxAge(ch, CountMaxAgeSample)
+}
+
+func NewMeasuresWithMaxAge(ch chan Series, maxAge time.Duration) *Measures {
 	return &Measures{
 		counter:   make(map[uint64]*Sample),
 		deviation: make(map[uint64]*Sample),
 		ch:        ch,
 		purge:     time.Now(),
-		maxAge:    CountMaxAgeSample,
+		maxAge:    maxAge,
 	}
 }
 

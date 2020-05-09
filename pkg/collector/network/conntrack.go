@@ -2,7 +2,6 @@ package network
 
 import (
 	"context"
-	"log"
 	"strconv"
 	"time"
 
@@ -19,8 +18,10 @@ import (
 const (
 	CollectorConntrackName = "network-conntrack"
 
-	conntrackPath              = "/proc/net/ip_conntrack"
+	conntrackPath = "/proc/net/ip_conntrack"
+
 	deadlineTolerationDuration = time.Second * 5
+	maxAgeConntrackEntries     = time.Hour
 )
 
 type Conntrack struct {
@@ -39,7 +40,7 @@ func NewConntrack(conf *collector.Config) collector.Collector {
 func newConntrack(conf *collector.Config) *Conntrack {
 	return &Conntrack{
 		conf:          conf,
-		measures:      metrics.NewMeasures(conf.SeriesCh),
+		measures:      metrics.NewMeasuresWithMaxAge(conf.SeriesCh, maxAgeConntrackEntries),
 		conntrackPath: conntrackPath,
 		tagLease:      tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
 		tagDevice:     tagger.NewTagUnsafe(selfExported.DeviceKey, tagger.MissingTagValue),
@@ -67,13 +68,6 @@ func getPortRange(port int) string {
 		return "8191-49151"
 	}
 	return "49152-65535"
-}
-
-func (c *Conntrack) measureCount(s *metrics.Sample) {
-	err := c.measures.Count(s)
-	if err != nil {
-		log.Printf("failed to count %s: %v", s.String(), err)
-	}
 }
 
 type aggregation struct {
@@ -138,7 +132,7 @@ func (c *Conntrack) Collect(ctx context.Context) error {
 				}
 			}
 			for key, value := range aggregations {
-				if time.Since(value.Timestamp) > metrics.CountMaxAgeSample {
+				if time.Since(value.Timestamp) > maxAgeConntrackEntries {
 					delete(aggregations, key)
 				}
 			}
