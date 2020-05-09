@@ -23,6 +23,13 @@ const (
 	dnsmasqPath = "/tmp/dnsmasq.leases"
 
 	dhcpWildcardLeaseValue = "wildcard"
+
+	dnsQueryBindSuffix  = ".bind"
+	hitsQueryBind       = "hits" + dnsQueryBindSuffix
+	missesQueryBind     = "misses" + dnsQueryBindSuffix
+	evictionsQueryBind  = "evictions" + dnsQueryBindSuffix
+	insertionsQueryBind = "insertions" + dnsQueryBindSuffix
+	cachesizeQueryBind  = "cachesize" + dnsQueryBindSuffix
 )
 
 /* cat /tmp/dnsmasq.leases
@@ -58,29 +65,29 @@ func NewDnsMasq(conf *collector.Config) collector.Collector {
 		},
 		dnsCounterQuestions: map[string]dns.Question{
 			"dnsmasq.dns.cache.hit": {
-				Name:   "hits.bind.",
+				Name:   hitsQueryBind + ".",
 				Qtype:  dns.TypeTXT,
 				Qclass: dns.ClassCHAOS,
 			},
 			"dnsmasq.dns.cache.miss": {
-				Name:   "misses.bind.",
+				Name:   missesQueryBind + ".",
 				Qtype:  dns.TypeTXT,
 				Qclass: dns.ClassCHAOS,
 			},
 			"dnsmasq.dns.cache.eviction": {
-				Name:   "evictions.bind.",
+				Name:   evictionsQueryBind + ".",
 				Qtype:  dns.TypeTXT,
 				Qclass: dns.ClassCHAOS,
 			},
 			"dnsmasq.dns.cache.insertion": {
-				Name:   "insertions.bind.",
+				Name:   insertionsQueryBind + ".",
 				Qtype:  dns.TypeTXT,
 				Qclass: dns.ClassCHAOS,
 			},
 		},
 		dnsGaugeQuestions: map[string]dns.Question{
 			"dnsmasq.dns.cache.size": {
-				Name:   "cachesize.bind.",
+				Name:   cachesizeQueryBind + ".",
 				Qtype:  dns.TypeTXT,
 				Qclass: dns.ClassCHAOS,
 			},
