@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -13,7 +14,11 @@ const (
 	TypeCount = "count"
 	TypeGauge = "gauge"
 
-	CountMaxAgeSample = time.Hour * 48
+	DefaultMeasureMaxAgeSample = time.Hour * 12
+)
+
+var (
+	errCountZero = errors.New("count value is zero")
 )
 
 type Series struct {
@@ -49,6 +54,9 @@ func (s *Sample) Count(newMetric *Sample) (*Series, error) {
 		return nil, fmt.Errorf("invalid interval for %q <-> %q : %.2f", s, newMetric, interval)
 	}
 	metricsValue := newMetric.Value - s.Value
+	if metricsValue == 0 {
+		return nil, errCountZero
+	}
 	// There is a logic error that should never happen
 	if metricsValue < 0 {
 		return nil, fmt.Errorf("invalid value %.2f for %q <-> %q", metricsValue, s, newMetric)
@@ -82,7 +90,7 @@ func (s *Sample) Hash() uint64 {
 }
 
 func NewMeasures(ch chan Series) *Measures {
-	return NewMeasuresWithMaxAge(ch, CountMaxAgeSample)
+	return NewMeasuresWithMaxAge(ch, DefaultMeasureMaxAgeSample)
 }
 
 func NewMeasuresWithMaxAge(ch chan Series, maxAge time.Duration) *Measures {
@@ -95,21 +103,26 @@ func NewMeasuresWithMaxAge(ch chan Series, maxAge time.Duration) *Measures {
 	}
 }
 
-func (m *Measures) Purge() {
+func (m *Measures) Purge() (float64, float64) {
+	counts := 0.
+	deviations := 0.
 	if time.Since(m.purge) < m.maxAge {
-		return
+		return counts, deviations
 	}
 	for key, sample := range m.counter {
 		if time.Since(sample.Timestamp) > m.maxAge {
 			delete(m.counter, key)
+			counts++
 		}
 	}
 	for key, sample := range m.deviation {
 		if time.Since(sample.Timestamp) > m.maxAge {
-			delete(m.counter, key)
+			delete(m.deviation, key)
+			deviations++
 		}
 	}
 	m.purge = time.Now()
+	return counts, deviations
 }
 
 func (m *Measures) Delete(sample *Sample) {
@@ -132,11 +145,11 @@ func (m *Measures) Gauge(newSample *Sample) {
 
 func (m *Measures) GaugeDeviation(newSample *Sample, maxAge time.Duration) bool {
 	h := newSample.Hash()
-	oldSample, ok := m.counter[h]
+	oldSample, ok := m.deviation[h]
 	if ok && newSample.Value == oldSample.Value && time.Since(oldSample.Timestamp) < maxAge {
 		return false
 	}
-	m.counter[h] = newSample
+	m.deviation[h] = newSample
 	m.Gauge(newSample)
 	return true
 }
@@ -156,6 +169,9 @@ func (m *Measures) Incr(newSample *Sample) error {
 		Tags:      newSample.Tags, // keep the same underlying array
 	})
 	if err != nil {
+		if err == errCountZero {
+			m.counter[h] = newSample
+		}
 		return err
 	}
 	m.counter[h] = newSample
@@ -172,9 +188,16 @@ func (m *Measures) Count(newSample *Sample) error {
 	}
 	s, err := oldSample.Count(newSample)
 	if err != nil {
+		if err == errCountZero {
+			m.counter[h] = newSample
+		}
 		return err
 	}
 	m.counter[h] = newSample
 	m.ch <- *s
 	return nil
+}
+
+func IsCountZero(err error) bool {
+	return err == errCountZero
 }
