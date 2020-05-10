@@ -14,13 +14,13 @@
               "type": "query_value",
               "requests": [
                 {
-                  "q": "avg:network.statistics.rx_bytes{device:vlan2,$location}.as_rate()",
-                  "aggregator": "avg"
+                  "q": "sum:network.statistics.rx_bytes{device:vlan2,$location}.as_rate()",
+                  "aggregator": "max"
                 }
               ],
-              "title": "Download WAN",
+              "title": "Max download WAN",
               "autoscale": true,
-              "precision": 0
+              "precision": 2
             }
           },
           {
@@ -196,12 +196,25 @@
         "layout_type": "ordered",
         "widgets": [
           {
+            "id": 4417923079265700,
+            "definition": {
+              "type": "toplist",
+              "requests": [
+                {
+                  "q": "top(sum:network.conntrack.rx_bytes{$location} by {lease,dport}.as_count(), 10, 'sum', 'desc')"
+                }
+              ],
+              "title": "Sum of network.conntrack.rx_bytes over $location by lease,dport",
+              "time": {}
+            }
+          },
+          {
             "id": 1413741540036256,
             "definition": {
               "type": "timeseries",
               "requests": [
                 {
-                  "q": "sum:network.conntrack.rx_bytes{$location} by {lease,protocol}.as_rate()",
+                  "q": "sum:network.conntrack.rx_bytes{$location} by {lease}.as_rate()",
                   "display_type": "area",
                   "style": {
                     "palette": "dog_classic",
@@ -210,7 +223,7 @@
                   }
                 },
                 {
-                  "q": "-sum:network.conntrack.tx_bytes{$location} by {lease,protocol}.as_rate()",
+                  "q": "-sum:network.conntrack.tx_bytes{$location} by {lease}.as_rate()",
                   "display_type": "area",
                   "style": {
                     "palette": "dog_classic",
@@ -226,8 +239,152 @@
                 "max": "auto",
                 "include_zero": true
               },
-              "title": "network.conntrack.rx_bytes, network.conntrack.tx_bytes",
+              "title": "[conntrack] sum by lease rx (+) / tx (-)",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 4756151568931870,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.conntrack.rx_bytes{$location} by {lease,dport}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "-sum:network.conntrack.tx_bytes{$location} by {lease,dport}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "[conntrack] destination ports (+) / tx (-)",
               "time": {},
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 2549113352829090,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.conntrack.rx_bytes{$location,protocol:tcp}.as_rate()",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "-sum:network.conntrack.tx_bytes{$location,protocol:tcp}.as_rate()",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "[conntrack] TCP rx (+) / tx (-)",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 3790009424073138,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.conntrack.rx_bytes{$location,protocol:udp}.as_rate()",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "-sum:network.conntrack.tx_bytes{$location,protocol:udp}.as_rate()",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "[conntrack] UDP rx (+) / tx (-)",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 5771955673110046,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.conntrack.rx_bytes{$location,protocol:icmp} by {lease}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "-sum:network.conntrack.tx_bytes{$location,protocol:icmp} by {lease}.as_count()",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "[conntrack] ICMP rx (+) / tx (-)",
               "show_legend": false,
               "legend_size": "0"
             }
@@ -278,7 +435,7 @@
                   "q": "avg:network.wireless.discard.retry{$location}.as_count()",
                   "display_type": "bars",
                   "style": {
-                    "palette": "warm",
+                    "palette": "dog_classic",
                     "line_type": "solid",
                     "line_width": "normal"
                   }
@@ -295,136 +452,85 @@
               "show_legend": false,
               "legend_size": "0"
             }
-          }
-        ],
-        "title": "wireless"
-      }
-    },
-    {
-      "id": 1047305051080478,
-      "definition": {
-        "type": "group",
-        "layout_type": "ordered",
-        "widgets": [
-          {
-            "id": 550912637719132,
-            "definition": {
-              "type": "timeseries",
-              "requests": [
-                {
-                  "q": "count_not_null(sum:dnsmasq.dhcp.lease{$location} by {mac,ip})",
-                  "display_type": "line",
-                  "style": {
-                    "palette": "dog_classic",
-                    "line_type": "dashed",
-                    "line_width": "normal"
-                  }
-                },
-                {
-                  "q": "count_not_null(sum:network.arp{device:br0,!lease:unknown,$location} by {mac,ip})",
-                  "display_type": "line",
-                  "style": {
-                    "palette": "dog_classic",
-                    "line_type": "solid",
-                    "line_width": "normal"
-                  }
-                }
-              ],
-              "yaxis": {
-                "label": "",
-                "scale": "linear",
-                "min": "auto",
-                "max": "auto",
-                "include_zero": true
-              },
-              "title": "dnsmasq.dhcp.lease, network.arp",
-              "show_legend": false,
-              "legend_size": "0"
-            }
           },
           {
-            "id": 8190856268895682,
-            "definition": {
-              "type": "timeseries",
-              "requests": [
-                {
-                  "q": "sum:network.arp{device:br0,!lease:unknown,$location} by {lease}",
-                  "display_type": "area",
-                  "style": {
-                    "palette": "dog_classic",
-                    "line_type": "solid",
-                    "line_width": "normal"
-                  }
-                }
-              ],
-              "yaxis": {
-                "label": "",
-                "scale": "linear",
-                "min": "auto",
-                "max": "auto",
-                "include_zero": true
-              },
-              "title": "Sum of network.arp over device:br0,!lease:unknown by lease",
-              "show_legend": false,
-              "legend_size": "0"
-            }
-          },
-          {
-            "id": 5003775673011798,
-            "definition": {
-              "type": "timeseries",
-              "requests": [
-                {
-                  "q": "sum:network.arp{lease:unknown,device:br0,$location} by {ip,mac}",
-                  "display_type": "bars",
-                  "style": {
-                    "palette": "dog_classic",
-                    "line_type": "solid",
-                    "line_width": "normal"
-                  }
-                }
-              ],
-              "yaxis": {
-                "label": "",
-                "scale": "linear",
-                "min": "auto",
-                "max": "auto",
-                "include_zero": true
-              },
-              "title": "Sum of network.arp over lease:unknown,device:br0 by ip,mac",
-              "show_legend": false,
-              "legend_size": "0"
-            }
-          },
-          {
-            "id": 1722850690616394,
+            "id": 7410402360632042,
             "definition": {
               "type": "toplist",
               "requests": [
                 {
-                  "q": "top(avg:dnsmasq.dhcp.lease{$location} by {lease,ip,mac}, 50, 'last', 'desc')"
+                  "q": "top(abs(avg:network.wireless.rssi.dbm{$location} by {ssid,lease,mac}), 10, 'mean', 'desc')",
+                  "conditional_formats": [
+                    {
+                      "comparator": ">",
+                      "value": 60,
+                      "palette": "white_on_red"
+                    },
+                    {
+                      "comparator": ">",
+                      "value": 50,
+                      "palette": "white_on_yellow"
+                    },
+                    {
+                      "comparator": ">",
+                      "value": 0,
+                      "palette": "white_on_green"
+                    }
+                  ]
                 }
               ],
-              "title": "Avg of dnsmasq.dhcp.lease over * by lease,ip,mac"
+              "title": "Avg of network.wireless.rssi.dbm over $location by ssid,lease,mac",
+              "time": {}
             }
           },
           {
-            "id": 3544822815551850,
+            "id": 8002199596070112,
             "definition": {
-              "type": "query_table",
+              "type": "timeseries",
               "requests": [
                 {
-                  "q": "top(avg:dnsmasq.dhcp.lease{$location} by {lease,ip}, 50, 'last', 'desc')",
-                  "aggregator": "min",
-                  "limit": 25,
-                  "order": "desc"
+                  "q": "avg:network.wireless.rssi.dbm{$location,ssid:ap} by {mac,lease}",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
                 }
               ],
-              "title": "Avg of dnsmasq.dhcp.lease over * by lease,ip"
+              "yaxis": {
+                "include_zero": false
+              },
+              "title": "AP 2.4 Ghz",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 7405005236644172,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "avg:network.wireless.rssi.dbm{$location,ssid:ap5} by {mac,lease}",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "include_zero": false
+              },
+              "title": "AP5 5 Ghz",
+              "show_legend": false,
+              "legend_size": "0"
             }
           }
         ],
-        "title": "dhcp"
+        "title": "wireless"
       }
     },
     {
@@ -482,7 +588,7 @@
                 "max": "auto",
                 "include_zero": true
               },
-              "title": "query by domain (+) / uniq (-)",
+              "title": "query by domain",
               "show_legend": false,
               "legend_size": "0"
             }
@@ -612,14 +718,33 @@
               "show_legend": false,
               "legend_size": "0"
             }
-          },
+          }
+        ],
+        "title": "dns"
+      }
+    },
+    {
+      "id": 1047305051080478,
+      "definition": {
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
           {
-            "id": 8633940806846714,
+            "id": 550912637719132,
             "definition": {
               "type": "timeseries",
               "requests": [
                 {
-                  "q": "avg:dnsmasq.dns.cache.size{$location} by {host}",
+                  "q": "count_not_null(sum:dnsmasq.dhcp.lease{$location} by {mac,ip})",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "dashed",
+                    "line_width": "normal"
+                  }
+                },
+                {
+                  "q": "count_not_null(sum:network.arp{device:br0,!lease:unknown,$location} by {mac,ip})",
                   "display_type": "line",
                   "style": {
                     "palette": "dog_classic",
@@ -635,13 +760,94 @@
                 "max": "auto",
                 "include_zero": true
               },
-              "title": "Avg of dnsmasq.dns.cache.size over * by host",
+              "title": "dnsmasq.dhcp.lease, network.arp",
               "show_legend": false,
               "legend_size": "0"
             }
+          },
+          {
+            "id": 8190856268895682,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.arp{device:br0,!lease:unknown,$location} by {lease}",
+                  "display_type": "area",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "Sum of network.arp over device:br0,!lease:unknown by lease",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 5003775673011798,
+            "definition": {
+              "type": "timeseries",
+              "requests": [
+                {
+                  "q": "sum:network.arp{lease:unknown,device:br0,$location} by {ip,mac}",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ],
+              "yaxis": {
+                "label": "",
+                "scale": "linear",
+                "min": "auto",
+                "max": "auto",
+                "include_zero": true
+              },
+              "title": "Sum of network.arp over lease:unknown,device:br0 by ip,mac",
+              "show_legend": false,
+              "legend_size": "0"
+            }
+          },
+          {
+            "id": 1722850690616394,
+            "definition": {
+              "type": "toplist",
+              "requests": [
+                {
+                  "q": "top(avg:dnsmasq.dhcp.lease{$location} by {lease,ip,mac}, 50, 'last', 'desc')"
+                }
+              ],
+              "title": "Avg of dnsmasq.dhcp.lease over * by lease,ip,mac"
+            }
+          },
+          {
+            "id": 3544822815551850,
+            "definition": {
+              "type": "query_table",
+              "requests": [
+                {
+                  "q": "top(avg:dnsmasq.dhcp.lease{$location} by {lease,ip}, 50, 'last', 'desc')",
+                  "aggregator": "min",
+                  "limit": 25,
+                  "order": "desc"
+                }
+              ],
+              "title": "Avg of dnsmasq.dhcp.lease over * by lease,ip"
+            }
           }
         ],
-        "title": "dns"
+        "title": "dhcp"
       }
     },
     {

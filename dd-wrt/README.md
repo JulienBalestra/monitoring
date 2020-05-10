@@ -2,6 +2,9 @@
 
 Intend to setup and monitor a dd-wrt router.
 
+Running use cases: 
+* Netgear R6700 v3
+
 ## dd-wrt setup
 
 ### ssh-keys
