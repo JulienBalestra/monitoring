@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"io"
-	"log"
 	"os"
 	"strconv"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/JulienBalestra/monitoring/pkg/fnv"
 )
@@ -222,7 +223,7 @@ func GetConntrackRecords(conntrackFile string) (map[uint64]*Record, time.Time, e
 		}
 		record, err := parseRecordFromLine(line)
 		if err != nil {
-			log.Printf("failed to parse conntrack record: %s %v", string(line), err)
+			zap.L().Error("failed to parse conntrack record", zap.ByteString("line", line), zap.Error(err))
 			continue
 		}
 		records[record.Hash()] = record

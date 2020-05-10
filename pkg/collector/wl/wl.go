@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	exportedTags "github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
@@ -126,7 +128,10 @@ func (c *WL) getWLCommands(ctx context.Context) ([]*wlCommand, error) {
 		}
 		ssid, err := c.getSSID(b)
 		if err != nil {
-			log.Printf("failed to get the SSID for %q %v", device, err)
+			zap.L().Error("failed to get the SSID",
+				zap.String("device", device),
+				zap.Error(err),
+			)
 			continue
 		}
 		wlCommands = append(wlCommands,

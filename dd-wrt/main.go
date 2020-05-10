@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/signal"
 	"runtime/pprof"
@@ -23,6 +22,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"go.uber.org/zap"
 )
 
 const (
@@ -45,11 +45,11 @@ func notifySignals(ctx context.Context, cancel context.CancelFunc, tag *tagger.T
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("end of system signal handling")
+			zap.L().Info("end of system signal handling")
 			return
 
 		case sig := <-signals:
-			log.Printf("signal %s received", sig)
+			zap.L().Info("signal received", zap.String("signal", sig.String()))
 			switch sig {
 			case syscall.SIGUSR1:
 				tag.Print()
@@ -71,11 +71,13 @@ func setDatadogKeys(key *string, flag, envvar string) error {
 	if *key == "" {
 		return fmt.Errorf("flag --%s or envvar %s must be set to a datadog key", flag, envvar)
 	}
-	log.Printf("using environment variable %s", envvar)
 	return nil
 }
 
 func main() {
+	zapConfig := zap.NewProductionConfig()
+	zapLevel := zapConfig.Level.String()
+
 	root := &cobra.Command{
 		Short: "monitoring app for dd-wrt routers",
 		Long:  "monitoring app for dd-wrt routers, disable any collector with --collector-${collector}=0s",
@@ -101,6 +103,7 @@ func main() {
 	fs.StringVar(&hostname, hostnameFlag, hostname, "datadog host tag")
 	fs.StringVar(&timezone, "timezone", timezone, "timezone")
 	fs.DurationVar(&datadogClientConfig.SendInterval, datadogClientSendInterval, time.Second*35, "datadog client send interval to the API >= "+minimalSendInterval.String())
+	fs.StringVar(&zapLevel, "log-level", zapLevel, fmt.Sprintf("log level - %s %s %s %s %s %s %s", zap.DebugLevel, zap.InfoLevel, zap.WarnLevel, zap.ErrorLevel, zap.DPanicLevel, zap.PanicLevel, zap.FatalLevel))
 
 	collectorCatalog := catalog.CollectorCatalog()
 	collectorCatalog[datadogCollector.CollectorName] = func(config *collector.Config) collector.Collector {
@@ -132,6 +135,17 @@ func main() {
 		if hostname == "" {
 			errorStrings = append(errorStrings, fmt.Sprintf("empty hostname, flag --%s to define one", hostnameFlag))
 		}
+		err = zapConfig.Level.UnmarshalText([]byte(zapLevel))
+		if err != nil {
+			errorStrings = append(errorStrings, err.Error())
+		}
+		logger, err := zapConfig.Build()
+		if err != nil {
+			return err
+		}
+		zap.ReplaceGlobals(logger)
+		zap.RedirectStdLog(logger)
+
 		tz, err := time.LoadLocation(timezone)
 		if err != nil {
 			errorStrings = append(errorStrings, err.Error())
@@ -154,7 +168,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		log.Printf("pid %d to %s", os.Getpid(), pidFilePath)
+		zap.L().Info("wrote pid file", zap.Int("pid", os.Getpid()), zap.String("file", pidFilePath))
 
 		ctx, cancel := context.WithCancel(context.TODO())
 		waitGroup := &sync.WaitGroup{}
@@ -180,6 +194,9 @@ func main() {
 		// TODO lifecycle of this chan / create outside ? Wrap ?
 		defer close(client.ChanSeries)
 
+		errorsChan := make(chan error, len(collectorCatalog))
+		defer close(errorsChan)
+
 		for name, newFn := range collectorCatalog {
 			select {
 			case <-ctx.Done():
@@ -187,7 +204,7 @@ func main() {
 			default:
 				d := collectionDuration[name]
 				if *d <= 0 {
-					log.Printf("ignoring collector %s", name)
+					zap.L().Info("ignoring collector", zap.String("collector", name))
 					continue
 				}
 				config := &collector.Config{
@@ -199,7 +216,7 @@ func main() {
 				c := newFn(config)
 				waitGroup.Add(1)
 				go func(coll collector.Collector) {
-					collector.RunCollection(ctx, coll)
+					errorsChan <- collector.RunCollection(ctx, coll)
 					waitGroup.Done()
 				}(c)
 			}
@@ -209,13 +226,18 @@ func main() {
 			"commit:"+version.Revision[:8],
 		)
 		client.MetricClientUp(hostname, tags...)
-		<-ctx.Done()
+		select {
+		case <-ctx.Done():
+		case err := <-errorsChan:
+			zap.L().Error("failed to run collection", zap.Error(err))
+			cancel()
+		}
 
 		ctxShutdown, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		_ = client.MetricClientShutdown(ctxShutdown, hostname, tags...)
 		cancel()
 		waitGroup.Wait()
-		log.Print("program exit")
+		zap.L().Info("program exit")
 		return nil
 	}
 	exitCode := 0

@@ -6,11 +6,12 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
@@ -87,7 +88,7 @@ func (c *Wireless) Collect(_ context.Context) error {
 
 		deviceMac, err := ioutil.ReadFile(sysClassPath + device + "/address")
 		if err != nil {
-			log.Printf("failed to parse device: %v", err)
+			zap.L().Error("failed to parse device", zap.Error(err))
 			continue
 		}
 		deviceMacR := strings.ReplaceAll(string(deviceMac), ":", "-")
@@ -95,7 +96,7 @@ func (c *Wireless) Collect(_ context.Context) error {
 
 		noiseV, err := strconv.ParseFloat(noise, 10)
 		if err != nil {
-			log.Printf("failed to parse noise: %v", err)
+			zap.L().Error("failed to parse noise", zap.Error(err))
 			continue
 		}
 		c.measures.GaugeDeviation(&metrics.Sample{
@@ -108,7 +109,7 @@ func (c *Wireless) Collect(_ context.Context) error {
 
 		discardRetryV, err := strconv.ParseFloat(discardRetry, 10)
 		if err != nil {
-			log.Printf("failed to parse discard/retry: %v", err)
+			zap.L().Error("failed to parse discard/retry", zap.Error(err))
 			continue
 		}
 		_ = c.measures.Count(&metrics.Sample{

@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
+	"go.uber.org/zap"
 )
 
 const (
@@ -46,7 +46,7 @@ func (c *Load) Collect(_ context.Context) error {
 	// 0.65 0.86 0.99 1/737 37114
 	load, err := ioutil.ReadFile(loadPath)
 	if err != nil {
-		log.Printf("failed to parse metrics %s: %v", loadPath, err)
+		zap.L().Error("failed to parse metrics", zap.Error(err))
 		return err
 	}
 	parts := strings.Fields(string(load))

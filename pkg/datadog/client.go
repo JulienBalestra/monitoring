@@ -5,15 +5,16 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 /*
@@ -44,6 +45,7 @@ type Config struct {
 
 	SendInterval  time.Duration
 	ClientMetrics *ClientMetrics
+	Logger        *zap.Config
 }
 
 type ClientMetrics struct {
@@ -79,8 +81,8 @@ func NewClient(conf *Config) *Client {
 	if conf.ClientMetrics == nil {
 		clientMetrics = &ClientMetrics{}
 	}
-	if conf.SendInterval == 0 {
-		conf.SendInterval = time.Minute
+	if conf.SendInterval <= time.Second*5 {
+		conf.SendInterval = time.Second * 60
 	}
 	return &Client{
 		httpClient: httpClient,
@@ -123,23 +125,28 @@ func (c *Client) UpdateHostTags(ctx context.Context, tags []string) error {
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode > 300 {
-		apiKey, err := hideKey(c.conf.DatadogAPIKey)
-		if err != nil {
-			return fmt.Errorf("failed to update host tags status code: %d: %v", resp.StatusCode, err)
-		}
-		appKey, err := hideKey(c.conf.DatadogAPPKey)
-		if err != nil {
-			return fmt.Errorf("failed to update host tags status code: %d: %v", resp.StatusCode, err)
-		}
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-		if err != nil {
-			return fmt.Errorf("failed to update host tags status code: %d %s: %v", resp.StatusCode, string(bodyBytes), err)
-		}
-		return fmt.Errorf("failed to update host tags status code: %d APP=%q API=%q %s", resp.StatusCode, appKey, apiKey, string(bodyBytes))
+
+	if resp.StatusCode < 300 {
+		// From https://golang.org/pkg/net/http/#Response:
+		// The default HTTP client's Transport may not reuse HTTP/1.x "keep-alive"
+		// TCP connections if the Body is not read to completion and closed.
+		_, _ = io.Copy(ioutil.Discard, resp.Body)
+		return resp.Body.Close()
 	}
-	return nil
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	_ = resp.Body.Close()
+	apiKey, err := hideKey(c.conf.DatadogAPIKey)
+	if err != nil {
+		return fmt.Errorf("failed to update host tags status code: %d: %v %s", resp.StatusCode, err, string(bodyBytes))
+	}
+	appKey, err := hideKey(c.conf.DatadogAPPKey)
+	if err != nil {
+		return fmt.Errorf("failed to update host tags status code: %d: %v %s", resp.StatusCode, err, string(bodyBytes))
+	}
+	return fmt.Errorf("failed to update host tags status code: %d APP=%q API=%q %s", resp.StatusCode, appKey, apiKey, string(bodyBytes))
 }
 
 func (c *Client) Run(ctx context.Context) {
@@ -147,26 +154,32 @@ func (c *Client) Run(ctx context.Context) {
 	const shutdownTimeout = 5 * time.Second
 	failures, failuresDropThreshold := 0, 300/int(c.conf.SendInterval.Seconds())
 
-	store := metrics.NewAggregateStore()
+	store := metrics.NewAggregationStore()
 
 	ticker := time.NewTicker(c.conf.SendInterval)
 	defer ticker.Stop()
-	log.Printf("sending metrics every %s", c.conf.SendInterval)
+	zap.L().Info("sending metrics periodically", zap.Duration("sendInterval", c.conf.SendInterval))
 
 	for {
 		select {
 		case <-ctx.Done():
-			if store.Len() > 0 {
+			storeLen := store.Len()
+			if storeLen > 0 {
+				zctx := zap.L().With(
+					zap.Int("storeLen", storeLen),
+					zap.Duration("timeout", shutdownTimeout),
+				)
 				// TODO find something better
-				log.Printf("sending %d pending series with %s timeout", store.Len(), shutdownTimeout)
+				zctx.Info("sending pending series")
 				ctxTimeout, cancel := context.WithTimeout(context.TODO(), shutdownTimeout)
 				err := c.SendSeries(ctxTimeout, store.Series())
 				cancel()
 				if err != nil {
-					log.Printf("still %d pending series: %v", store.Len(), err)
+					zctx.Error("end of datadog client with pending series", zap.Error(err))
+					return
 				}
 			}
-			log.Printf("end of datadog client")
+			zap.L().Info("end of datadog client")
 			return
 
 		case s := <-c.ChanSeries:
@@ -176,15 +189,19 @@ func (c *Client) Run(ctx context.Context) {
 			c.ClientMetrics.Unlock()
 
 		case <-ticker.C:
-			if store.Len() == 0 {
-				log.Printf("no series cached")
+			storeLen := store.Len()
+			zctx := zap.L().With(
+				zap.Int("storeLen", storeLen),
+			)
+			if storeLen == 0 {
+				zctx.Debug("no series cached")
 				continue
 			}
 			ctxTimeout, cancel := context.WithTimeout(ctx, c.conf.SendInterval)
 			err := c.SendSeries(ctxTimeout, store.Series())
 			cancel()
 			if err == nil {
-				log.Printf("successfully sent %d series", store.Len())
+				zctx.Info("successfully sent series")
 				failures = 0
 				store.Reset()
 				continue
@@ -195,13 +212,17 @@ func (c *Client) Run(ctx context.Context) {
 			c.ClientMetrics.Unlock()
 
 			failures++
-			log.Printf("failed to send %d series: %v", store.Len(), err)
+			zctx = zctx.With(
+				zap.Error(err),
+				zap.Int("failures", failures),
+				zap.Int("threshold", failuresDropThreshold),
+			)
 			// TODO maybe use a rate limited queue
 			if failures < failuresDropThreshold {
-				log.Printf("attempt %d/%d: will drop the series over threshold", failures, failuresDropThreshold)
+				zctx.Warn("will drop series over threshold")
 				continue
 			}
-			log.Printf("dropping %d series", store.Len())
+			zctx.Error("dropping series")
 			failures = 0
 			store.Reset()
 		}
@@ -226,7 +247,7 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 	}
 
 	// TODO find a good logger/workflow to debug this
-	//log.Printf("%s", string(b))
+	zap.L().Debug("sending series", zap.Any("series", series))
 	//return nil
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.seriesURL, bytes.NewBuffer(b))
@@ -238,25 +259,29 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode > 300 {
-		k, err := hideKey(c.conf.DatadogAPIKey)
-		if err != nil {
-			return fmt.Errorf("failed to send series status code: %d: %v", resp.StatusCode, err)
-		}
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-		if err != nil {
-			return fmt.Errorf("failed to send series status code: %d %s: %v", resp.StatusCode, string(bodyBytes), err)
-		}
-		return fmt.Errorf("failed to send series status code: %d api_key=%q %s", resp.StatusCode, k, string(bodyBytes))
-	}
+	if resp.StatusCode < 300 {
+		// internal self metrics/counters
+		c.ClientMetrics.Lock()
+		c.ClientMetrics.SentBytes += float64(len(b))
+		c.ClientMetrics.SentSeries += float64(len(series))
+		c.ClientMetrics.Unlock()
 
-	// internal self metrics/counters
-	c.ClientMetrics.Lock()
-	c.ClientMetrics.SentBytes += float64(len(b))
-	c.ClientMetrics.SentSeries += float64(len(series))
-	c.ClientMetrics.Unlock()
-	return nil
+		// From https://golang.org/pkg/net/http/#Response:
+		// The default HTTP client's Transport may not reuse HTTP/1.x "keep-alive"
+		// TCP connections if the Body is not read to completion and closed.
+		_, _ = io.Copy(ioutil.Discard, resp.Body)
+		return resp.Body.Close()
+	}
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	_ = resp.Body.Close()
+	apiKey, err := hideKey(c.conf.DatadogAPIKey)
+	if err != nil {
+		return fmt.Errorf("failed to update host tags status code: %d: %v %s", resp.StatusCode, err, string(bodyBytes))
+	}
+	return fmt.Errorf("failed to update host tags status code: %d API=%q %s", resp.StatusCode, apiKey, string(bodyBytes))
 }
 
 func (c *Client) MetricClientUp(host string, tags ...string) {

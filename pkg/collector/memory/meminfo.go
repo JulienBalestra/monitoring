@@ -3,10 +3,11 @@ package memory
 import (
 	"context"
 	"io/ioutil"
-	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
@@ -142,10 +143,10 @@ func (c *Memory) Collect(_ context.Context) error {
 	now := time.Now()
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
 
-	for i, line := range lines[3:] {
+	for _, line := range lines[3:] {
 		raw := strings.Fields(line)
 		if len(raw) != 3 {
-			log.Printf("failed to parse meminfo line %d len(%d): %q : %q", i, len(raw), line, strings.Join(raw, ","))
+			zap.L().Error("failed to parse meminfo line")
 			continue
 		}
 		metricCandidate := raw[0][:len(raw[0])-1]
@@ -155,7 +156,11 @@ func (c *Memory) Collect(_ context.Context) error {
 		}
 		value, err := strconv.ParseFloat(raw[1], 10)
 		if err != nil {
-			log.Printf("ignoring insupported meminfo metric value %s: %q: %v", metricName, raw[1], err)
+			zap.L().Error("ignoring insupported meminfo metric value",
+				zap.String("metricName", metricName),
+				zap.Error(err),
+				zap.String("field", raw[1]),
+			)
 			continue
 		}
 
