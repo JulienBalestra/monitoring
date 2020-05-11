@@ -159,7 +159,7 @@ func TestNewAggregateStore(t *testing.T) {
 		},
 	} {
 		t.Run(n, func(t *testing.T) {
-			s := NewAggregateStore()
+			s := NewAggregationStore()
 			l := 0
 			for _, se := range tc.series {
 				l += s.Aggregate(se)

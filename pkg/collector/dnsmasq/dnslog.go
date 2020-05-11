@@ -5,11 +5,12 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"log"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
@@ -109,7 +110,7 @@ func (c *Log) Collect(ctx context.Context) error {
 			default:
 				err := c.tail(ctx, lineCh, dnsmasqLogPath)
 				if err != nil {
-					log.Printf("failed tailing: %v", err)
+					zap.L().Error("failed tailing", zap.Error(err))
 					wait, cancel := context.WithTimeout(ctx, time.Second*5)
 					<-wait.Done()
 					cancel()
@@ -123,11 +124,14 @@ func (c *Log) Collect(ctx context.Context) error {
 
 	ticker := time.NewTicker(c.conf.CollectInterval)
 	defer ticker.Stop()
+	zctx := zap.L().With(
+		zap.String("collection", c.Name()),
+	)
 	for {
 		select {
 		case <-ctx.Done():
 			wg.Wait()
-			log.Printf("end of collection: %s", c.Name())
+			zctx.Info("end of collection")
 			return nil
 
 		case <-ticker.C:
@@ -140,13 +144,14 @@ func (c *Log) Collect(ctx context.Context) error {
 				if err == nil {
 					continue
 				}
-				log.Printf("failed to run collection %s: %v", c.Name(), err)
-			}
-			if err == nil {
-				log.Printf("successfully run collection: %s", c.Name())
+				zctx.Error("failed to run collection", zap.Error(err))
 			}
 			queries = make(map[string]*dnsQuery)
 			c.measures.Purge()
+			if err != nil {
+				continue
+			}
+			zctx.Info("successfully run collection")
 
 		case line := <-lineCh:
 			c.processLine(queries, line)
@@ -202,7 +207,7 @@ func (c *Log) processLine(counters map[string]*dnsQuery, line []byte) {
 	// 2006Apr 20 21:35:07
 	t, err := time.Parse(dnsmasqDateFormat, c.year+string(line[:15]))
 	if err != nil {
-		log.Printf("failed to parse date in line: %q %v", string(line), err)
+		zap.L().Error("failed to parse date in line", zap.Error(err), zap.ByteString("line", line))
 		return
 	}
 	if !c.startTailing.Before(t) {

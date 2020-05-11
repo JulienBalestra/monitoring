@@ -3,12 +3,12 @@ package network
 import (
 	"context"
 	"io/ioutil"
-	"log"
 	"strconv"
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
+	"go.uber.org/zap"
 )
 
 const (
@@ -58,13 +58,15 @@ func (c *Statistics) Collect(_ context.Context) error {
 	for metricPath, statistic := range statistics {
 		metric, err := ioutil.ReadFile(metricPath)
 		if err != nil {
-			log.Printf("failed to read metrics from statistics %s: %v", metricPath, err)
+			zap.L().Error("failed to read metrics from statistics",
+				zap.String("metricPath", metricPath), zap.Error(err))
 			continue
 		}
 
 		i, err := strconv.ParseFloat(string(metric[:len(metric)-1]), 10)
 		if err != nil {
-			log.Printf("failed to parse metrics from statistics %s: %v", metricPath, err)
+			zap.L().Error("failed to parse metrics from statistics",
+				zap.String("metricPath", metricPath), zap.Error(err))
 			continue
 		}
 		_ = c.measures.Count(&metrics.Sample{
@@ -96,7 +98,8 @@ func (c *Statistics) getStatisticsFiles() (map[string]*statisticFile, error) {
 		statisticsPath := devicesPath + deviceName + "/statistics/"
 		statistics, err := ioutil.ReadDir(statisticsPath)
 		if err != nil {
-			log.Printf("failed to read statistics for device %s: %v", statisticsPath, err)
+			zap.L().Error("failed to read statistics for device",
+				zap.String("device", statisticsPath), zap.Error(err))
 			continue
 		}
 		for _, statistic := range statistics {

@@ -3,9 +3,10 @@ package network
 import (
 	"context"
 	"io/ioutil"
-	"log"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	exportedTags "github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
@@ -67,15 +68,19 @@ func (c *ARP) Collect(_ context.Context) error {
 	}
 	now := time.Now()
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
-	for i, line := range lines[1:] {
+	for _, line := range lines[1:] {
 		raw := strings.Fields(line)
 		if len(raw) != 6 {
-			log.Printf("failed to parse arp line %d len(%d): %q : %q", i, len(raw), line, strings.Join(raw, ","))
+			zap.L().Error("failed to parse arp line", zap.String("line", line), zap.Strings("fields", raw))
 			continue
 		}
 		ipAddress, macAddress, device := raw[0], raw[3], raw[5]
 		if macAddress == "00:00:00:00:00:00" {
-			log.Printf("ignoring entry %s %s %s", ipAddress, macAddress, device)
+			zap.L().Debug("ignoring entry",
+				zap.String("ip", ipAddress),
+				zap.String("mac", macAddress),
+				zap.String("device", device),
+			)
 			continue
 		}
 		macAddress = strings.ReplaceAll(macAddress, ":", "-")

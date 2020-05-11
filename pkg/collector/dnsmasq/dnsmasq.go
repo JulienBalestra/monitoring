@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
@@ -118,17 +119,23 @@ func (c *DnsMasq) Collect(_ context.Context) error {
 	now := time.Now()
 	timestampSeconds := float64(now.Unix())
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
-	for i, line := range lines {
+	for _, line := range lines {
 		raw := strings.Fields(line)
 		if len(raw) != 5 {
-			log.Printf("failed to parse dnsmasq line %d len(%d): %q : %q", i, len(raw), line, strings.Join(raw, ","))
+			zap.L().Error("failed to parse dnsmasq line",
+				zap.String("line", line),
+				zap.Int("len", len(raw)),
+				zap.Strings("fields", raw),
+			)
 			continue
 		}
 
 		lease, macAddress, ipAddress, leaseName := raw[0], raw[1], raw[2], raw[3]
 		leaseStarted, err := strconv.ParseFloat(lease, 10)
 		if err != nil {
-			log.Printf("failed to parse dnsmasq lease: %v", err)
+			zap.L().Error("failed to parse dnsmasq line",
+				zap.Error(err),
+			)
 			continue
 		}
 		macAddress = strings.ReplaceAll(macAddress, ":", "-")
@@ -154,7 +161,10 @@ func (c *DnsMasq) Collect(_ context.Context) error {
 	for metricName, dnsQuestion := range c.dnsCounterQuestions {
 		v, err := c.queryDnsmasqMetric(&dnsQuestion)
 		if err != nil {
-			log.Printf("failed to query dnsmasq for %s: %v", dnsQuestion.Name, err)
+			zap.L().Error("failed to query dnsmasq",
+				zap.Error(err),
+				zap.String("question", dnsQuestion.Name),
+			)
 			continue
 		}
 		_ = c.measures.Count(&metrics.Sample{
@@ -168,7 +178,10 @@ func (c *DnsMasq) Collect(_ context.Context) error {
 	for metricName, dnsQuestion := range c.dnsGaugeQuestions {
 		v, err := c.queryDnsmasqMetric(&dnsQuestion)
 		if err != nil {
-			log.Printf("failed to query dnsmasq for %s: %v", dnsQuestion.Name, err)
+			zap.L().Error("failed to query dnsmasq",
+				zap.Error(err),
+				zap.String("question", dnsQuestion.Name),
+			)
 			continue
 		}
 		c.measures.GaugeDeviation(&metrics.Sample{

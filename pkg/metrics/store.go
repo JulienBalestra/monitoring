@@ -7,26 +7,26 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/fnv"
 )
 
-type AggregateStore struct {
+type AggregationStore struct {
 	mu    *sync.RWMutex
 	store map[uint64]*Series
 }
 
-func NewAggregateStore() *AggregateStore {
-	return &AggregateStore{
+func NewAggregationStore() *AggregationStore {
+	return &AggregationStore{
 		store: make(map[uint64]*Series),
 		mu:    &sync.RWMutex{},
 	}
 }
 
 // Reset with 75% of the previous size
-func (st *AggregateStore) Reset() {
+func (st *AggregationStore) Reset() {
 	st.mu.Lock()
 	st.store = make(map[uint64]*Series, int(float64(len(st.store))*0.75))
 	st.mu.Unlock()
 }
 
-func (st *AggregateStore) Series() []Series {
+func (st *AggregationStore) Series() []Series {
 	st.mu.RLock()
 	series := make([]Series, 0, len(st.store))
 	for _, s := range st.store {
@@ -36,7 +36,7 @@ func (st *AggregateStore) Series() []Series {
 	return series
 }
 
-func (st *AggregateStore) Aggregate(series ...*Series) int {
+func (st *AggregationStore) Aggregate(series ...*Series) int {
 	matchingSeries := 0
 	st.mu.Lock()
 	for _, s := range series {
@@ -61,8 +61,9 @@ func (st *AggregateStore) Aggregate(series ...*Series) int {
 	return matchingSeries
 }
 
-func (st *AggregateStore) Len() int {
+func (st *AggregationStore) Len() int {
 	st.mu.RLock()
+	l := len(st.store)
 	st.mu.RUnlock()
-	return len(st.store)
+	return l
 }

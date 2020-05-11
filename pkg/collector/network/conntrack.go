@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/JulienBalestra/monitoring/pkg/conntrack"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
@@ -128,11 +130,20 @@ func (c *Conntrack) Collect(ctx context.Context) error {
 			c.measures.Purge()
 			for h, record := range records {
 				if time.Since(record.Deadline) > deadlineTolerationDuration {
+					zap.L().Debug("delete record", zap.Uint64("hash", h))
 					delete(records, h)
 				}
 			}
 			for key, value := range aggregations {
 				if time.Since(value.Timestamp) > maxAgeConntrackEntries {
+					zap.L().Debug("delete aggregation",
+						zap.String("sourceIP", value.sourceIP),
+						zap.String("destinationPortRange", value.destinationPortRange),
+						zap.String("protocol", value.protocol),
+						zap.Float64("fromBytes", value.fromBytes),
+						zap.Float64("toBytes", value.toBytes),
+						zap.String("key", key),
+					)
 					delete(aggregations, key)
 				}
 			}

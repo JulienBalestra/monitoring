@@ -169,10 +169,11 @@ func (m *Measures) Incr(newSample *Sample) error {
 		Tags:      newSample.Tags, // keep the same underlying array
 	})
 	if err != nil {
-		if err == errCountZero {
-			m.counter[h] = newSample
+		if err != errCountZero {
+			return err
 		}
-		return err
+		m.counter[h] = newSample
+		return nil
 	}
 	m.counter[h] = newSample
 	m.ch <- *s
@@ -188,10 +189,11 @@ func (m *Measures) Count(newSample *Sample) error {
 	}
 	s, err := oldSample.Count(newSample)
 	if err != nil {
-		if err == errCountZero {
-			m.counter[h] = newSample
+		if err != errCountZero {
+			return err
 		}
-		return err
+		m.counter[h] = newSample
+		return nil
 	}
 	m.counter[h] = newSample
 	m.ch <- *s

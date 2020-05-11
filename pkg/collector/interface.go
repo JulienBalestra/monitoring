@@ -2,12 +2,11 @@ package collector
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
-
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
+	"go.uber.org/zap"
 )
 
 type Config struct {
@@ -30,35 +29,40 @@ type Collector interface {
 	IsDaemon() bool
 }
 
-func RunCollection(ctx context.Context, c Collector) {
+func RunCollection(ctx context.Context, c Collector) error {
 	config := c.Config()
 
+	zctx := zap.L().With(
+		zap.String("collector", c.Name()),
+		zap.Duration("collectionInterval", config.CollectInterval),
+	)
+
 	if c.IsDaemon() {
-		log.Printf("collecting metrics continuously: %s", c.Name())
+		zctx.Info("collecting metrics continuously")
 		err := c.Collect(ctx)
 		if err != nil {
-			// TODO manage this ?
+			return err
 		}
-		return
+		return nil
 	}
 
 	ticker := time.NewTicker(config.CollectInterval)
 	defer ticker.Stop()
-	log.Printf("collecting metrics every %s: %s", config.CollectInterval.String(), c.Name())
+	zctx.Info("collecting metrics periodically")
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("end of collection: %s", c.Name())
-			return
+			zctx.Info("end of collection")
+			return ctx.Err()
 
 		case <-ticker.C:
 			err := c.Collect(ctx)
 			if err != nil {
-				log.Printf("failed collection: %s: %v", c.Name(), err)
+				zctx.Error("failed collection", zap.Error(err))
 				continue
 			}
-			log.Printf("successfully run collection: %s", c.Name())
+			zctx.Info("successfully run collection")
 		}
 	}
 }
