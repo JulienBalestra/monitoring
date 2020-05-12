@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -19,6 +18,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/catalog"
 	datadogCollector "github.com/JulienBalestra/monitoring/pkg/collector/datadog"
 	"github.com/JulienBalestra/monitoring/pkg/datadog"
+	"github.com/JulienBalestra/monitoring/pkg/forward"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -31,7 +31,6 @@ const (
 	datadogClientSendInterval = "datadog-client-send-interval"
 	hostnameFlag              = "hostname"
 	defaultCollectionInterval = time.Second * 30
-	minimalSendInterval       = time.Second * 10
 	defaultPIDFilePath        = "/tmp/monitoring.pid"
 )
 
@@ -41,7 +40,7 @@ func notifySignals(ctx context.Context, cancel context.CancelFunc, tag *tagger.T
 	defer signal.Stop(signals)
 	defer signal.Reset()
 
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2)
 	for {
 		select {
 		case <-ctx.Done():
@@ -55,6 +54,9 @@ func notifySignals(ctx context.Context, cancel context.CancelFunc, tag *tagger.T
 				tag.Print()
 			case syscall.SIGUSR2:
 				_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 2)
+
+			case syscall.SIGHUP:
+				// nohup
 
 			default:
 				cancel()
@@ -76,6 +78,7 @@ func setDatadogKeys(key *string, flag, envvar string) error {
 
 func main() {
 	zapConfig := zap.NewProductionConfig()
+	zapConfig.OutputPaths = append(zapConfig.OutputPaths)
 	zapLevel := zapConfig.Level.String()
 
 	root := &cobra.Command{
@@ -91,6 +94,7 @@ func main() {
 	hostname, _ := os.Hostname()
 	timezone := time.Local.String()
 	hostname = strings.ToLower(hostname)
+	var client *datadog.Client
 	datadogClientConfig := &datadog.Config{
 		Host:          hostname,
 		ClientMetrics: &datadog.ClientMetrics{},
@@ -102,8 +106,9 @@ func main() {
 	fs.StringVarP(&datadogClientConfig.DatadogAPPKey, datadogAPPKeyFlag, "p", "", "datadog APP key")
 	fs.StringVar(&hostname, hostnameFlag, hostname, "datadog host tag")
 	fs.StringVar(&timezone, "timezone", timezone, "timezone")
-	fs.DurationVar(&datadogClientConfig.SendInterval, datadogClientSendInterval, time.Second*35, "datadog client send interval to the API >= "+minimalSendInterval.String())
+	fs.DurationVar(&datadogClientConfig.SendInterval, datadogClientSendInterval, time.Second*35, "datadog client send interval to the API >= "+datadog.MinimalSendInterval.String())
 	fs.StringVar(&zapLevel, "log-level", zapLevel, fmt.Sprintf("log level - %s %s %s %s %s %s %s", zap.DebugLevel, zap.InfoLevel, zap.WarnLevel, zap.ErrorLevel, zap.DPanicLevel, zap.PanicLevel, zap.FatalLevel))
+	fs.StringSliceVar(&zapConfig.OutputPaths, "log-output", zapConfig.OutputPaths, "log output")
 
 	collectorCatalog := catalog.CollectorCatalog()
 	collectorCatalog[datadogCollector.CollectorName] = func(config *collector.Config) collector.Collector {
@@ -120,24 +125,29 @@ func main() {
 
 	root.Flags().AddFlagSet(fs)
 	root.PreRunE = func(cmd *cobra.Command, args []string) error {
-		var errorStrings []string
 		err := setDatadogKeys(&datadogClientConfig.DatadogAPIKey, datadogAPIKeyFlag, "DATADOG_API_KEY")
 		if err != nil {
-			errorStrings = append(errorStrings, err.Error())
+			return err
 		}
 		err = setDatadogKeys(&datadogClientConfig.DatadogAPPKey, datadogAPPKeyFlag, "DATADOG_APP_KEY")
 		if err != nil {
-			errorStrings = append(errorStrings, err.Error())
+			return err
 		}
-		if datadogClientConfig.SendInterval < minimalSendInterval {
-			errorStrings = append(errorStrings, fmt.Sprintf("flag --%s must be greater or equal to %s", datadogClientSendInterval, minimalSendInterval))
+		if datadogClientConfig.SendInterval <= datadog.MinimalSendInterval {
+			return fmt.Errorf("flag --%s must be greater or equal to %s", datadogClientSendInterval, datadog.MinimalSendInterval)
 		}
 		if hostname == "" {
-			errorStrings = append(errorStrings, fmt.Sprintf("empty hostname, flag --%s to define one", hostnameFlag))
+			return fmt.Errorf("empty hostname, flag --%s to define one", hostnameFlag)
 		}
 		err = zapConfig.Level.UnmarshalText([]byte(zapLevel))
 		if err != nil {
-			errorStrings = append(errorStrings, err.Error())
+			return err
+		}
+		client = datadog.NewClient(datadogClientConfig)
+		// TODO make it works
+		err = zap.RegisterSink(forward.DatadogZapScheme, forward.NewDatadogForwarder(client))
+		if err != nil {
+			return err
 		}
 		logger, err := zapConfig.Build()
 		if err != nil {
@@ -148,13 +158,10 @@ func main() {
 
 		tz, err := time.LoadLocation(timezone)
 		if err != nil {
-			errorStrings = append(errorStrings, err.Error())
+			return err
 		}
-		if errorStrings == nil {
-			time.Local = tz
-			return nil
-		}
-		return errors.New(strings.Join(errorStrings, "; "))
+		time.Local = tz
+		return nil
 	}
 
 	root.RunE = func(cmd *cobra.Command, args []string) error {
@@ -179,12 +186,6 @@ func main() {
 			notifySignals(ctx, cancel, tag)
 			waitGroup.Done()
 		}()
-
-		client := datadog.NewClient(datadogClientConfig)
-		err = client.UpdateHostTags(ctx, hostTagsStrings)
-		if err != nil {
-			return err
-		}
 
 		waitGroup.Add(1)
 		go func() {
@@ -226,6 +227,7 @@ func main() {
 			"commit:"+version.Revision[:8],
 		)
 		client.MetricClientUp(hostname, tags...)
+		_ = client.UpdateHostTags(ctx, hostTagsStrings)
 		select {
 		case <-ctx.Done():
 		case err := <-errorsChan:
@@ -237,13 +239,16 @@ func main() {
 		_ = client.MetricClientShutdown(ctxShutdown, hostname, tags...)
 		cancel()
 		waitGroup.Wait()
-		zap.L().Info("program exit")
 		return nil
 	}
 	exitCode := 0
 	err := root.Execute()
 	if err != nil {
 		exitCode = 1
+		zap.L().Error("program exit", zap.Error(err), zap.Int("exitCode", exitCode))
+	} else {
+		zap.L().Info("program exit", zap.Int("exitCode", exitCode))
 	}
+	_ = zap.L().Sync()
 	os.Exit(exitCode)
 }
