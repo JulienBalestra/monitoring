@@ -117,10 +117,16 @@ func (c *DnsMasq) Collect(_ context.Context) error {
 	}
 
 	if len(b) == 0 {
-		return errors.New("empty file " + dnsmasqPath)
+		zap.L().Debug("dnsmasq file is empty",
+			zap.ByteString(dnsmasqPath, b),
+		)
+		return nil
 	}
 	lines := bytes.Split(b[:len(b)-1], c.splitSep)
 	if len(lines) == 0 {
+		zap.L().Debug("dnsmasq file is empty",
+			zap.ByteString(dnsmasqPath, b),
+		)
 		return nil
 	}
 	now := time.Now()

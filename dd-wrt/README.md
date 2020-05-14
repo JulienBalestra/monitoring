@@ -77,7 +77,7 @@ Router Management:
 **command**:
 
 ```shell script
-/tmp/mnt/sda1/monitoring.sh
+until /tmp/mnt/sda1/monitoring.sh;do sleep 1;done
 ``` 
 
 
