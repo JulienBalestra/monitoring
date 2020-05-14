@@ -5,11 +5,10 @@ kill $(cat ${PID_FILE})
 
 export DATADOG_API_KEY="fake-api-key********************"
 export DATADOG_APP_KEY="fake-app-key********************"
-export DATADOG_HOST_TAGS=location:home,room:living-room
 
-exec /tmp/mnt/sda2/monitoring \
+exec /tmp/mnt/sda1/monitoring \
     --pid-file=${PID_FILE} \
-    --datadog-host-tags=${DATADOG_HOST_TAGS} \
+    --log-output=/tmp/mnt/sda1/monitoring.log \
     --collector-datadog-client=2m \
     --collector-dnsmasq=30s  \
     --collector-dnsmasq-log=10s  \

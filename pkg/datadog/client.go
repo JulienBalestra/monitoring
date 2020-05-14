@@ -34,10 +34,14 @@ curl  -X POST -H "Content-type: application/json" \
 const (
 	contentType     = "Content-Type"
 	applicationJson = "application/json"
+
+	MinimalSendInterval = time.Second * 5
+	DefaultSendInterval = time.Second * 60
 )
 
 type Config struct {
 	Host     string
+	HostTags []string
 	ChanSize int
 
 	DatadogAPIKey string
@@ -51,9 +55,12 @@ type Config struct {
 type ClientMetrics struct {
 	sync.RWMutex
 
-	SentBytes  float64
-	SentSeries float64
-	SentErrors float64
+	SentLogsBytes  float64
+	SentLogsErrors float64
+
+	SentSeriesBytes  float64
+	SentSeries       float64
+	SentSeriesErrors float64
 
 	StoreAggregations float64
 }
@@ -61,8 +68,8 @@ type ClientMetrics struct {
 type Client struct {
 	conf *Config
 
-	httpClient             *http.Client
-	seriesURL, hostTagsURL string
+	httpClient                      *http.Client
+	seriesURL, hostTagsURL, logsURL string
 
 	ChanSeries    chan metrics.Series
 	ClientMetrics *ClientMetrics
@@ -81,8 +88,8 @@ func NewClient(conf *Config) *Client {
 	if conf.ClientMetrics == nil {
 		clientMetrics = &ClientMetrics{}
 	}
-	if conf.SendInterval <= time.Second*5 {
-		conf.SendInterval = time.Second * 60
+	if conf.SendInterval <= MinimalSendInterval {
+		conf.SendInterval = DefaultSendInterval
 	}
 	return &Client{
 		httpClient: httpClient,
@@ -90,6 +97,7 @@ func NewClient(conf *Config) *Client {
 
 		seriesURL:   "https://api.datadoghq.com/api/v1/series?api_key=" + conf.DatadogAPIKey,
 		hostTagsURL: "https://api.datadoghq.com/api/v1/tags/hosts/" + conf.Host,
+		logsURL:     "https://http-intake.logs.datadoghq.com/v1/input/" + conf.DatadogAPIKey,
 		ChanSeries:  make(chan metrics.Series, conf.ChanSize),
 
 		ClientMetrics: clientMetrics,
@@ -151,27 +159,44 @@ func (c *Client) UpdateHostTags(ctx context.Context, tags []string) error {
 
 func (c *Client) Run(ctx context.Context) {
 	// TODO explain these magic numbers
-	const shutdownTimeout = 5 * time.Second
+	const timeout = 5 * time.Second
 	failures, failuresDropThreshold := 0, 300/int(c.conf.SendInterval.Seconds())
 
 	store := metrics.NewAggregationStore()
 
-	ticker := time.NewTicker(c.conf.SendInterval)
-	defer ticker.Stop()
+	seriesTicker := time.NewTicker(c.conf.SendInterval)
+	defer seriesTicker.Stop()
+
+	hostTicker := time.NewTicker(time.Hour)
+	defer hostTicker.Stop()
+
 	zap.L().Info("sending metrics periodically", zap.Duration("sendInterval", c.conf.SendInterval))
 
 	for {
 		select {
+		case <-hostTicker.C:
+			zctx := zap.L().With(
+				zap.Strings("hostTags", c.conf.HostTags),
+			)
+			ctxTimeout, cancel := context.WithTimeout(ctx, timeout)
+			err := c.UpdateHostTags(ctxTimeout, c.conf.HostTags)
+			cancel()
+			if err != nil {
+				zctx.Error("failed to update host tags", zap.Error(err))
+				continue
+			}
+			zctx.Info("successfully updated host tags")
+
 		case <-ctx.Done():
 			storeLen := store.Len()
 			if storeLen > 0 {
 				zctx := zap.L().With(
 					zap.Int("storeLen", storeLen),
-					zap.Duration("timeout", shutdownTimeout),
+					zap.Duration("timeout", timeout),
 				)
 				// TODO find something better
 				zctx.Info("sending pending series")
-				ctxTimeout, cancel := context.WithTimeout(context.TODO(), shutdownTimeout)
+				ctxTimeout, cancel := context.WithTimeout(context.TODO(), timeout)
 				err := c.SendSeries(ctxTimeout, store.Series())
 				cancel()
 				if err != nil {
@@ -188,7 +213,7 @@ func (c *Client) Run(ctx context.Context) {
 			c.ClientMetrics.StoreAggregations += float64(aggregateCount)
 			c.ClientMetrics.Unlock()
 
-		case <-ticker.C:
+		case <-seriesTicker.C:
 			storeLen := store.Len()
 			zctx := zap.L().With(
 				zap.Int("storeLen", storeLen),
@@ -206,11 +231,6 @@ func (c *Client) Run(ctx context.Context) {
 				store.Reset()
 				continue
 			}
-
-			c.ClientMetrics.Lock()
-			c.ClientMetrics.SentErrors++
-			c.ClientMetrics.Unlock()
-
 			failures++
 			zctx = zctx.With(
 				zap.Error(err),
@@ -254,6 +274,7 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 	if err != nil {
 		return err
 	}
+	// TODO use compression
 	req.Header.Set(contentType, applicationJson)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -262,7 +283,7 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 	if resp.StatusCode < 300 {
 		// internal self metrics/counters
 		c.ClientMetrics.Lock()
-		c.ClientMetrics.SentBytes += float64(len(b))
+		c.ClientMetrics.SentSeriesBytes += float64(len(b))
 		c.ClientMetrics.SentSeries += float64(len(series))
 		c.ClientMetrics.Unlock()
 
@@ -272,8 +293,58 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 		_, _ = io.Copy(ioutil.Discard, resp.Body)
 		return resp.Body.Close()
 	}
+	c.ClientMetrics.Lock()
+	c.ClientMetrics.SentSeriesErrors++
+	c.ClientMetrics.Unlock()
+
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		return err
+	}
+	_ = resp.Body.Close()
+	apiKey, err := hideKey(c.conf.DatadogAPIKey)
+	if err != nil {
+		return fmt.Errorf("failed to update host tags status code: %d: %v %s", resp.StatusCode, err, string(bodyBytes))
+	}
+	return fmt.Errorf("failed to update host tags status code: %d API=%q %s", resp.StatusCode, apiKey, string(bodyBytes))
+}
+
+func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {
+	bufferLen := buffer.Len()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.logsURL, buffer)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set(contentType, "application/logplex-1")
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		c.ClientMetrics.Lock()
+		c.ClientMetrics.SentLogsErrors++
+		c.ClientMetrics.Unlock()
+		return err
+	}
+	if resp.StatusCode < 300 {
+		// internal self metrics/counters
+		c.ClientMetrics.Lock()
+		c.ClientMetrics.SentLogsBytes += float64(bufferLen)
+		c.ClientMetrics.Unlock()
+
+		// From https://golang.org/pkg/net/http/#Response:
+		// The default HTTP client's Transport may not reuse HTTP/1.x "keep-alive"
+		// TCP connections if the Body is not read to completion and closed.
+		_, _ = io.Copy(ioutil.Discard, resp.Body)
+		return resp.Body.Close()
+	}
+	c.ClientMetrics.Lock()
+	c.ClientMetrics.SentLogsErrors++
+	c.ClientMetrics.Unlock()
+
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		c.ClientMetrics.Lock()
+		c.ClientMetrics.SentLogsErrors++
+		c.ClientMetrics.Unlock()
 		return err
 	}
 	_ = resp.Body.Close()

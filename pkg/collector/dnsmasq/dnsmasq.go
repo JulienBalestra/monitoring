@@ -1,6 +1,7 @@
 package dnsmasq
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -51,6 +52,8 @@ type DnsMasq struct {
 	dnsClient           *dns.Client
 	dnsCounterQuestions map[string]dns.Question
 	dnsGaugeQuestions   map[string]dns.Question
+
+	splitSep []byte
 }
 
 func NewDnsMasq(conf *collector.Config) collector.Collector {
@@ -93,6 +96,7 @@ func NewDnsMasq(conf *collector.Config) collector.Collector {
 				Qclass: dns.ClassCHAOS,
 			},
 		},
+		splitSep: []byte{'\n'},
 	}
 }
 
@@ -112,7 +116,10 @@ func (c *DnsMasq) Collect(_ context.Context) error {
 		return err
 	}
 
-	lines := strings.Split(string(b[:len(b)-1]), "\n")
+	if len(b) == 0 {
+		return errors.New("empty file " + dnsmasqPath)
+	}
+	lines := bytes.Split(b[:len(b)-1], c.splitSep)
 	if len(lines) == 0 {
 		return nil
 	}
@@ -120,17 +127,17 @@ func (c *DnsMasq) Collect(_ context.Context) error {
 	timestampSeconds := float64(now.Unix())
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
 	for _, line := range lines {
-		raw := strings.Fields(line)
+		raw := bytes.Fields(line)
 		if len(raw) != 5 {
 			zap.L().Error("failed to parse dnsmasq line",
-				zap.String("line", line),
+				zap.ByteString("line", line),
 				zap.Int("len", len(raw)),
-				zap.Strings("fields", raw),
+				zap.ByteStrings("fields", raw),
 			)
 			continue
 		}
 
-		lease, macAddress, ipAddress, leaseName := raw[0], raw[1], raw[2], raw[3]
+		lease, macAddress, ipAddress, leaseName := string(raw[0]), string(raw[1]), string(raw[2]), string(raw[3])
 		leaseStarted, err := strconv.ParseFloat(lease, 10)
 		if err != nil {
 			zap.L().Error("failed to parse dnsmasq line",

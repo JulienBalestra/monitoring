@@ -52,7 +52,7 @@ func (c *Client) Collect(_ context.Context) error {
 	samples := []*metrics.Sample{
 		{
 			Name:      clientSentByteMetric,
-			Value:     c.ClientMetrics.SentBytes,
+			Value:     c.ClientMetrics.SentSeriesBytes,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,
@@ -66,7 +66,7 @@ func (c *Client) Collect(_ context.Context) error {
 		},
 		{
 			Name:      clientErrorsMetric,
-			Value:     c.ClientMetrics.SentErrors,
+			Value:     c.ClientMetrics.SentSeriesErrors,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,
