@@ -45,11 +45,12 @@ jobs:
     - checkout
     - run: make ineffassign
 
-  build-amd64:
+  dd-wrt-monitoring-amd64:
     <<: *base
     steps:
     - checkout
     - run: make amd64
+    - run: ./dd-wrt/monitoring-amd64 version
 
   example:
     <<: *base
@@ -67,5 +68,5 @@ workflows:
     - lint
     - test
     - ineffassign
-    - build-amd64
+    - dd-wrt-monitoring-amd64
     - example
