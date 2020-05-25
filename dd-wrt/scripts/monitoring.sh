@@ -8,7 +8,7 @@ export DATADOG_APP_KEY="fake-app-key********************"
 
 exec /tmp/mnt/sda1/monitoring \
     --pid-file=${PID_FILE} \
-    --log-output=/tmp/mnt/sda1/monitoring.log \
+    --log-output=/tmp/mnt/sda1/monitoring.log,datadog://zap \
     --collector-datadog-client=2m \
     --collector-dnsmasq=30s  \
     --collector-dnsmasq-log=10s  \

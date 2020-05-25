@@ -13,6 +13,7 @@ import (
 
 const (
 	DatadogZapScheme  = "datadog"
+	DatadogZapOutput  = DatadogZapScheme + "://zap"
 	bufferSize        = 1000000
 	bufferSyncTrigger = bufferSize + (bufferSize * 0.15)
 )
@@ -42,9 +43,11 @@ func (f *Forwarder) Write(p []byte) (n int, err error) {
 }
 
 func (f *Forwarder) Sync() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	err := f.c.SendLogs(context.Background(), f.buffer)
+	err := f.c.SendLogs(ctx, f.buffer)
 	if err != nil {
 		return err
 	}
@@ -60,9 +63,10 @@ func (f *Forwarder) Close() error {
 func NewDatadogForwarder(c *datadog.Client) func(*url.URL) (zap.Sink, error) {
 	return func(_ *url.URL) (zap.Sink, error) {
 		return &Forwarder{
-			mu:     &sync.Mutex{},
-			buffer: bytes.NewBuffer(make([]byte, 0, bufferSize)),
-			c:      c,
+			mu:       &sync.Mutex{},
+			buffer:   bytes.NewBuffer(make([]byte, 0, bufferSize)),
+			c:        c,
+			lastSync: time.Now(),
 		}, nil
 	}
 }

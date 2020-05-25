@@ -18,7 +18,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/catalog"
 	datadogCollector "github.com/JulienBalestra/monitoring/pkg/collector/datadog"
 	"github.com/JulienBalestra/monitoring/pkg/datadog"
-	"github.com/JulienBalestra/monitoring/pkg/forward"
+	"github.com/JulienBalestra/monitoring/pkg/datadog/forward"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -78,7 +78,7 @@ func setDatadogKeys(key *string, flag, envvar string) error {
 
 func main() {
 	zapConfig := zap.NewProductionConfig()
-	zapConfig.OutputPaths = append(zapConfig.OutputPaths)
+	zapConfig.OutputPaths = append(zapConfig.OutputPaths, forward.DatadogZapOutput)
 	zapLevel := zapConfig.Level.String()
 
 	root := &cobra.Command{
