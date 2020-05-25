@@ -97,8 +97,9 @@ func NewClient(conf *Config) *Client {
 
 		seriesURL:   "https://api.datadoghq.com/api/v1/series?api_key=" + conf.DatadogAPIKey,
 		hostTagsURL: "https://api.datadoghq.com/api/v1/tags/hosts/" + conf.Host,
-		logsURL:     "https://http-intake.logs.datadoghq.com/v1/input/" + conf.DatadogAPIKey,
-		ChanSeries:  make(chan metrics.Series, conf.ChanSize),
+		logsURL: "https://http-intake.logs.datadoghq.com/v1/input/" + conf.DatadogAPIKey +
+			"?hostname=" + conf.Host,
+		ChanSeries: make(chan metrics.Series, conf.ChanSize),
 
 		ClientMetrics: clientMetrics,
 	}
@@ -316,7 +317,7 @@ func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {
 		return err
 	}
 
-	req.Header.Set(contentType, "application/logplex-1")
+	req.Header.Set(contentType, "text/plain")
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		c.ClientMetrics.Lock()
