@@ -99,6 +99,7 @@ func (c *Log) Collect(ctx context.Context) error {
 	lineCh := make(chan []byte)
 	defer close(lineCh)
 
+	firstStart := true
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
@@ -108,17 +109,20 @@ func (c *Log) Collect(ctx context.Context) error {
 				wg.Done()
 				return
 			default:
-				err := c.tail(ctx, lineCh, dnsmasqLogPath)
+				err := c.tail(ctx, lineCh, dnsmasqLogPath, firstStart)
 				if err != nil {
 					zap.L().Error("failed tailing", zap.Error(err))
-					wait, cancel := context.WithTimeout(ctx, time.Second*5)
+					wait, cancel := context.WithTimeout(ctx, time.Second)
 					<-wait.Done()
 					cancel()
 				}
+				firstStart = false
 			}
 		}
 	}()
-	c.year = time.Now().Format("2006")
+
+	// 127.0.0.1 can do dns query
+	c.conf.Tagger.Update("127.0.0.1", tagger.NewTagUnsafe(exported.LeaseKey, "localhost"))
 	c.startTailing = time.Now()
 	queries := make(map[string]*dnsQuery)
 
@@ -159,23 +163,24 @@ func (c *Log) Collect(ctx context.Context) error {
 	}
 }
 
-func (c *Log) tail(ctx context.Context, ch chan []byte, f string) error {
+func (c *Log) tail(ctx context.Context, ch chan []byte, f string, end bool) error {
 	file, err := os.Open(f)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	_, err = file.Seek(0, 2)
-	if err != nil {
-		return err
+	if end {
+		_, err = file.Seek(0, 2)
+		if err != nil {
+			return err
+		}
 	}
-
-	// 127.0.0.1 can do dns query
-	c.conf.Tagger.Update("127.0.0.1", tagger.NewTagUnsafe(exported.LeaseKey, "localhost"))
 
 	// TODO fix this reader
 	reader := bufio.NewReaderSize(file, 1024*6)
+	var prevSize int64
+	stalingFileCount := 0
 	for {
 		select {
 		case <-ctx.Done():
@@ -191,9 +196,38 @@ func (c *Log) tail(ctx context.Context, ch chan []byte, f string) error {
 			if err != io.EOF {
 				return err
 			}
+			s, err := file.Stat()
+			if err != nil {
+				return err
+			}
+			if s.Size() < prevSize {
+				zap.L().Info("truncated file",
+					zap.String("file", f),
+					zap.Int64("currentSize", s.Size()),
+					zap.Int64("previousSize", prevSize),
+					zap.Int("stalingFileCount", stalingFileCount),
+				)
+				return nil
+			}
 			wait, cancel := context.WithTimeout(ctx, time.Second)
 			<-wait.Done()
 			cancel()
+			if s.Size() > prevSize {
+				prevSize = s.Size()
+				stalingFileCount = 0
+				continue
+			}
+			if stalingFileCount < 30 {
+				stalingFileCount++
+				continue
+			}
+			zap.L().Info("staling file",
+				zap.String("file", f),
+				zap.Int64("currentSize", s.Size()),
+				zap.Int64("previousSize", prevSize),
+				zap.Int("stalingFileCount", stalingFileCount),
+			)
+			return nil
 		}
 	}
 }
