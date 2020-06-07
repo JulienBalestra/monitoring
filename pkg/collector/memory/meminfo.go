@@ -1,10 +1,12 @@
 package memory
 
 import (
+	"bufio"
+	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
+	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -69,10 +71,13 @@ type Memory struct {
 	conf     *collector.Config
 	mapping  map[string]string
 	measures *metrics.Measures
+
+	endline []byte
 }
 
-func NewMemory(conf *collector.Config) collector.Collector {
+func newMemory(conf *collector.Config) *Memory {
 	return &Memory{
+		endline:  []byte(" kB\n"),
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.SeriesCh),
 		// TODO this is all the available metrics, some are commented for random reasons
@@ -120,6 +125,10 @@ func NewMemory(conf *collector.Config) collector.Collector {
 	}
 }
 
+func NewMemory(conf *collector.Config) collector.Collector {
+	return newMemory(conf)
+}
+
 func (c *Memory) Config() *collector.Config {
 	return c.conf
 }
@@ -130,36 +139,57 @@ func (c *Memory) Name() string {
 	return CollectorMemoryName
 }
 
-func (c *Memory) Collect(_ context.Context) error {
-	b, err := ioutil.ReadFile(memInfoPath)
+func (c *Memory) collect(f string) error {
+	file, err := os.Open(f)
 	if err != nil {
 		return err
 	}
+	defer file.Close()
+	reader := bufio.NewReader(file)
 
-	lines := strings.Split(string(b[:len(b)-1]), "\n")
-	if len(lines) == 0 {
-		return nil
-	}
 	now := time.Now()
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
-
-	for _, line := range lines[3:] {
-		raw := strings.Fields(line)
-		if len(raw) != 3 {
-			zap.L().Error("failed to parse meminfo line")
+	for {
+		// TODO improve this reader
+		line, err := reader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+		if len(line) < 1 {
 			continue
 		}
-		metricCandidate := raw[0][:len(raw[0])-1]
+		// dd-wrt starts its meminfo file like this:
+		//        total:    used:    free:  shared: buffers:  cached:
+		if line[0] == ' ' {
+			continue
+		}
+		i := bytes.Index(line, c.endline)
+		if i == -1 {
+			continue
+		}
+		lineToParse := line[:i]
+		fields := bytes.Fields(lineToParse)
+		if len(fields) != 2 {
+			continue
+		}
+		if len(fields[0]) < 2 {
+			continue
+		}
+		metricCandidate := string(fields[0][:len(fields[0])-1])
 		metricName := c.mapping[metricCandidate] // remove the trailing ":"
 		if metricName == "" {
 			continue
 		}
-		value, err := strconv.ParseFloat(raw[1], 10)
+		metricsValue := string(fields[1])
+		value, err := strconv.ParseFloat(metricsValue, 10)
 		if err != nil {
 			zap.L().Error("ignoring insupported meminfo metric value",
 				zap.String("metricName", metricName),
 				zap.Error(err),
-				zap.String("field", raw[1]),
+				zap.String("field", metricsValue),
 			)
 			continue
 		}
@@ -171,6 +201,10 @@ func (c *Memory) Collect(_ context.Context) error {
 			Host:      c.conf.Host,
 			Tags:      hostTags,
 		}, c.conf.CollectInterval*3)
+
 	}
-	return nil
+}
+
+func (c *Memory) Collect(_ context.Context) error {
+	return c.collect(memInfoPath)
 }
