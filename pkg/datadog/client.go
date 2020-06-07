@@ -152,13 +152,13 @@ func (c *Client) UpdateHostTags(ctx context.Context, tags []string) error {
 	_ = resp.Body.Close()
 	apiKey, err := hideKey(c.conf.DatadogAPIKey)
 	if err != nil {
-		return fmt.Errorf("failed to update host tags status code: %d: %v %s", resp.StatusCode, err, string(bodyBytes))
+		return fmt.Errorf("failed to update host tags status code: %d: %v %s %q", resp.StatusCode, err, string(bodyBytes), tags)
 	}
 	appKey, err := hideKey(c.conf.DatadogAPPKey)
 	if err != nil {
-		return fmt.Errorf("failed to update host tags status code: %d: %v %s", resp.StatusCode, err, string(bodyBytes))
+		return fmt.Errorf("failed to update host tags status code: %d: %v %s %q", resp.StatusCode, err, string(bodyBytes), tags)
 	}
-	return fmt.Errorf("failed to update host tags status code: %d APP=%q API=%q %s", resp.StatusCode, appKey, apiKey, string(bodyBytes))
+	return fmt.Errorf("failed to update host tags status code: %d APP=%q API=%q %s %q", resp.StatusCode, appKey, apiKey, string(bodyBytes), tags)
 }
 
 func (c *Client) Run(ctx context.Context) {
