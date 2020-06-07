@@ -1,0 +1,21 @@
+[Unit]
+Description=monitoring
+Documentation=https://github.com/JulienBalestra/monitoring
+
+[Service]
+Environment=DATADOG_API_KEY=
+Environment=DATADOG_APP_KEY=
+EnvironmentFile=/etc/monitoring/environment
+
+ExecStart=/usr/local/bin/monitoring \
+    --pid-file=/run/monitoring.pid \
+    --log-output=stdout,datadog://zap \
+    --collector-datadog-client=2m \
+    --collector-load=30s \
+    --collector-memory=60s \
+    --collector-network-statistics=10s \
+    --collector-network-wireless=30s \
+    --collector-tagger=2m
+
+[Install]
+WantedBy=multi-user.target

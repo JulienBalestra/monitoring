@@ -3,6 +3,7 @@ arm:
 
 amd64:
 	$(MAKE) -C dd-wrt $@
+	$(MAKE) -C pi $@
 
 clean:
 	$(MAKE) -C dd-wrt $@

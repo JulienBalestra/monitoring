@@ -51,6 +51,7 @@ jobs:
     - checkout
     - run: make amd64
     - run: ./dd-wrt/monitoring-amd64 version
+    - run: ./pi/monitoring-amd64 version
 
   example:
     <<: *base
