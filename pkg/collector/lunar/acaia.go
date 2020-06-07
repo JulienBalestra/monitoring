@@ -1,16 +1,14 @@
-package acaia
+package lunar
 
 import (
+	"context"
+
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 )
 
-import (
-	"context"
-)
-
 const (
-	CollectorLoadName = "acaia"
+	CollectorLoadName = "lunar"
 )
 
 type Load struct {

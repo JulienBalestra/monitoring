@@ -115,6 +115,9 @@ type HostTags struct {
 }
 
 func (c *Client) UpdateHostTags(ctx context.Context, tags []string) error {
+	if len(tags) == 0 {
+		return nil
+	}
 	var buff bytes.Buffer
 	err := json.NewEncoder(&buff).Encode(&HostTags{
 		Host: c.conf.Host,
@@ -262,6 +265,9 @@ func hideKey(key string) (string, error) {
 }
 
 func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error {
+	if len(series) == 0 {
+		return nil
+	}
 	b, err := json.Marshal(Payload{Series: series})
 	if err != nil {
 		return err
@@ -312,6 +318,9 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 
 func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {
 	bufferLen := buffer.Len()
+	if bufferLen == 0 {
+		return nil
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.logsURL, buffer)
 	if err != nil {
 		return err
