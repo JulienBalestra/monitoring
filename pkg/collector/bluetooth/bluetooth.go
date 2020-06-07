@@ -54,6 +54,7 @@ func (c *Bluetooth) Collect(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 
 	ag := agent.NewSimpleAgent()
 	defer ag.Cancel()
@@ -62,11 +63,13 @@ func (c *Bluetooth) Collect(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer agent.RemoveAgent(ag)
 
 	a, err := adapter.GetDefaultAdapter()
 	if err != nil {
 		return err
 	}
+	defer a.Close()
 
 	err = a.FlushDevices()
 	if err != nil {
