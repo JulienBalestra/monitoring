@@ -2,6 +2,7 @@ package lunar
 
 import (
 	"context"
+
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/godbus/dbus"
@@ -111,7 +112,7 @@ func (c *Lunar) Collect(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer a.Close()
+	defer a.StopDiscovery()
 
 	for {
 		select {

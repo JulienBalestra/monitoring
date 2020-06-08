@@ -34,3 +34,6 @@ vet:
 verify-fmt: fmt .pristine
 
 verify-import: import .pristine
+
+generate:
+	@go run pkg/mac/main/main.go

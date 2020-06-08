@@ -18,6 +18,8 @@ ExecStart=/usr/local/bin/monitoring \
     --collector-network-wireless=60s \
     --collector-bluetooth=10s \
     --collector-tagger=2m
+Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target

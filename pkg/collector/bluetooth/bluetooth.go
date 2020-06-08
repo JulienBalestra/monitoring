@@ -2,14 +2,15 @@ package bluetooth
 
 import (
 	"context"
-	"github.com/JulienBalestra/monitoring/pkg/collector/bluetooth/exported"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
+	"github.com/JulienBalestra/monitoring/pkg/collector/bluetooth/exported"
 	"github.com/JulienBalestra/monitoring/pkg/fnv"
+	"github.com/JulienBalestra/monitoring/pkg/mac"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
 	"github.com/godbus/dbus"
@@ -52,39 +53,34 @@ func (c *Bluetooth) Name() string {
 func (c *Bluetooth) Collect(ctx context.Context) error {
 	conn, err := dbus.SystemBus()
 	if err != nil {
+		zap.L().Error("failed to create dbus connection", zap.Error(err))
 		return err
 	}
 	defer conn.Close()
 
 	ag := agent.NewSimpleAgent()
-	defer ag.Cancel()
+	zctx := zap.L().With(
+		zap.String("agentCapability", agent.CapDisplayOnly),
+		zap.String("agentInterface", ag.Interface()),
+	)
 
-	err = agent.ExposeAgent(conn, ag, agent.CapKeyboardDisplay, true)
+	err = agent.ExposeAgent(conn, ag, agent.CapDisplayOnly, false)
 	if err != nil {
+		zctx.Error("failed to expose agent", zap.Error(err))
 		return err
 	}
 	defer agent.RemoveAgent(ag)
 
 	a, err := adapter.GetDefaultAdapter()
 	if err != nil {
+		zctx.Error("failed to get default adapter", zap.Error(err))
 		return err
 	}
 	defer a.Close()
 
 	err = a.FlushDevices()
 	if err != nil {
-		return err
-	}
-
-	err = a.StartDiscovery()
-	if err != nil {
-		return err
-	}
-	defer a.Close()
-
-	// TODO revamp this
-	err = a.Client().Connect()
-	if err != nil {
+		zap.L().Error("failed to flush devices", zap.Error(err))
 		return err
 	}
 
@@ -92,9 +88,31 @@ func (c *Bluetooth) Collect(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return nil
+
+		default:
+		}
+		zctx.Info("starting discovery")
+		err = a.StartDiscovery()
+		if err == nil {
+			zctx.Info("started discovery")
+			break
+		}
+		zctx.Warn("failed to start discovery", zap.Error(err))
+		wCtx, cancel := context.WithTimeout(ctx, time.Second)
+		<-wCtx.Done()
+		cancel()
+	}
+	defer a.Close()
+
+	seenDevices := make(map[string]map[string]struct{})
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
 		default:
 			devices, err := a.GetDevices()
 			if err != nil {
+				zap.L().Error("failed to get devices", zap.Error(err))
 				return err
 			}
 			for _, device := range devices {
@@ -117,13 +135,18 @@ func (c *Bluetooth) Collect(ctx context.Context) error {
 					h = fnv.AddString(h, elt)
 				}
 
-				mac := c.replacer.Replace(device.Properties.Address)
-				c.conf.Tagger.Update(mac, newTags...)
-				tags := append(c.conf.Tagger.GetUnstableWithDefault(mac,
+				macAddress := c.replacer.Replace(device.Properties.Address)
+				vendor, ok := mac.GetVendor(macAddress)
+				if ok {
+					newTags = append(newTags, tagger.NewTagUnsafe(exported.MacVendorKey, vendor))
+				}
+				c.conf.Tagger.Update(macAddress, newTags...)
+				tags := append(c.conf.Tagger.GetUnstableWithDefault(macAddress,
 					tagger.NewTagUnsafe(exported.NameKey, "unknown"),
 					tagger.NewTagUnsafe(exported.AliasKey, "unknown"),
+					tagger.NewTagUnsafe(exported.MacVendorKey, "unknown"),
 				),
-					"mac:"+mac,
+					"mac:"+macAddress,
 
 					"uuids-hash:"+strconv.FormatUint(h, 10),
 
@@ -132,10 +155,11 @@ func (c *Bluetooth) Collect(ctx context.Context) error {
 					"blocked:"+strconv.FormatBool(device.Properties.Blocked),
 					"paired:"+strconv.FormatBool(device.Properties.Paired),
 				)
-				zctx := zap.L().With(
+				dzctx := zctx.With(
 					zap.String("name", name),
-					zap.String("mac", mac),
+					zap.String("mac", macAddress),
 					zap.String("alias", alias),
+					zap.String("vendor", vendor),
 
 					zap.String("addressType", device.Properties.AddressType),
 					zap.Int16("rssi", device.Properties.RSSI),
@@ -145,7 +169,13 @@ func (c *Bluetooth) Collect(ctx context.Context) error {
 					zap.Bool("blocked", device.Properties.Blocked),
 					zap.Bool("paired", device.Properties.Paired),
 				)
-				zctx.Debug("found device")
+				dzctx.Debug("found device")
+
+				_, ok = seenDevices[vendor]
+				if !ok {
+					seenDevices[vendor] = make(map[string]struct{})
+				}
+				seenDevices[vendor][macAddress] = struct{}{}
 
 				c.measures.GaugeDeviation(&metrics.Sample{
 					Name:      "bluetooth.rssi.dbm",
@@ -154,6 +184,27 @@ func (c *Bluetooth) Collect(ctx context.Context) error {
 					Host:      c.conf.Host,
 					Tags:      tags,
 				}, c.conf.CollectInterval*3)
+
+				err = a.RemoveDevice(device.Path())
+				if err != nil {
+					dzctx.Error("failed to remove device", zap.Error(err))
+				}
+			}
+
+			for vendor := range seenDevices {
+				nb := len(seenDevices[vendor])
+				if vendor == "" {
+					vendor = "unknown"
+				}
+				c.measures.GaugeDeviation(&metrics.Sample{
+					Name:      "bluetooth.devices",
+					Value:     float64(nb),
+					Timestamp: time.Now(),
+					Host:      c.conf.Host,
+					Tags: []string{
+						"vendor:" + vendor,
+					},
+				}, c.conf.CollectInterval*6)
 			}
 			wCtx, cancel := context.WithTimeout(ctx, c.conf.CollectInterval)
 			<-wCtx.Done()
