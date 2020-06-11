@@ -1,10 +1,10 @@
 TARGET=monitoring
-REVISION=$(shell git rev-parse HEAD)
+COMMIT=$(shell git rev-parse HEAD)
 VERSION=$(shell git describe --exact-match --tags $(git log -n1 --pretty='%h'))
 
 VERSION_FLAGS=-ldflags '-s -w \
     -X github.com/JulienBalestra/monitoring/cmd/version.Version=$(VERSION) \
-    -X github.com/JulienBalestra/monitoring/cmd/version.Revision=$(REVISION)'
+    -X github.com/JulienBalestra/monitoring/cmd/version.Commit=$(COMMIT)'
 
 arm:
 	GOARCH=arm GOARM=6 go build -o $(TARGET)-arm $(VERSION_FLAGS) .

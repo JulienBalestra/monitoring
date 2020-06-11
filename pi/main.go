@@ -180,7 +180,7 @@ func main() {
 		}
 		tags := append(tag.GetUnstable(hostname),
 			"ts:"+strconv.FormatInt(time.Now().Unix(), 10),
-			"commit:"+version.Revision[:8],
+			"commit:"+version.Commit[:8],
 		)
 		client.MetricClientUp(hostname, tags...)
 		_ = client.UpdateHostTags(ctx, hostTagsStrings)

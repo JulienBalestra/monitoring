@@ -10,6 +10,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/network"
 	"github.com/JulienBalestra/monitoring/pkg/collector/tagger"
 	"github.com/JulienBalestra/monitoring/pkg/collector/temperature"
+	"github.com/JulienBalestra/monitoring/pkg/collector/wealth"
 	"github.com/JulienBalestra/monitoring/pkg/collector/wl"
 )
 
@@ -28,5 +29,6 @@ func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 		temperature.CollectorTemperatureName: temperature.NewTemperature,
 		tagger.CollectorName:                 tagger.NewTagger,
 		wl.CollectorWLName:                   wl.NewWL,
+		wealth.CollectorWealthName:           wealth.NewWealth,
 	}
 }

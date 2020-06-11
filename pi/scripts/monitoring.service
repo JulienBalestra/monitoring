@@ -5,6 +5,9 @@ Documentation=https://github.com/JulienBalestra/monitoring
 [Service]
 Environment=DATADOG_API_KEY=
 Environment=DATADOG_APP_KEY=
+
+# DDOG employees
+Environment=DDOG_STOCK_FILE=/home/pi/ddog-stock.json
 EnvironmentFile=/etc/monitoring/environment
 
 ExecStart=/usr/local/bin/monitoring \
@@ -17,7 +20,8 @@ ExecStart=/usr/local/bin/monitoring \
     --collector-network-statistics=30s \
     --collector-network-wireless=60s \
     --collector-bluetooth=10s \
-    --collector-tagger=2m
+    --collector-tagger=2m \
+    --collector-wealth=2m
 Restart=always
 RestartSec=5
 
