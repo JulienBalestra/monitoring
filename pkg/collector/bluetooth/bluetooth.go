@@ -171,12 +171,6 @@ func (c *Bluetooth) Collect(ctx context.Context) error {
 				)
 				dzctx.Debug("found device")
 
-				_, ok = seenDevices[vendor]
-				if !ok {
-					seenDevices[vendor] = make(map[string]struct{})
-				}
-				seenDevices[vendor][macAddress] = struct{}{}
-
 				c.measures.GaugeDeviation(&metrics.Sample{
 					Name:      "bluetooth.rssi.dbm",
 					Value:     float64(device.Properties.RSSI),
@@ -189,13 +183,18 @@ func (c *Bluetooth) Collect(ctx context.Context) error {
 				if err != nil {
 					dzctx.Error("failed to remove device", zap.Error(err))
 				}
+				if vendor == "" {
+					continue
+				}
+				_, ok = seenDevices[vendor]
+				if !ok {
+					seenDevices[vendor] = make(map[string]struct{})
+				}
+				seenDevices[vendor][macAddress] = struct{}{}
 			}
 
 			for vendor := range seenDevices {
 				nb := len(seenDevices[vendor])
-				if vendor == "" {
-					vendor = "unknown"
-				}
 				c.measures.GaugeDeviation(&metrics.Sample{
 					Name:      "bluetooth.devices",
 					Value:     float64(nb),
