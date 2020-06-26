@@ -135,7 +135,7 @@ func (c *Shelly) Collect(ctx context.Context) error {
 		}, time.Minute)
 		_ = c.measures.Count(&metrics.Sample{
 			Name:      "power.total",
-			Value:     meter.Power,
+			Value:     meter.Total,
 			Timestamp: now,
 			Host:      c.conf.Host,
 			Tags:      append(tags, meterTag),
