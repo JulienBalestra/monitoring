@@ -1,6 +1,6 @@
 module github.com/JulienBalestra/monitoring
 
-go 1.13
+go 1.14
 
 require (
 	github.com/godbus/dbus v4.1.0+incompatible

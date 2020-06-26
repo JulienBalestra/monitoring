@@ -8,6 +8,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/lunar"
 	"github.com/JulienBalestra/monitoring/pkg/collector/memory"
 	"github.com/JulienBalestra/monitoring/pkg/collector/network"
+	"github.com/JulienBalestra/monitoring/pkg/collector/shelly"
 	"github.com/JulienBalestra/monitoring/pkg/collector/tagger"
 	"github.com/JulienBalestra/monitoring/pkg/collector/temperature"
 	"github.com/JulienBalestra/monitoring/pkg/collector/wealth"
@@ -26,6 +27,7 @@ func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 		network.CollectorConntrackName:       network.NewConntrack,
 		network.CollectorStatisticsName:      network.NewStatistics,
 		network.CollectorWirelessName:        network.NewWireless,
+		shelly.CollectorShellyName:           shelly.NewShelly,
 		temperature.CollectorTemperatureName: temperature.NewTemperature,
 		tagger.CollectorName:                 tagger.NewTagger,
 		wl.CollectorWLName:                   wl.NewWL,

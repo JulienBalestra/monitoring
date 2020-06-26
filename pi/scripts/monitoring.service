@@ -6,6 +6,9 @@ Documentation=https://github.com/JulienBalestra/monitoring
 Environment=DATADOG_API_KEY=
 Environment=DATADOG_APP_KEY=
 
+# IOT
+Environment=SHELLY_URL=
+
 # DDOG employees
 Environment=DDOG_STOCK_FILE=/home/pi/ddog-stock.json
 EnvironmentFile=/etc/monitoring/environment
@@ -20,6 +23,7 @@ ExecStart=/usr/local/bin/monitoring \
     --collector-network-statistics=30s \
     --collector-network-wireless=60s \
     --collector-bluetooth=10s \
+    --collector-shelly=5s \
     --collector-tagger=2m \
     --collector-wealth=2m
 Restart=always
