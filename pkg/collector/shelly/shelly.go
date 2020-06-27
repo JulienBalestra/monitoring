@@ -122,8 +122,44 @@ func (c *Shelly) Collect(ctx context.Context) error {
 		Value:     float64(s.WifiSTA.RSSI),
 		Timestamp: now,
 		Host:      c.conf.Host,
-		Tags:      append(tags, "sensor:shelly", "ssid:"+s.WifiSTA.SSID),
+		Tags:      append(tags, "ssid:"+s.WifiSTA.SSID),
 	}, time.Minute)
+	c.measures.GaugeDeviation(&metrics.Sample{
+		Name:      "memory.free",
+		Value:     float64(s.RamFree),
+		Timestamp: now,
+		Host:      c.conf.Host,
+		Tags:      tags,
+	}, time.Minute)
+	c.measures.GaugeDeviation(&metrics.Sample{
+		Name:      "memory.total",
+		Value:     float64(s.RamTotal),
+		Timestamp: now,
+		Host:      c.conf.Host,
+		Tags:      tags,
+	}, time.Minute)
+	c.measures.GaugeDeviation(&metrics.Sample{
+		Name:      "filesystem.free",
+		Value:     float64(s.FSFree),
+		Timestamp: now,
+		Host:      c.conf.Host,
+		Tags:      tags,
+	}, time.Minute)
+	c.measures.GaugeDeviation(&metrics.Sample{
+		Name:      "filesystem.size",
+		Value:     float64(s.FSSize),
+		Timestamp: now,
+		Host:      c.conf.Host,
+		Tags:      tags,
+	}, time.Minute)
+	c.measures.Gauge(&metrics.Sample{
+		Name:      "uptime",
+		Value:     float64(s.Uptime),
+		Timestamp: now,
+		Host:      c.conf.Host,
+		Tags:      tags,
+	})
+
 	for i, meter := range s.Meters {
 		meterTag := "meter:" + strconv.Itoa(i)
 		c.measures.GaugeDeviation(&metrics.Sample{
