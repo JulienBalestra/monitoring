@@ -1,0 +1,25 @@
+[Unit]
+Description=monitoring
+Documentation=https://github.com/JulienBalestra/monitoring
+
+[Service]
+Environment=DATADOG_API_KEY=
+Environment=DATADOG_APP_KEY=
+
+# IOT
+Environment=SHELLY_URL=
+
+# DDOG employees
+Environment=DDOG_STOCK_FILE=/home/pi/ddog-stock.json
+EnvironmentFile=/etc/monitoring/environment
+
+ExecStart=/usr/local/bin/monitoring \
+    --datadog-host-tags=os:raspbian \
+    --pid-file=/run/monitoring.pid \
+    --log-output=stdout,datadog://zap \
+    --config-file=/etc/monitoring/config.yaml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

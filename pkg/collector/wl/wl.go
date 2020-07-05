@@ -56,7 +56,7 @@ func NewWL(conf *collector.Config) collector.Collector {
 func newWL(conf *collector.Config) *WL {
 	return &WL{
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 
 		// alloc once
 		commaByte:      []byte{'"'},

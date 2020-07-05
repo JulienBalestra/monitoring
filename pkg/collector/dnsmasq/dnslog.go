@@ -49,7 +49,7 @@ type dnsQuery struct {
 func newLog(conf *collector.Config) *Log {
 	return &Log{
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 
 		firstSep:  []byte("]: query["),
 		secondSep: []byte("] "),

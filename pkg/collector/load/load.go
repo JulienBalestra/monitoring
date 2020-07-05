@@ -27,7 +27,7 @@ type Load struct {
 func NewLoad(conf *collector.Config) collector.Collector {
 	return &Load{
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 

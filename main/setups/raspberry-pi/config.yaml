@@ -1,0 +1,33 @@
+collectors:
+#  acaia-lunar:
+#    interval: 0s
+#  bluetooth:
+#    interval: 0s
+  datadog-client:
+    interval: 2m
+#  dnsmasq:
+#    interval: 30s
+#  dnsmasq-log:
+#    interval: 10s
+  load:
+    interval: 30s
+  memory:
+    interval: 60s
+#  network-arp:
+#    interval: 10s
+#  network-conntrack:
+#    interval: 10s
+  network-statistics:
+    interval: 10s
+  network-wireless:
+    interval: 30s
+  shelly:
+    interval: 5s
+  tagger:
+    interval: 2m
+#  temperature:
+#    interval: 2m
+  wealth:
+    interval: 2m
+#  wl:
+#    interval: 15s

@@ -5,18 +5,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/signal"
-	"runtime/pprof"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
+	"github.com/JulienBalestra/monitoring/cmd/env"
+	"github.com/JulienBalestra/monitoring/cmd/signals"
 	"github.com/JulienBalestra/monitoring/cmd/version"
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/catalog"
-	datadogCollector "github.com/JulienBalestra/monitoring/pkg/collector/datadog"
 	"github.com/JulienBalestra/monitoring/pkg/datadog"
 	"github.com/JulienBalestra/monitoring/pkg/datadog/forward"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
@@ -30,51 +28,8 @@ const (
 	datadogAPPKeyFlag         = "datadog-app-key"
 	datadogClientSendInterval = "datadog-client-send-interval"
 	hostnameFlag              = "hostname"
-	defaultCollectionInterval = time.Second * 30
 	defaultPIDFilePath        = "/tmp/monitoring.pid"
 )
-
-func notifySignals(ctx context.Context, cancel context.CancelFunc, tag *tagger.Tagger) {
-	signals := make(chan os.Signal)
-	defer close(signals)
-	defer signal.Stop(signals)
-	defer signal.Reset()
-
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2)
-	for {
-		select {
-		case <-ctx.Done():
-			zap.L().Info("end of system signal handling")
-			return
-
-		case sig := <-signals:
-			zap.L().Info("signal received", zap.String("signal", sig.String()))
-			switch sig {
-			case syscall.SIGUSR1:
-				tag.Print()
-			case syscall.SIGUSR2:
-				_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 2)
-
-			case syscall.SIGHUP:
-				// nohup
-
-			default:
-				cancel()
-			}
-		}
-	}
-}
-
-func setDatadogKeys(key *string, flag, envvar string) error {
-	if *key != "" {
-		return nil
-	}
-	*key = os.Getenv(envvar)
-	if *key == "" {
-		return fmt.Errorf("flag --%s or envvar %s must be set to a datadog key", flag, envvar)
-	}
-	return nil
-}
 
 func main() {
 	zapConfig := zap.NewProductionConfig()
@@ -82,8 +37,8 @@ func main() {
 	zapLevel := zapConfig.Level.String()
 
 	root := &cobra.Command{
-		Short: "monitoring app for dd-wrt routers",
-		Long:  "monitoring app for dd-wrt routers, disable any collector with --collector-${collector}=0s",
+		Short: "monitoring application",
+		Long:  "monitoring application",
 		Use:   "monitoring",
 	}
 	root.AddCommand(version.NewCommand())
@@ -94,6 +49,7 @@ func main() {
 	hostname, _ := os.Hostname()
 	timezone := time.Local.String()
 	hostname = strings.ToLower(hostname)
+	configFile := ""
 	var client *datadog.Client
 	datadogClientConfig := &datadog.Config{
 		Host:          hostname,
@@ -108,28 +64,16 @@ func main() {
 	fs.StringVar(&timezone, "timezone", timezone, "timezone")
 	fs.DurationVar(&datadogClientConfig.SendInterval, datadogClientSendInterval, time.Second*35, "datadog client send interval to the API >= "+datadog.MinimalSendInterval.String())
 	fs.StringVar(&zapLevel, "log-level", zapLevel, fmt.Sprintf("log level - %s %s %s %s %s %s %s", zap.DebugLevel, zap.InfoLevel, zap.WarnLevel, zap.ErrorLevel, zap.DPanicLevel, zap.PanicLevel, zap.FatalLevel))
+	fs.StringVarP(&configFile, "config-file", "c", "/etc/monitoring/config.yaml", "monitoring configuration file")
 	fs.StringSliceVar(&zapConfig.OutputPaths, "log-output", zapConfig.OutputPaths, "log output")
-
-	collectorCatalog := catalog.CollectorCatalog()
-	collectorCatalog[datadogCollector.CollectorName] = func(config *collector.Config) collector.Collector {
-		d := datadogCollector.NewClient(config)
-		d.ClientMetrics = datadogClientConfig.ClientMetrics
-		return d
-	}
-	collectionDuration := make(map[string]*time.Duration, len(collectorCatalog))
-	for name := range collectorCatalog {
-		var d time.Duration
-		collectionDuration[name] = &d
-		fs.DurationVar(&d, "collector-"+name, defaultCollectionInterval, "collection interval/backoff for "+name)
-	}
 
 	root.Flags().AddFlagSet(fs)
 	root.PreRunE = func(cmd *cobra.Command, args []string) error {
-		err := setDatadogKeys(&datadogClientConfig.DatadogAPIKey, datadogAPIKeyFlag, "DATADOG_API_KEY")
+		err := env.DefaultFromEnv(&datadogClientConfig.DatadogAPIKey, datadogAPIKeyFlag, "DATADOG_API_KEY")
 		if err != nil {
 			return err
 		}
-		err = setDatadogKeys(&datadogClientConfig.DatadogAPPKey, datadogAPPKeyFlag, "DATADOG_APP_KEY")
+		err = env.DefaultFromEnv(&datadogClientConfig.DatadogAPPKey, datadogAPPKeyFlag, "DATADOG_APP_KEY")
 		if err != nil {
 			return err
 		}
@@ -171,6 +115,11 @@ func main() {
 			return err
 		}
 
+		catalogConfig, err := catalog.ParseConfigFile(configFile)
+		if err != nil {
+			return err
+		}
+
 		err = ioutil.WriteFile(pidFilePath, []byte(strconv.Itoa(os.Getpid())), 0644)
 		if err != nil {
 			return err
@@ -183,7 +132,7 @@ func main() {
 		tag := tagger.NewTagger()
 		waitGroup.Add(1)
 		go func() {
-			notifySignals(ctx, cancel, tag)
+			signals.NotifySignals(ctx, cancel, tag)
 			waitGroup.Done()
 		}()
 
@@ -195,24 +144,28 @@ func main() {
 		// TODO lifecycle of this chan / create outside ? Wrap ?
 		defer close(client.ChanSeries)
 
-		errorsChan := make(chan error, len(collectorCatalog))
+		errorsChan := make(chan error, len(catalogConfig.Collectors))
 		defer close(errorsChan)
 
-		for name, newFn := range collectorCatalog {
+		for name, newFn := range catalog.CollectorCatalog() {
 			select {
 			case <-ctx.Done():
 				break
 			default:
-				d := collectionDuration[name]
-				if *d <= 0 {
+				cf, ok := catalogConfig.Collectors[name]
+				if !ok {
 					zap.L().Info("ignoring collector", zap.String("collector", name))
 					continue
 				}
+				if cf.Interval <= 0 {
+					zap.L().Warn("ignoring collector", zap.String("collector", name))
+					continue
+				}
 				config := &collector.Config{
-					SeriesCh:        client.ChanSeries,
+					MetricsClient:   client,
 					Tagger:          tag,
 					Host:            hostname,
-					CollectInterval: *d,
+					CollectInterval: cf.Interval,
 				}
 				c := newFn(config)
 				waitGroup.Add(1)
@@ -224,7 +177,7 @@ func main() {
 		}
 		tags := append(tag.GetUnstable(hostname),
 			"ts:"+strconv.FormatInt(time.Now().Unix(), 10),
-			"commit:"+version.Revision[:8],
+			"commit:"+version.Commit[:8],
 		)
 		client.MetricClientUp(hostname, tags...)
 		_ = client.UpdateHostTags(ctx, hostTagsStrings)

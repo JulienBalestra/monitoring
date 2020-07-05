@@ -40,7 +40,7 @@ type ARP struct {
 func NewARP(conf *collector.Config) collector.Collector {
 	return &ARP{
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 
 		leaseTag: tagger.NewTagUnsafe(exportedTags.LeaseKey, tagger.MissingTagValue),
 	}

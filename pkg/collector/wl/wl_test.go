@@ -4,12 +4,18 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/JulienBalestra/monitoring/pkg/datadog"
+
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetSSID(t *testing.T) {
-	c := newWL(&collector.Config{})
+	c := newWL(&collector.Config{
+		MetricsClient: datadog.NewClient(&datadog.Config{
+			ChanSize: 1000,
+		}),
+	})
 	for name, tc := range map[string]struct {
 		input string
 		ssid  string
@@ -61,7 +67,11 @@ VHT Capable:
 }
 
 func TestGetMacs(t *testing.T) {
-	c := newWL(&collector.Config{})
+	c := newWL(&collector.Config{
+		MetricsClient: datadog.NewClient(&datadog.Config{
+			ChanSize: 1000,
+		}),
+	})
 	for name, tc := range map[string]struct {
 		input string
 		macs  []string

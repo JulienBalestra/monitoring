@@ -25,7 +25,7 @@ type Temperature struct {
 func NewTemperature(conf *collector.Config) collector.Collector {
 	return &Temperature{
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 
@@ -54,11 +54,11 @@ func (c *Temperature) Collect(_ context.Context) error {
 	t /= 10
 
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "cpu.temperature",
+		Name:      "temperature.celsius",
 		Value:     t,
 		Timestamp: time.Now(),
 		Host:      c.conf.Host,
-		Tags:      c.conf.Tagger.Get(c.conf.Host),
+		Tags:      append(c.conf.Tagger.GetUnstableWithDefault(c.conf.Host), "sensor:cpu"),
 	}, c.conf.CollectInterval*3)
 	return nil
 }

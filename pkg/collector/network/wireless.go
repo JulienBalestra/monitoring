@@ -44,7 +44,7 @@ type Wireless struct {
 func NewWireless(conf *collector.Config) collector.Collector {
 	return &Wireless{
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 

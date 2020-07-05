@@ -45,12 +45,19 @@ jobs:
     - checkout
     - run: make ineffassign
 
-  dd-wrt-monitoring-amd64:
+  go-generate:
+    <<: *base
+    steps:
+    - checkout
+    - run: make generate
+    - run: make .pristine
+
+  monitoring-amd64:
     <<: *base
     steps:
     - checkout
     - run: make amd64
-    - run: ./dd-wrt/monitoring-amd64 version
+    - run: ./main/monitoring-amd64 version
 
   example:
     <<: *base
@@ -68,5 +75,5 @@ workflows:
     - lint
     - test
     - ineffassign
-    - dd-wrt-monitoring-amd64
+    - monitoring-amd64
     - example

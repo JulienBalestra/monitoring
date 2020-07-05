@@ -39,7 +39,7 @@ func NewConntrack(conf *collector.Config) collector.Collector {
 func newConntrack(conf *collector.Config) *Conntrack {
 	return &Conntrack{
 		conf:          conf,
-		measures:      metrics.NewMeasuresWithMaxAge(conf.SeriesCh, maxAgeConntrackEntries),
+		measures:      metrics.NewMeasuresWithMaxAge(conf.MetricsClient.ChanSeries, maxAgeConntrackEntries),
 		conntrackPath: conntrackPath,
 		tagLease:      tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
 		tagDevice:     tagger.NewTagUnsafe(selfExported.DeviceKey, tagger.MissingTagValue),

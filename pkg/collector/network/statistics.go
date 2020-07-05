@@ -33,7 +33,7 @@ type Statistics struct {
 func NewStatistics(conf *collector.Config) collector.Collector {
 	return &Statistics{
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 
