@@ -20,7 +20,7 @@ type Tagger struct {
 func NewTagger(conf *collector.Config) collector.Collector {
 	return &Tagger{
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 

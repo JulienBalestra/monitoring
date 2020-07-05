@@ -17,15 +17,7 @@ ExecStart=/usr/local/bin/monitoring \
     --datadog-host-tags=os:raspbian \
     --pid-file=/run/monitoring.pid \
     --log-output=stdout,datadog://zap \
-    --collector-datadog-client=2m \
-    --collector-load=30s \
-    --collector-memory=60s \
-    --collector-network-statistics=30s \
-    --collector-network-wireless=60s \
-    --collector-bluetooth=10s \
-    --collector-shelly=5s \
-    --collector-tagger=2m \
-    --collector-wealth=2m
+    --config-file=/etc/monitoring/config.yaml
 Restart=always
 RestartSec=5
 

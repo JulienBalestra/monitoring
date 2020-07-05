@@ -1,12 +1,11 @@
 arm:
-	$(MAKE) -C dd-wrt $@
+	$(MAKE) -C main $@
 
 amd64:
-	$(MAKE) -C dd-wrt $@
-	$(MAKE) -C pi $@
+	$(MAKE) -C main $@
 
 clean:
-	$(MAKE) -C dd-wrt $@
+	$(MAKE) -C main $@
 
 re: clean amd64 arm
 
@@ -17,7 +16,7 @@ lint:
 	golint -set_exit_status $(go list ./...)
 
 import:
-	goimports -w pkg/ cmd/
+	goimports -w pkg/ cmd/ main/
 
 ineffassign:
 	ineffassign ./

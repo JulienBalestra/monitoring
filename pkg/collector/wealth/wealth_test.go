@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/JulienBalestra/monitoring/pkg/datadog"
+
 	"github.com/JulienBalestra/monitoring/pkg/collector"
-	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +17,9 @@ func TestNewWealth(t *testing.T) {
 		Host:            "entity",
 		Tagger:          tagger.NewTagger(),
 		CollectInterval: time.Second,
-		SeriesCh:        make(chan metrics.Series, 1000),
+		MetricsClient: datadog.NewClient(&datadog.Config{
+			ChanSize: 1000,
+		}),
 	})
 	c.ddogStockFile = "fixtures/ddog.json"
 	err := c.Collect(context.TODO())

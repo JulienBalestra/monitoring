@@ -32,7 +32,7 @@ type Bluetooth struct {
 func NewBluetooth(conf *collector.Config) collector.Collector {
 	return &Bluetooth{
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 		replacer: strings.NewReplacer(
 			":", "-",
 			" ", "-",

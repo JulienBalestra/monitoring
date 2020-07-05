@@ -29,7 +29,7 @@ type Lunar struct {
 func NewAcaia(conf *collector.Config) collector.Collector {
 	return &Lunar{
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 

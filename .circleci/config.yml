@@ -57,8 +57,7 @@ jobs:
     steps:
     - checkout
     - run: make amd64
-    - run: ./dd-wrt/monitoring-amd64 version
-    - run: ./pi/monitoring-amd64 version
+    - run: ./main/monitoring-amd64 version
 
   example:
     <<: *base
@@ -72,7 +71,6 @@ workflows:
     jobs:
     - fmt
     - import
-    - go-generate
     - vet
     - lint
     - test

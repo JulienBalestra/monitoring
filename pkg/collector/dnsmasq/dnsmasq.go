@@ -59,7 +59,7 @@ type DnsMasq struct {
 func NewDnsMasq(conf *collector.Config) collector.Collector {
 	return &DnsMasq{
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 
 		dnsClient: &dns.Client{
 			Timeout:      time.Second,

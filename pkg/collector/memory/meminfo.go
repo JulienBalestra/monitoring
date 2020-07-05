@@ -79,7 +79,7 @@ func newMemory(conf *collector.Config) *Memory {
 	return &Memory{
 		endline:  []byte(" kB\n"),
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 		// TODO this is all the available metrics, some are commented for random reasons
 		mapping: map[string]string{
 			"MemTotal":  memoryMetricPrefix + "total",

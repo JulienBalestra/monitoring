@@ -25,7 +25,7 @@ type Temperature struct {
 func NewTemperature(conf *collector.Config) collector.Collector {
 	return &Temperature{
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 

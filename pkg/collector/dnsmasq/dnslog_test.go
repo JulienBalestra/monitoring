@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/JulienBalestra/monitoring/pkg/datadog"
+
 	"github.com/JulienBalestra/monitoring/pkg/collector"
-	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,9 @@ func TestLogCollect(t *testing.T) {
 		Host:            "entity",
 		Tagger:          tagger.NewTagger(),
 		CollectInterval: time.Second,
-		SeriesCh:        make(chan metrics.Series, 10),
+		MetricsClient: datadog.NewClient(&datadog.Config{
+			ChanSize: 1000,
+		}),
 	})
 	c.ignoreDomains = make(map[string]struct{})
 
@@ -47,9 +50,9 @@ func TestLogCollect(t *testing.T) {
 	assert.Equal(t, 1., queries["Aa.b1.1.1.1"].count)
 	for _, query := range queries {
 		require.NoError(t, c.measures.Count(c.queryToSample(query)), query)
-		assert.Len(t, c.conf.SeriesCh, 0)
-		for i := 0; i < len(c.conf.SeriesCh); i++ {
-			t.Errorf("incorrect number of elt in the SeriesCh: %v", <-c.conf.SeriesCh)
+		assert.Len(t, c.conf.MetricsClient.ChanSeries, 0)
+		for i := 0; i < len(c.conf.MetricsClient.ChanSeries); i++ {
+			t.Errorf("incorrect number of elt in the SeriesCh: %v", <-c.conf.MetricsClient.ChanSeries)
 		}
 	}
 	for _, line := range lines {

@@ -15,7 +15,6 @@ import (
 	"github.com/JulienBalestra/monitoring/cmd/version"
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/catalog"
-	datadogCollector "github.com/JulienBalestra/monitoring/pkg/collector/datadog"
 	"github.com/JulienBalestra/monitoring/pkg/datadog"
 	"github.com/JulienBalestra/monitoring/pkg/datadog/forward"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
@@ -38,8 +37,8 @@ func main() {
 	zapLevel := zapConfig.Level.String()
 
 	root := &cobra.Command{
-		Short: "monitoring app for dd-wrt routers",
-		Long:  "monitoring app for dd-wrt routers, disable any collector with --collector-${collector}=0s",
+		Short: "monitoring application",
+		Long:  "monitoring application",
 		Use:   "monitoring",
 	}
 	root.AddCommand(version.NewCommand())
@@ -50,6 +49,7 @@ func main() {
 	hostname, _ := os.Hostname()
 	timezone := time.Local.String()
 	hostname = strings.ToLower(hostname)
+	configFile := ""
 	var client *datadog.Client
 	datadogClientConfig := &datadog.Config{
 		Host:          hostname,
@@ -64,20 +64,8 @@ func main() {
 	fs.StringVar(&timezone, "timezone", timezone, "timezone")
 	fs.DurationVar(&datadogClientConfig.SendInterval, datadogClientSendInterval, time.Second*35, "datadog client send interval to the API >= "+datadog.MinimalSendInterval.String())
 	fs.StringVar(&zapLevel, "log-level", zapLevel, fmt.Sprintf("log level - %s %s %s %s %s %s %s", zap.DebugLevel, zap.InfoLevel, zap.WarnLevel, zap.ErrorLevel, zap.DPanicLevel, zap.PanicLevel, zap.FatalLevel))
+	fs.StringVarP(&configFile, "config-file", "c", "/etc/monitoring/config.yaml", "monitoring configuration file")
 	fs.StringSliceVar(&zapConfig.OutputPaths, "log-output", zapConfig.OutputPaths, "log output")
-
-	collectorCatalog := catalog.CollectorCatalog()
-	collectorCatalog[datadogCollector.CollectorName] = func(config *collector.Config) collector.Collector {
-		d := datadogCollector.NewClient(config)
-		d.ClientMetrics = datadogClientConfig.ClientMetrics
-		return d
-	}
-	collectionDuration := make(map[string]*time.Duration, len(collectorCatalog))
-	for name := range collectorCatalog {
-		var d time.Duration
-		collectionDuration[name] = &d
-		fs.DurationVar(&d, "collector-"+name, 0, "collection interval/backoff for "+name)
-	}
 
 	root.Flags().AddFlagSet(fs)
 	root.PreRunE = func(cmd *cobra.Command, args []string) error {
@@ -127,6 +115,11 @@ func main() {
 			return err
 		}
 
+		catalogConfig, err := catalog.ParseConfigFile(configFile)
+		if err != nil {
+			return err
+		}
+
 		err = ioutil.WriteFile(pidFilePath, []byte(strconv.Itoa(os.Getpid())), 0644)
 		if err != nil {
 			return err
@@ -151,24 +144,28 @@ func main() {
 		// TODO lifecycle of this chan / create outside ? Wrap ?
 		defer close(client.ChanSeries)
 
-		errorsChan := make(chan error, len(collectorCatalog))
+		errorsChan := make(chan error, len(catalogConfig.Collectors))
 		defer close(errorsChan)
 
-		for name, newFn := range collectorCatalog {
+		for name, newFn := range catalog.CollectorCatalog() {
 			select {
 			case <-ctx.Done():
 				break
 			default:
-				d := collectionDuration[name]
-				if *d <= 0 {
+				cf, ok := catalogConfig.Collectors[name]
+				if !ok {
 					zap.L().Info("ignoring collector", zap.String("collector", name))
 					continue
 				}
+				if cf.Interval <= 0 {
+					zap.L().Warn("ignoring collector", zap.String("collector", name))
+					continue
+				}
 				config := &collector.Config{
-					SeriesCh:        client.ChanSeries,
+					MetricsClient:   client,
 					Tagger:          tag,
 					Host:            hostname,
-					CollectInterval: *d,
+					CollectInterval: cf.Interval,
 				}
 				c := newFn(config)
 				waitGroup.Add(1)

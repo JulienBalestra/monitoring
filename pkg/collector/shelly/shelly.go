@@ -52,7 +52,7 @@ type Status struct {
 func NewShelly(conf *collector.Config) collector.Collector {
 	return &Shelly{
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 		client: &http.Client{
 			Timeout: conf.CollectInterval,
 		},

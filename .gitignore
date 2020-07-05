@@ -1,5 +1,3 @@
 /vendor
-/dd-wrt/monitoring-amd64
-/dd-wrt/monitoring-arm
-/pi/monitoring-amd64
-/pi/monitoring-arm
+/main/monitoring-amd64
+/main/monitoring-arm

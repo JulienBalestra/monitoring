@@ -34,7 +34,7 @@ func NewWealth(conf *collector.Config) collector.Collector {
 func newWealth(conf *collector.Config) *Wealth {
 	return &Wealth{
 		conf:          conf,
-		measures:      metrics.NewMeasures(conf.SeriesCh),
+		measures:      metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 		ddogStockFile: os.Getenv("DDOG_STOCK_FILE"),
 		client:        &http.Client{},
 	}

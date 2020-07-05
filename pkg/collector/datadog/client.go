@@ -28,10 +28,10 @@ type Client struct {
 	measures      *metrics.Measures
 }
 
-func NewClient(conf *collector.Config) *Client {
+func NewClient(conf *collector.Config) collector.Collector {
 	return &Client{
 		conf:     conf,
-		measures: metrics.NewMeasures(conf.SeriesCh),
+		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 
