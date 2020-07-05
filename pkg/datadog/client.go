@@ -71,8 +71,8 @@ type Client struct {
 	httpClient                      *http.Client
 	seriesURL, hostTagsURL, logsURL string
 
-	ChanSeries    chan metrics.Series
-	ClientMetrics *ClientMetrics
+	ChanSeries chan metrics.Series
+	Stats      *ClientMetrics
 }
 
 func NewClient(conf *Config) *Client {
@@ -101,7 +101,7 @@ func NewClient(conf *Config) *Client {
 			"?hostname=" + conf.Host,
 		ChanSeries: make(chan metrics.Series, conf.ChanSize),
 
-		ClientMetrics: clientMetrics,
+		Stats: clientMetrics,
 	}
 }
 
@@ -213,9 +213,9 @@ func (c *Client) Run(ctx context.Context) {
 
 		case s := <-c.ChanSeries:
 			aggregateCount := store.Aggregate(&s)
-			c.ClientMetrics.Lock()
-			c.ClientMetrics.StoreAggregations += float64(aggregateCount)
-			c.ClientMetrics.Unlock()
+			c.Stats.Lock()
+			c.Stats.StoreAggregations += float64(aggregateCount)
+			c.Stats.Unlock()
 
 		case <-seriesTicker.C:
 			storeLen := store.Len()
@@ -289,10 +289,10 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 	}
 	if resp.StatusCode < 300 {
 		// internal self metrics/counters
-		c.ClientMetrics.Lock()
-		c.ClientMetrics.SentSeriesBytes += float64(len(b))
-		c.ClientMetrics.SentSeries += float64(len(series))
-		c.ClientMetrics.Unlock()
+		c.Stats.Lock()
+		c.Stats.SentSeriesBytes += float64(len(b))
+		c.Stats.SentSeries += float64(len(series))
+		c.Stats.Unlock()
 
 		// From https://golang.org/pkg/net/http/#Response:
 		// The default HTTP client's Transport may not reuse HTTP/1.x "keep-alive"
@@ -300,9 +300,9 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 		_, _ = io.Copy(ioutil.Discard, resp.Body)
 		return resp.Body.Close()
 	}
-	c.ClientMetrics.Lock()
-	c.ClientMetrics.SentSeriesErrors++
-	c.ClientMetrics.Unlock()
+	c.Stats.Lock()
+	c.Stats.SentSeriesErrors++
+	c.Stats.Unlock()
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -329,16 +329,16 @@ func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {
 	req.Header.Set(contentType, "text/plain")
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		c.ClientMetrics.Lock()
-		c.ClientMetrics.SentLogsErrors++
-		c.ClientMetrics.Unlock()
+		c.Stats.Lock()
+		c.Stats.SentLogsErrors++
+		c.Stats.Unlock()
 		return err
 	}
 	if resp.StatusCode < 300 {
 		// internal self metrics/counters
-		c.ClientMetrics.Lock()
-		c.ClientMetrics.SentLogsBytes += float64(bufferLen)
-		c.ClientMetrics.Unlock()
+		c.Stats.Lock()
+		c.Stats.SentLogsBytes += float64(bufferLen)
+		c.Stats.Unlock()
 
 		// From https://golang.org/pkg/net/http/#Response:
 		// The default HTTP client's Transport may not reuse HTTP/1.x "keep-alive"
@@ -346,15 +346,15 @@ func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {
 		_, _ = io.Copy(ioutil.Discard, resp.Body)
 		return resp.Body.Close()
 	}
-	c.ClientMetrics.Lock()
-	c.ClientMetrics.SentLogsErrors++
-	c.ClientMetrics.Unlock()
+	c.Stats.Lock()
+	c.Stats.SentLogsErrors++
+	c.Stats.Unlock()
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		c.ClientMetrics.Lock()
-		c.ClientMetrics.SentLogsErrors++
-		c.ClientMetrics.Unlock()
+		c.Stats.Lock()
+		c.Stats.SentLogsErrors++
+		c.Stats.Unlock()
 		return err
 	}
 	_ = resp.Body.Close()
