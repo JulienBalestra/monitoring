@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
-	"github.com/JulienBalestra/monitoring/pkg/datadog"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 )
 
@@ -24,8 +23,7 @@ const (
 type Client struct {
 	conf *collector.Config
 
-	ClientMetrics *datadog.ClientMetrics
-	measures      *metrics.Measures
+	measures *metrics.Measures
 }
 
 func NewClient(conf *collector.Config) collector.Collector {
@@ -48,38 +46,38 @@ func (c *Client) Name() string {
 func (c *Client) Collect(_ context.Context) error {
 	now := time.Now()
 	tags := c.conf.Tagger.GetUnstable(c.conf.Host)
-	c.ClientMetrics.RLock()
+	c.conf.MetricsClient.Stats.RLock()
 	samples := []*metrics.Sample{
 		{
 			Name:      clientSentByteMetric,
-			Value:     c.ClientMetrics.SentSeriesBytes,
+			Value:     c.conf.MetricsClient.Stats.SentSeriesBytes,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,
 		},
 		{
 			Name:      clientSentSeriesMetric,
-			Value:     c.ClientMetrics.SentSeries,
+			Value:     c.conf.MetricsClient.Stats.SentSeries,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,
 		},
 		{
 			Name:      clientErrorsMetric,
-			Value:     c.ClientMetrics.SentSeriesErrors,
+			Value:     c.conf.MetricsClient.Stats.SentSeriesErrors,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,
 		},
 		{
 			Name:      clientStoreMetric,
-			Value:     c.ClientMetrics.StoreAggregations,
+			Value:     c.conf.MetricsClient.Stats.StoreAggregations,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,
 		},
 	}
-	c.ClientMetrics.RUnlock()
+	c.conf.MetricsClient.Stats.RUnlock()
 	for _, s := range samples {
 		_ = c.measures.Count(s)
 	}
