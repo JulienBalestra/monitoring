@@ -27,7 +27,5 @@ collectors:
     interval: 0s
   temperature:
     interval: 0s
-  wealth:
-    interval: 0s
   wl:
     interval: 0s
