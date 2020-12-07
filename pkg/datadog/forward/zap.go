@@ -43,7 +43,7 @@ func (f *Forwarder) Write(p []byte) (n int, err error) {
 }
 
 func (f *Forwarder) Sync() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*45)
 	defer cancel()
 	f.mu.Lock()
 	defer f.mu.Unlock()

@@ -11,13 +11,18 @@ import (
 const (
 	CollectorName = "datadog-client"
 
-	clientMetricPrefix = "client."
+	clientPrefix = "client."
 
-	clientSentByteMetric   = clientMetricPrefix + "sent.bytes"
-	clientSentSeriesMetric = clientMetricPrefix + "sent.series"
+	// metrics
+	clientSentByteMetrics   = clientPrefix + "sent.metrics.bytes"
+	clientSentSeriesMetrics = clientPrefix + "sent.metrics.series"
 
-	clientErrorsMetric = clientMetricPrefix + "errors"
-	clientStoreMetric  = clientMetricPrefix + "store.aggregations"
+	clientSentSeriesErrors         = clientPrefix + "metrics.errors"
+	clientMetricsStoreAggregations = clientPrefix + "metrics.store.aggregations"
+
+	// logs
+	clientSentLogsBytes = clientPrefix + "sent.logs.bytes"
+	SentLogsErrors      = clientPrefix + "logs.errors"
 )
 
 type Client struct {
@@ -49,29 +54,43 @@ func (c *Client) Collect(_ context.Context) error {
 	c.conf.MetricsClient.Stats.RLock()
 	samples := []*metrics.Sample{
 		{
-			Name:      clientSentByteMetric,
+			Name:      clientSentByteMetrics,
 			Value:     c.conf.MetricsClient.Stats.SentSeriesBytes,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,
 		},
 		{
-			Name:      clientSentSeriesMetric,
+			Name:      clientSentSeriesMetrics,
 			Value:     c.conf.MetricsClient.Stats.SentSeries,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,
 		},
 		{
-			Name:      clientErrorsMetric,
+			Name:      clientSentSeriesErrors,
 			Value:     c.conf.MetricsClient.Stats.SentSeriesErrors,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,
 		},
 		{
-			Name:      clientStoreMetric,
+			Name:      clientMetricsStoreAggregations,
 			Value:     c.conf.MetricsClient.Stats.StoreAggregations,
+			Host:      c.conf.Host,
+			Timestamp: now,
+			Tags:      tags,
+		},
+		{
+			Name:      SentLogsErrors,
+			Value:     c.conf.MetricsClient.Stats.SentLogsErrors,
+			Host:      c.conf.Host,
+			Timestamp: now,
+			Tags:      tags,
+		},
+		{
+			Name:      clientSentLogsBytes,
+			Value:     c.conf.MetricsClient.Stats.SentLogsBytes,
 			Host:      c.conf.Host,
 			Timestamp: now,
 			Tags:      tags,

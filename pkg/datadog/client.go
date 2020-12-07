@@ -336,12 +336,27 @@ func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {
 	if bufferLen == 0 {
 		return nil
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.logsURL, buffer)
+	var zb bytes.Buffer
+	w, err := zlib.NewWriterLevel(&zb, zlib.BestCompression)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(buffer.Bytes())
+	if err != nil {
+		return err
+	}
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+	logsBytes := float64(zb.Len())
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.logsURL, &zb)
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set(contentType, "text/plain")
+	req.Header.Set(contentEncoding, encodingDeflate)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		c.Stats.Lock()
@@ -352,7 +367,7 @@ func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {
 	if resp.StatusCode < 300 {
 		// internal self metrics/counters
 		c.Stats.Lock()
-		c.Stats.SentLogsBytes += float64(bufferLen)
+		c.Stats.SentLogsBytes += logsBytes
 		c.Stats.Unlock()
 
 		// From https://golang.org/pkg/net/http/#Response:
