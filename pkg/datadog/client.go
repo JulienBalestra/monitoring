@@ -2,6 +2,7 @@ package datadog
 
 import (
 	"bytes"
+	"compress/zlib"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -32,8 +33,11 @@ curl  -X POST -H "Content-type: application/json" \
 */
 
 const (
-	contentType     = "Content-Type"
-	applicationJson = "application/json"
+	contentType         = "Content-Type"
+	typeApplicationJson = "application/json"
+
+	contentEncoding = "Content-Encoding"
+	encodingDeflate = "deflate"
 
 	MinimalSendInterval = time.Second * 5
 	DefaultSendInterval = time.Second * 60
@@ -130,7 +134,7 @@ func (c *Client) UpdateHostTags(ctx context.Context, tags []string) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set(contentType, applicationJson)
+	req.Header.Set(contentType, typeApplicationJson)
 	req.Header.Set("DD-API-KEY", c.conf.DatadogAPIKey)
 	req.Header.Set("DD-APPLICATION-KEY", c.conf.DatadogAPPKey)
 	resp, err := c.httpClient.Do(req)
@@ -268,21 +272,32 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 	if len(series) == 0 {
 		return nil
 	}
-	b, err := json.Marshal(Payload{Series: series})
-	if err != nil {
-		return err
-	}
 
 	// TODO find a good logger/workflow to debug this
 	zap.L().Debug("sending series", zap.Any("series", series))
 	//return nil
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.seriesURL, bytes.NewBuffer(b))
+	var zb bytes.Buffer
+	w, err := zlib.NewWriterLevel(&zb, zlib.BestCompression)
 	if err != nil {
 		return err
 	}
-	// TODO use compression
-	req.Header.Set(contentType, applicationJson)
+	err = json.NewEncoder(w).Encode(Payload{Series: series})
+	if err != nil {
+		return err
+	}
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+	bodyLen := float64(zb.Len())
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.seriesURL, &zb)
+	if err != nil {
+		return err
+	}
+	req.Header.Set(contentType, typeApplicationJson)
+	req.Header.Set(contentEncoding, encodingDeflate)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
@@ -290,7 +305,7 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 	if resp.StatusCode < 300 {
 		// internal self metrics/counters
 		c.Stats.Lock()
-		c.Stats.SentSeriesBytes += float64(len(b))
+		c.Stats.SentSeriesBytes += bodyLen
 		c.Stats.SentSeries += float64(len(series))
 		c.Stats.Unlock()
 
