@@ -97,6 +97,7 @@ func main() {
 		if err != nil {
 			return err
 		}
+		logger = logger.With(zap.Int("pid", os.Getpid()))
 		zap.ReplaceGlobals(logger)
 		zap.RedirectStdLog(logger)
 
