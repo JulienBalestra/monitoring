@@ -13,7 +13,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/mac"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
-	"github.com/godbus/dbus"
+	"github.com/godbus/dbus/v5"
 	"github.com/muka/go-bluetooth/bluez/profile/adapter"
 	"github.com/muka/go-bluetooth/bluez/profile/agent"
 	"go.uber.org/zap"
