@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"strconv"
 	"time"
@@ -14,7 +15,7 @@ import (
 const (
 	CollectorStatisticsName = "network-statistics"
 
-	devicesPath = "/sys/class/net/"
+	optionDevicePath = "device-path"
 )
 
 type statisticFile struct {
@@ -37,6 +38,16 @@ func NewStatistics(conf *collector.Config) collector.Collector {
 	}
 }
 
+func (c *Statistics) DefaultOptions() map[string]string {
+	return map[string]string{
+		optionDevicePath: "/sys/class/net/",
+	}
+}
+
+func (c *Statistics) DefaultCollectInterval() time.Duration {
+	return time.Second * 10
+}
+
 func (c *Statistics) Config() *collector.Config {
 	return c.conf
 }
@@ -56,6 +67,7 @@ func (c *Statistics) Collect(_ context.Context) error {
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
 	now := time.Now()
 	for metricPath, statistic := range statistics {
+		// TODO use a buffer
 		metric, err := ioutil.ReadFile(metricPath)
 		if err != nil {
 			zap.L().Error("failed to read metrics from statistics",
@@ -86,6 +98,12 @@ func (c *Statistics) getStatisticsFiles() (map[string]*statisticFile, error) {
 		return c.statisticsFiles, nil
 	}
 
+	devicesPath, ok := c.conf.Options[optionDevicePath]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionDevicePath))
+		return nil, errors.New("missing option " + optionDevicePath)
+	}
+
 	devices, err := ioutil.ReadDir(devicesPath)
 	if err != nil {
 		return nil, err
@@ -93,7 +111,6 @@ func (c *Statistics) getStatisticsFiles() (map[string]*statisticFile, error) {
 
 	statisticsFiles := make(map[string]*statisticFile)
 	for _, device := range devices {
-		// TODO use a use usable buffer of bytes or something else cool
 		deviceName := device.Name()
 		statisticsPath := devicesPath + deviceName + "/statistics/"
 		statistics, err := ioutil.ReadDir(statisticsPath)

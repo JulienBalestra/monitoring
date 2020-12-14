@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"strconv"
@@ -18,7 +19,7 @@ import (
 const (
 	CollectorMemoryName = "memory"
 
-	memInfoPath        = "/proc/meminfo"
+	optionMemInfoFile  = "meminfo-file"
 	memoryMetricPrefix = "memory."
 )
 
@@ -103,7 +104,7 @@ func newMemory(conf *collector.Config) *Memory {
 			//"LowFree":        memoryMetricPrefix + "low.free",
 			//"SwapTotal": memoryMetricPrefix + "swap.total",
 			//"SwapFree":  memoryMetricPrefix + "swap.free",
-			"Dirty": memoryMetricPrefix + "dirty",
+			//"Dirty": memoryMetricPrefix + "dirty",
 			//"Writeback":      memoryMetricPrefix + "writeback",
 			//"AnonPages":      memoryMetricPrefix + "anon.pages",
 			//"Mapped":         memoryMetricPrefix + "mapped",
@@ -133,14 +134,32 @@ func (c *Memory) Config() *collector.Config {
 	return c.conf
 }
 
+func (c *Memory) DefaultOptions() map[string]string {
+	return map[string]string{
+		// TODO find a way to do an elegant mapping
+
+		optionMemInfoFile: "/proc/meminfo",
+	}
+}
+
+func (c *Memory) DefaultCollectInterval() time.Duration {
+	return time.Second * 60
+}
+
 func (c *Memory) IsDaemon() bool { return false }
 
 func (c *Memory) Name() string {
 	return CollectorMemoryName
 }
 
-func (c *Memory) collect(f string) error {
-	file, err := os.Open(f)
+func (c *Memory) Collect(_ context.Context) error {
+	meminfoFile, ok := c.conf.Options[optionMemInfoFile]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionMemInfoFile))
+		return errors.New("missing option " + optionMemInfoFile)
+	}
+
+	file, err := os.Open(meminfoFile)
 	if err != nil {
 		return err
 	}
@@ -201,10 +220,5 @@ func (c *Memory) collect(f string) error {
 			Host:      c.conf.Host,
 			Tags:      hostTags,
 		}, c.conf.CollectInterval*3)
-
 	}
-}
-
-func (c *Memory) Collect(_ context.Context) error {
-	return c.collect(memInfoPath)
 }

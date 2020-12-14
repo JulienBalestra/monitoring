@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -20,11 +21,11 @@ import (
 const (
 	CollectorWirelessName = "network-wireless"
 
-	wirelessPath               = "/proc/net/wireless"
 	wirelessMetricPrefix       = "network.wireless."
 	wirelessDiscardRetryMetric = wirelessMetricPrefix + "discard.retry"
 
-	sysClassPath = "/sys/class/net/"
+	optionSysClassPath = "sys-class-net-path"
+	optionWirelessPath = "proc-net-wireless-path"
 )
 
 /*
@@ -48,6 +49,17 @@ func NewWireless(conf *collector.Config) collector.Collector {
 	}
 }
 
+func (c *Wireless) DefaultOptions() map[string]string {
+	return map[string]string{
+		optionSysClassPath: "/sys/class/net/",
+		optionWirelessPath: "/proc/net/wireless",
+	}
+}
+
+func (c *Wireless) DefaultCollectInterval() time.Duration {
+	return time.Second * 10
+}
+
 func (c *Wireless) Config() *collector.Config {
 	return c.conf
 }
@@ -59,6 +71,18 @@ func (c *Wireless) Name() string {
 }
 
 func (c *Wireless) Collect(_ context.Context) error {
+	wirelessPath, ok := c.conf.Options[optionWirelessPath]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionWirelessPath))
+		return errors.New("missing option " + optionWirelessPath)
+	}
+
+	sysClassPath, ok := c.conf.Options[optionSysClassPath]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionSysClassPath))
+		return errors.New("missing option " + optionSysClassPath)
+	}
+
 	file, err := os.Open(wirelessPath)
 	if err != nil {
 		return err

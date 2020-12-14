@@ -24,6 +24,14 @@ func NewTagger(conf *collector.Config) collector.Collector {
 	}
 }
 
+func (c *Tagger) DefaultOptions() map[string]string {
+	return map[string]string{}
+}
+
+func (c *Tagger) DefaultCollectInterval() time.Duration {
+	return time.Minute * 2
+}
+
 func (c *Tagger) Config() *collector.Config {
 	return c.conf
 }

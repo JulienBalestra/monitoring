@@ -2,9 +2,12 @@ package temperature
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"strconv"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 
@@ -14,7 +17,8 @@ import (
 const (
 	CollectorTemperatureName = "temperature"
 
-	cpuTemperaturePath = "/proc/dmu/temperature"
+	optionTemperatureFile   = "temperature-file"
+	optionDivideTemperature = "temperature-divide"
 )
 
 type Temperature struct {
@@ -29,6 +33,24 @@ func NewTemperature(conf *collector.Config) collector.Collector {
 	}
 }
 
+func (c *Temperature) DefaultOptions() map[string]string {
+	return map[string]string{
+		/*
+			raspberry pi:
+
+			optionTemperatureFile: "/sys/class/thermal/thermal_zone0/temp",
+			optionDivideTemperature: "1000",
+		*/
+
+		optionTemperatureFile:   "/proc/dmu/temperature",
+		optionDivideTemperature: "10",
+	}
+}
+
+func (c *Temperature) DefaultCollectInterval() time.Duration {
+	return time.Minute * 2
+}
+
 func (c *Temperature) Config() *collector.Config {
 	return c.conf
 }
@@ -40,18 +62,34 @@ func (c *Temperature) Name() string {
 }
 
 func (c *Temperature) Collect(_ context.Context) error {
+	tempFile, ok := c.conf.Options[optionTemperatureFile]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionTemperatureFile))
+		return errors.New("missing option " + optionTemperatureFile)
+	}
+
+	var err error
+	divideBy := 1.
+	divideString, ok := c.conf.Options[optionDivideTemperature]
+	if ok {
+		divideBy, err = strconv.ParseFloat(divideString, 10)
+		if err != nil {
+			return err
+		}
+	}
+
 	// example content:
-	// 669
-	load, err := ioutil.ReadFile(cpuTemperaturePath)
+	// 669 / 37552
+	temp, err := ioutil.ReadFile(tempFile)
 	if err != nil {
 		return err
 	}
 
-	t, err := strconv.ParseFloat(string(load[:len(load)-1]), 10)
+	t, err := strconv.ParseFloat(string(temp[:len(temp)-1]), 10)
 	if err != nil {
 		return err
 	}
-	t /= 10
+	t /= divideBy
 
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:      "temperature.celsius",

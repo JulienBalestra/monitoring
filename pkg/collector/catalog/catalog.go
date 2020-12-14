@@ -17,6 +17,8 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/tagger"
 	"github.com/JulienBalestra/monitoring/pkg/collector/temperature"
 	"github.com/JulienBalestra/monitoring/pkg/collector/wl"
+	datadogClient "github.com/JulienBalestra/monitoring/pkg/datadog"
+	tagStore "github.com/JulienBalestra/monitoring/pkg/tagger"
 	"gopkg.in/yaml.v2"
 )
 
@@ -45,7 +47,8 @@ type ConfigFile struct {
 }
 
 type Collector struct {
-	Interval time.Duration `yaml:"interval"`
+	Interval time.Duration     `yaml:"interval"`
+	Options  map[string]string `yaml:"options"`
 }
 
 func ParseConfigFile(f string) (*ConfigFile, error) {
@@ -71,8 +74,18 @@ func GenerateCollectorConfigFile(f string) error {
 	c := &ConfigFile{
 		Collectors: make(map[string]Collector, len(catalog)),
 	}
-	for name := range catalog {
-		c.Collectors[name] = Collector{}
+
+	tag := tagStore.NewTagger()
+	metricsClient := datadogClient.NewClient(&datadogClient.Config{})
+	for name, newCollector := range catalog {
+		coll := newCollector(&collector.Config{
+			Tagger:        tag,
+			MetricsClient: metricsClient,
+		})
+		c.Collectors[name] = Collector{
+			Interval: coll.DefaultCollectInterval(),
+			Options:  coll.DefaultOptions(),
+		}
 	}
 	b, err := yaml.Marshal(c)
 	if err != nil {

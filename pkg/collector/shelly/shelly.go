@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
@@ -18,13 +19,14 @@ import (
 
 const (
 	CollectorShellyName = "shelly"
+
+	optionEndpoint = "endpoint"
 )
 
 type Shelly struct {
-	conf      *collector.Config
-	measures  *metrics.Measures
-	client    *http.Client
-	shellyUrl string
+	conf     *collector.Config
+	measures *metrics.Measures
+	client   *http.Client
 }
 
 type Status struct {
@@ -56,8 +58,17 @@ func NewShelly(conf *collector.Config) collector.Collector {
 		client: &http.Client{
 			Timeout: conf.CollectInterval,
 		},
-		shellyUrl: os.Getenv("SHELLY_URL"),
 	}
+}
+
+func (c *Shelly) DefaultOptions() map[string]string {
+	return map[string]string{
+		optionEndpoint: "http://192.168.1.2",
+	}
+}
+
+func (c *Shelly) DefaultCollectInterval() time.Duration {
+	return time.Second * 5
 }
 
 func (c *Shelly) Config() *collector.Config {
@@ -77,7 +88,13 @@ func parseMac(m string) string {
 }
 
 func (c *Shelly) Collect(ctx context.Context) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.shellyUrl+"/status", nil)
+	shellyEndpoint, ok := c.conf.Options[optionEndpoint]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionEndpoint))
+		return errors.New("missing option " + optionEndpoint)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, shellyEndpoint+"/status", nil)
 	if err != nil {
 		return err
 	}

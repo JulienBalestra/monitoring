@@ -1,33 +1,63 @@
 collectors:
 #  acaia-lunar:
-#    interval: 0s
+#    interval: 10s
+#    options:
+#      lunar-service-uuid: 00002a80-0000-1000-8000-00805f9b34fb
+#      lunar-uuid: 00001820-0000-1000-8000-00805f9b34fb
 #  bluetooth:
-#    interval: 0s
+#    interval: 30s
+#    options: {}
   datadog-client:
-    interval: 2m
+    interval: 2m0s
+    options: {}
   dnsmasq:
     interval: 30s
+    options:
+      address: 127.0.0.1:53
+      leases-file: /tmp/dnsmasq.leases
   dnsmasq-log:
     interval: 10s
+    options:
+      log-facility: /tmp/dnsmasq.log
   load:
     interval: 30s
+    options:
+      load-average-file: /proc/loadavg
   memory:
-    interval: 60s
+    interval: 1m0s
+    options:
+      meminfo-file: /proc/meminfo
   network-arp:
     interval: 10s
+    options:
+      arp-file: /proc/self/net/arp
   network-conntrack:
     interval: 10s
+    options:
+      conntrack-file: /proc/net/ip_conntrack
   network-statistics:
     interval: 10s
+    options:
+      device-path: /sys/class/net/
   network-wireless:
-    interval: 30s
+    interval: 10s
+    options:
+      proc-net-wireless-path: /proc/net/wireless
+      sys-class-net-path: /sys/class/net/
 #  shelly:
-#    interval: 0s
+#    interval: 5s
+#    options:
+#      endpoint: http://192.168.1.2
   tagger:
-    interval: 2m
+    interval: 2m0s
+    options: {}
   temperature:
-    interval: 2m
-#  wealth:
-#    interval: 0s
+    interval: 2m0s
+    options:
+      temperature-divide: "10"
+      temperature-file: /proc/dmu/temperature
   wl:
     interval: 15s
+    options:
+      proc-net-wireless-path: /proc/net/wireless
+      wl-file: /usr/sbin/wl

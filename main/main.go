@@ -167,6 +167,7 @@ func main() {
 					Tagger:          tag,
 					Host:            hostname,
 					CollectInterval: cf.Interval,
+					Options:         cf.Options,
 				}
 				c := newFn(config)
 				waitGroup.Add(1)

@@ -22,7 +22,8 @@ import (
 const (
 	CollectorDnsMasqName = "dnsmasq"
 
-	dnsmasqPath = "/tmp/dnsmasq.leases"
+	optionDNSMasqLeaseFile = "leases-file"
+	optionDNSMasqAddress   = "address"
 
 	dhcpWildcardLeaseValue = "wildcard"
 
@@ -100,6 +101,17 @@ func NewDnsMasq(conf *collector.Config) collector.Collector {
 	}
 }
 
+func (c *DnsMasq) DefaultOptions() map[string]string {
+	return map[string]string{
+		optionDNSMasqLeaseFile: "/tmp/dnsmasq.leases",
+		optionDNSMasqAddress:   "127.0.0.1:53",
+	}
+}
+
+func (c *DnsMasq) DefaultCollectInterval() time.Duration {
+	return time.Second * 30
+}
+
 func (c *DnsMasq) IsDaemon() bool { return false }
 
 func (c *DnsMasq) Config() *collector.Config {
@@ -111,21 +123,26 @@ func (c *DnsMasq) Name() string {
 }
 
 func (c *DnsMasq) Collect(_ context.Context) error {
-	b, err := ioutil.ReadFile(dnsmasqPath)
+	dnsmasqFile, ok := c.conf.Options[optionDNSMasqLeaseFile]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionDNSMasqLeaseFile))
+		return errors.New("missing option " + optionDNSMasqLeaseFile)
+	}
+	b, err := ioutil.ReadFile(dnsmasqFile)
 	if err != nil {
 		return err
 	}
 
 	if len(b) == 0 {
 		zap.L().Debug("dnsmasq file is empty",
-			zap.ByteString(dnsmasqPath, b),
+			zap.ByteString(dnsmasqFile, b),
 		)
 		return nil
 	}
 	lines := bytes.Split(b[:len(b)-1], c.splitSep)
 	if len(lines) == 0 {
-		zap.L().Debug("dnsmasq file is empty",
-			zap.ByteString(dnsmasqPath, b),
+		zap.L().Debug("dnsmasq lease file is empty",
+			zap.ByteString(dnsmasqFile, b),
 		)
 		return nil
 	}
@@ -210,13 +227,18 @@ func (c *DnsMasq) Collect(_ context.Context) error {
 }
 
 func (c *DnsMasq) queryDnsmasqMetric(question *dns.Question) (float64, error) {
+	address, ok := c.conf.Options[optionDNSMasqAddress]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionDNSMasqAddress))
+		return 0, errors.New("missing option " + optionDNSMasqAddress)
+	}
 	msg := &dns.Msg{
 		Question: []dns.Question{*question},
 	}
 	msg.Id = dns.Id()
 	msg.RecursionDesired = true
 
-	in, _, err := c.dnsClient.Exchange(msg, "127.0.0.1:53") // TODO make this configurable
+	in, _, err := c.dnsClient.Exchange(msg, address)
 	if err != nil {
 		return 0, err
 	}

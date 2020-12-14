@@ -44,6 +44,14 @@ func (c *Bluetooth) Config() *collector.Config {
 	return c.conf
 }
 
+func (c *Bluetooth) DefaultOptions() map[string]string {
+	return map[string]string{}
+}
+
+func (c *Bluetooth) DefaultCollectInterval() time.Duration {
+	return time.Second * 30
+}
+
 func (c *Bluetooth) IsDaemon() bool { return true }
 
 func (c *Bluetooth) Name() string {
