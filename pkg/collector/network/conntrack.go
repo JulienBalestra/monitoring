@@ -19,8 +19,7 @@ const (
 
 	conntrackPath = "/proc/net/ip_conntrack"
 
-	deadlineTolerationDuration = time.Second * 5
-	maxAgeConntrackEntries     = time.Hour
+	maxAgeConntrackEntries = time.Hour
 )
 
 type Conntrack struct {

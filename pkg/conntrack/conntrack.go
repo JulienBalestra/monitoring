@@ -3,6 +3,7 @@ package conntrack
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -17,7 +18,12 @@ const (
 	ProtocolTCP      = "tcp"
 	StateEstablished = "ESTABLISHED"
 
-	ProtocolUDP    = "udp"
+	ProtocolUDP = "udp"
+
+	ProtocolICMP = "icmp"
+
+	ProtocolUnknown = "unknown"
+
 	StateUnreplied = "UNREPLIED"
 	StateReplied   = "REPLIED"
 )
@@ -106,7 +112,7 @@ func getTraffic(packets, bytes []byte) (float64, float64, error) {
 }
 
 func parseRecordFromLine(line []byte) (*Record, error) {
-	fields := bytes.Fields(line[9:])
+	fields := bytes.Fields(line)
 	ttl, err := strconv.Atoi(string(fields[1]))
 	if err != nil {
 		return nil, err
@@ -116,10 +122,9 @@ func parseRecordFromLine(line []byte) (*Record, error) {
 		From:     &Track{},
 		To:       &Track{},
 	}
-	fields = fields[2:]
-	switch line[0] {
-	case 't':
-		r.Protocol = ProtocolTCP
+	r.Protocol, fields = string(fields[0]), fields[3:]
+	switch r.Protocol {
+	case ProtocolTCP:
 		r.State = string(fields[0])
 		r.From.Quad, err = getQuadruplet(1, fields)
 		if err != nil {
@@ -144,8 +149,7 @@ func parseRecordFromLine(line []byte) (*Record, error) {
 		if err != nil {
 			return nil, err
 		}
-	case 'u':
-		r.Protocol = ProtocolUDP
+	case ProtocolUDP:
 		r.From.Quad, err = getQuadruplet(0, fields)
 		if err != nil {
 			return nil, err
@@ -171,8 +175,7 @@ func parseRecordFromLine(line []byte) (*Record, error) {
 		if err != nil {
 			return nil, err
 		}
-	case 'i':
-		r.Protocol = "icmp"
+	case ProtocolICMP:
 		r.From.Quad = &Quad{
 			Source:      string(fields[0][4:]),
 			Destination: string(fields[1][4:]),
@@ -198,6 +201,34 @@ func parseRecordFromLine(line []byte) (*Record, error) {
 		if err != nil {
 			return nil, err
 		}
+	case ProtocolUnknown:
+		r.From.Quad = &Quad{
+			Source:      string(fields[0][4:]),
+			Destination: string(fields[1][4:]),
+		}
+		r.From.Packets, r.From.Bytes, err = getTraffic(fields[2], fields[3])
+		if err != nil {
+			return nil, err
+		}
+		if bytes.Equal(fields[4], unRepliedBytes) {
+			r.State = StateUnreplied
+			r.To.Quad = &Quad{
+				Source:      string(fields[5][4:]),
+				Destination: string(fields[6][4:]),
+			}
+			return r, nil
+		}
+		r.State = StateReplied
+		r.To.Quad = &Quad{
+			Source:      string(fields[4][4:]),
+			Destination: string(fields[5][4:]),
+		}
+		r.To.Packets, r.To.Bytes, err = getTraffic(fields[6], fields[7])
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("invalid protocol: %q", r.Protocol)
 	}
 	return r, nil
 }
