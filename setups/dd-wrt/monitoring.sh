@@ -1,4 +1,4 @@
-#!/bin/sh
+""#!/bin/sh
 
 PID_FILE=/tmp/monitoring.pid
 kill $(cat ${PID_FILE})

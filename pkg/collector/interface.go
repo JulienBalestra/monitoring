@@ -15,7 +15,7 @@ type Config struct {
 	Tagger        *tagger.Tagger
 
 	Host            string
-	CollectInterval time.Duration `yaml:"interval"`
+	CollectInterval time.Duration
 	Options         map[string]string
 }
 
