@@ -1,13 +1,16 @@
 arm:
 	$(MAKE) -C main $@
 
+arm64:
+	$(MAKE) -C main $@
+
 amd64:
 	$(MAKE) -C main $@
 
 clean:
 	$(MAKE) -C main $@
 
-re: clean amd64 arm
+re: clean amd64 arm arm64
 
 fmt:
 	@go fmt ./...
