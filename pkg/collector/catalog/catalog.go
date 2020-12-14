@@ -6,9 +6,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/JulienBalestra/monitoring/pkg/collector/temperature/ddwrt"
-	"github.com/JulienBalestra/monitoring/pkg/collector/temperature/raspberrypi"
-
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/bluetooth"
 	"github.com/JulienBalestra/monitoring/pkg/collector/datadog"
@@ -24,6 +21,9 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/network/wireless"
 	"github.com/JulienBalestra/monitoring/pkg/collector/shelly"
 	"github.com/JulienBalestra/monitoring/pkg/collector/tagger"
+	"github.com/JulienBalestra/monitoring/pkg/collector/temperature/ddwrt"
+	"github.com/JulienBalestra/monitoring/pkg/collector/temperature/raspberrypi"
+	"github.com/JulienBalestra/monitoring/pkg/collector/wireguard"
 	"github.com/JulienBalestra/monitoring/pkg/collector/wl"
 	datadogClient "github.com/JulienBalestra/monitoring/pkg/datadog"
 	tagStore "github.com/JulienBalestra/monitoring/pkg/tagger"
@@ -49,6 +49,7 @@ func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 		datadog.CollectorName:                datadog.NewClient,
 		dhcp.CollectorDnsMasqName:            dhcp.NewDNSMasqDHCP,
 		raspberrypi.CollectorTemperatureName: raspberrypi.NewTemperature,
+		wireguard.CollectorWireguardName:     wireguard.NewWireguard,
 	}
 }
 
