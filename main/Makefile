@@ -7,13 +7,15 @@ VERSION_FLAGS=-ldflags '-s -w \
     -X github.com/JulienBalestra/monitoring/cmd/version.Commit=$(COMMIT)'
 
 arm:
-	GOARCH=arm GOARM=5 go build -i -o $(TARGET)-arm $(VERSION_FLAGS) .
+	GOARCH=$@ GOARM=7 go build -i -o $(TARGET)-$@ $(VERSION_FLAGS) .
+
+arm64:
+	GOARCH=$@ go build -i -o $(TARGET)-$@ $(VERSION_FLAGS) .
 
 amd64:
-	go build -o $(TARGET)-amd64 $(VERSION_FLAGS) .
+	go build -o $(TARGET)-$@ $(VERSION_FLAGS) .
 
 clean:
-	$(RM) $(TARGET)-amd64 $(TARGET)-arm
+	$(RM) $(TARGET)-amd64 $(TARGET)-arm $(TARGET)-arm64
 
-re: clean amd64 arm
-
+re: clean amd64 arm arm64
