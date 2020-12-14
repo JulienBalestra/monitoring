@@ -38,6 +38,14 @@ func NewClient(conf *collector.Config) collector.Collector {
 	}
 }
 
+func (c *Client) DefaultOptions() map[string]string {
+	return map[string]string{}
+}
+
+func (c *Client) DefaultCollectInterval() time.Duration {
+	return time.Minute * 2
+}
+
 func (c *Client) IsDaemon() bool { return false }
 
 func (c *Client) Config() *collector.Config {

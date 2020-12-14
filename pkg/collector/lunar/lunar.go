@@ -2,6 +2,8 @@ package lunar
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
@@ -15,8 +17,8 @@ import (
 const (
 	CollectorLoadName = "acaia-lunar"
 
-	lunarUUID        = "00001820-0000-1000-8000-00805f9b34fb"
-	lunarServiceUUID = "00002a80-0000-1000-8000-00805f9b34fb"
+	optionLunarServiceUUID = "lunar-service-uuid"
+	optionLunarUUID        = "lunar-uuid"
 )
 
 type Lunar struct {
@@ -26,11 +28,23 @@ type Lunar struct {
 	sequenceID byte
 }
 
+// NewAcaia TODO: this is a work in progress
 func NewAcaia(conf *collector.Config) collector.Collector {
 	return &Lunar{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
+}
+
+func (c *Lunar) DefaultOptions() map[string]string {
+	return map[string]string{
+		optionLunarUUID:        "00001820-0000-1000-8000-00805f9b34fb",
+		optionLunarServiceUUID: "00002a80-0000-1000-8000-00805f9b34fb",
+	}
+}
+
+func (c *Lunar) DefaultCollectInterval() time.Duration {
+	return time.Second * 10
 }
 
 func (c *Lunar) Config() *collector.Config {
@@ -44,6 +58,12 @@ func (c *Lunar) Name() string {
 }
 
 func (c *Lunar) lunar(d *device.Device1) error {
+	lunarServiceUUID, ok := c.conf.Options[optionLunarServiceUUID]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionLunarServiceUUID))
+		return errors.New("missing option " + optionLunarServiceUUID)
+	}
+
 	zap.L().Debug("pairing")
 	err := d.Pair()
 	if err != nil {
@@ -87,6 +107,12 @@ func (c *Lunar) lunar(d *device.Device1) error {
 }
 
 func (c *Lunar) Collect(ctx context.Context) error {
+	lunarUUID, ok := c.conf.Options[optionLunarUUID]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionLunarUUID))
+		return errors.New("missing option " + optionLunarUUID)
+	}
+
 	conn, err := dbus.SystemBus()
 	if err != nil {
 		return err

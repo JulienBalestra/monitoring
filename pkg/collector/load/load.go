@@ -2,6 +2,7 @@ package load
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strconv"
@@ -16,7 +17,7 @@ import (
 const (
 	CollectorLoadName = "load"
 
-	loadPath = "/proc/loadavg"
+	optionProcLoadAvgFile = "load-average-file"
 )
 
 type Load struct {
@@ -31,6 +32,16 @@ func NewLoad(conf *collector.Config) collector.Collector {
 	}
 }
 
+func (c *Load) DefaultOptions() map[string]string {
+	return map[string]string{
+		optionProcLoadAvgFile: "/proc/loadavg",
+	}
+}
+
+func (c *Load) DefaultCollectInterval() time.Duration {
+	return time.Second * 30
+}
+
 func (c *Load) Config() *collector.Config {
 	return c.conf
 }
@@ -42,9 +53,14 @@ func (c *Load) Name() string {
 }
 
 func (c *Load) Collect(_ context.Context) error {
+	loadAverageFile, ok := c.conf.Options[optionProcLoadAvgFile]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionProcLoadAvgFile))
+		return errors.New("missing option " + optionProcLoadAvgFile)
+	}
 	// example content:
 	// 0.65 0.86 0.99 1/737 37114
-	load, err := ioutil.ReadFile(loadPath)
+	load, err := ioutil.ReadFile(loadAverageFile)
 	if err != nil {
 		zap.L().Error("failed to parse metrics", zap.Error(err))
 		return err

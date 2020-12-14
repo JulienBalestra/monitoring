@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -17,7 +18,7 @@ import (
 const (
 	CollectorARPName = "network-arp"
 
-	arpPath = "/proc/self/net/arp"
+	optionARPFile = "arp-file"
 )
 
 /* cat /proc/self/net/arp
@@ -46,6 +47,16 @@ func NewARP(conf *collector.Config) collector.Collector {
 	}
 }
 
+func (c *ARP) DefaultOptions() map[string]string {
+	return map[string]string{
+		optionARPFile: "/proc/self/net/arp",
+	}
+}
+
+func (c *ARP) DefaultCollectInterval() time.Duration {
+	return time.Second * 10
+}
+
 func (c *ARP) Config() *collector.Config {
 	return c.conf
 }
@@ -57,7 +68,13 @@ func (c *ARP) Name() string {
 }
 
 func (c *ARP) Collect(_ context.Context) error {
-	b, err := ioutil.ReadFile(arpPath)
+	arpFile, ok := c.conf.Options[optionARPFile]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionARPFile))
+		return errors.New("missing option " + optionARPFile)
+	}
+
+	b, err := ioutil.ReadFile(arpFile)
 	if err != nil {
 		return err
 	}

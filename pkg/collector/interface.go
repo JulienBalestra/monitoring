@@ -16,6 +16,7 @@ type Config struct {
 
 	Host            string
 	CollectInterval time.Duration `yaml:"interval"`
+	Options         map[string]string
 }
 
 func (c Config) OverrideCollectInterval(d time.Duration) *Config {
@@ -28,6 +29,8 @@ type Collector interface {
 	Collect(context.Context) error
 	Name() string
 	IsDaemon() bool
+	DefaultOptions() map[string]string
+	DefaultCollectInterval() time.Duration
 }
 
 func RunCollection(ctx context.Context, c Collector) error {

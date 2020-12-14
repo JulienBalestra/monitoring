@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"testing"
 
 	"github.com/JulienBalestra/monitoring/pkg/datadog"
@@ -17,8 +18,11 @@ func TestNewMemory(t *testing.T) {
 			ChanSize: 1000,
 		}),
 		Tagger: tagger.NewTagger(),
+		Options: map[string]string{
+			optionMemInfoFile: "fixtures/dd-wrt.meminfo",
+		},
 	})
-	err := m.collect("fixtures/dd-wrt.meminfo")
+	err := m.Collect(context.TODO())
 	require.NoError(t, err)
 	assert.Len(t, m.conf.MetricsClient.ChanSeries, len(m.mapping))
 
@@ -27,8 +31,11 @@ func TestNewMemory(t *testing.T) {
 			ChanSize: 1000,
 		}),
 		Tagger: tagger.NewTagger(),
+		Options: map[string]string{
+			optionMemInfoFile: "fixtures/pi.meminfo",
+		},
 	})
-	err = m.collect("fixtures/pi.meminfo")
+	err = m.Collect(context.TODO())
 	require.NoError(t, err)
 	assert.Len(t, m.conf.MetricsClient.ChanSeries, len(m.mapping)-1)
 }

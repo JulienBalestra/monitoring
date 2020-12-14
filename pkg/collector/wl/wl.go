@@ -22,7 +22,9 @@ import (
 
 const (
 	CollectorWLName = "wl"
-	wlBinaryPath    = "/usr/sbin/wl"
+
+	optionWLBinaryFile = "wl-file"
+	optionWirelessPath = "proc-net-wireless-path"
 
 	wirelessMetricPrefix = "network.wireless."
 )
@@ -51,6 +53,17 @@ type wlCommand struct {
 
 func NewWL(conf *collector.Config) collector.Collector {
 	return newWL(conf)
+}
+
+func (c *WL) DefaultOptions() map[string]string {
+	return map[string]string{
+		optionWLBinaryFile: "/usr/sbin/wl",
+		optionWirelessPath: "/proc/net/wireless",
+	}
+}
+
+func (c *WL) DefaultCollectInterval() time.Duration {
+	return time.Second * 15
 }
 
 func newWL(conf *collector.Config) *WL {
@@ -93,11 +106,24 @@ func (c *WL) getSSID(b []byte) (string, error) {
 
 func (c *WL) getWLCommands(ctx context.Context) ([]*wlCommand, error) {
 	var wlCommands []*wlCommand
+
+	wlBinaryFile, ok := c.conf.Options[optionWLBinaryFile]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionWLBinaryFile))
+		return wlCommands, errors.New("missing option " + optionWLBinaryFile)
+	}
+
+	procNetWirelessPath, ok := c.conf.Options[optionWirelessPath]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionWirelessPath))
+		return wlCommands, errors.New("missing option " + optionWirelessPath)
+	}
+
 	now := time.Now()
 	if now.Before(c.wlCommandsToUpdate) && c.wlCommands != nil {
 		return c.wlCommands, nil
 	}
-	f, err := os.Open("/proc/net/wireless")
+	f, err := os.Open(procNetWirelessPath)
 	if err != nil {
 		return c.wlCommands, err
 	}
@@ -122,7 +148,7 @@ func (c *WL) getWLCommands(ctx context.Context) ([]*wlCommand, error) {
 	}
 
 	for _, device := range devices {
-		b, err := exec.CommandContext(ctx, wlBinaryPath, "-i", device, "status").CombinedOutput()
+		b, err := exec.CommandContext(ctx, wlBinaryFile, "-i", device, "status").CombinedOutput()
 		if err != nil {
 			continue
 		}
@@ -161,6 +187,12 @@ func (c *WL) getMacs(b []byte) []string {
 }
 
 func (c *WL) Collect(ctx context.Context) error {
+	wlBinaryFile, ok := c.conf.Options[optionWLBinaryFile]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", optionWLBinaryFile))
+		return errors.New("missing option " + optionWLBinaryFile)
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, c.conf.CollectInterval)
 	defer cancel()
 	wlCommands, err := c.getWLCommands(ctx)
@@ -169,13 +201,13 @@ func (c *WL) Collect(ctx context.Context) error {
 	}
 	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
 	for _, command := range wlCommands {
-		b, err := exec.CommandContext(ctx, wlBinaryPath, "-i", command.device, "assoclist").CombinedOutput()
+		b, err := exec.CommandContext(ctx, wlBinaryFile, "-i", command.device, "assoclist").CombinedOutput()
 		if err != nil {
 			log.Printf("failed to run command: %v", err)
 			continue
 		}
 		for _, mac := range c.getMacs(b) {
-			b, err := exec.CommandContext(ctx, wlBinaryPath, "-i", command.device, "rssi", mac).CombinedOutput()
+			b, err := exec.CommandContext(ctx, wlBinaryFile, "-i", command.device, "rssi", mac).CombinedOutput()
 			if err != nil {
 				log.Printf("failed to run command: %v", err)
 				continue

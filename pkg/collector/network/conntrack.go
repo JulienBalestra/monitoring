@@ -17,7 +17,7 @@ import (
 const (
 	CollectorConntrackName = "network-conntrack"
 
-	conntrackPath = "/proc/net/ip_conntrack"
+	optionConntrackFile = "conntrack-file"
 
 	maxAgeConntrackEntries = time.Hour
 )
@@ -37,12 +37,21 @@ func NewConntrack(conf *collector.Config) collector.Collector {
 
 func newConntrack(conf *collector.Config) *Conntrack {
 	return &Conntrack{
-		conf:          conf,
-		measures:      metrics.NewMeasuresWithMaxAge(conf.MetricsClient.ChanSeries, maxAgeConntrackEntries),
-		conntrackPath: conntrackPath,
-		tagLease:      tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
-		tagDevice:     tagger.NewTagUnsafe(selfExported.DeviceKey, tagger.MissingTagValue),
+		conf:      conf,
+		measures:  metrics.NewMeasuresWithMaxAge(conf.MetricsClient.ChanSeries, maxAgeConntrackEntries),
+		tagLease:  tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
+		tagDevice: tagger.NewTagUnsafe(selfExported.DeviceKey, tagger.MissingTagValue),
 	}
+}
+
+func (c *Conntrack) DefaultOptions() map[string]string {
+	return map[string]string{
+		optionConntrackFile: "/proc/net/ip_conntrack",
+	}
+}
+
+func (c *Conntrack) DefaultCollectInterval() time.Duration {
+	return time.Second * 10
 }
 
 func (c *Conntrack) Config() *collector.Config {
@@ -117,6 +126,12 @@ func (c *Conntrack) Collect(ctx context.Context) error {
 			aggregations = make(map[string]*aggregation)
 
 		case <-after:
+			conntrackPath, ok := c.conf.Options[optionConntrackFile]
+			if !ok {
+				zap.L().Error("missing option", zap.String("options", optionConntrackFile))
+				continue
+			}
+
 			newRecords, closestDeadline, err := conntrack.GetConntrackRecords(conntrackPath)
 			if err != nil {
 				zap.L().Error("failed to get conntrack records", zap.Error(err))

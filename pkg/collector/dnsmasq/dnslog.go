@@ -21,10 +21,10 @@ import (
 const (
 	CollectorDnsMasqLogName = "dnsmasq-log"
 
-	dnsmasqLogPath = "/tmp/dnsmasq.log"
-
 	dnsmasqDateFormat  = "2006Jan 2 15:04:05"
 	dnsmasqQueryMetric = "dnsmasq.dns.query"
+
+	optionLogFacilityKey = "log-facility"
 )
 
 type Log struct {
@@ -72,6 +72,21 @@ func NewDnsMasqLog(conf *collector.Config) collector.Collector {
 	return newLog(conf)
 }
 
+func (c *Log) DefaultOptions() map[string]string {
+	return map[string]string{
+		/*
+			dnsmasq configfile:
+			log-queries
+			log-facility=/tmp/dnsmasq.log
+		*/
+		optionLogFacilityKey: "/tmp/dnsmasq.log",
+	}
+}
+
+func (c *Log) DefaultCollectInterval() time.Duration {
+	return time.Second * 10
+}
+
 func (c *Log) IsDaemon() bool { return true }
 
 func (c *Log) Config() *collector.Config {
@@ -109,7 +124,15 @@ func (c *Log) Collect(ctx context.Context) error {
 				wg.Done()
 				return
 			default:
-				err := c.tail(ctx, lineCh, dnsmasqLogPath, firstStart)
+				dnsmasqLogQueriesFile, ok := c.conf.Options[optionLogFacilityKey]
+				if !ok {
+					zap.L().Error("missing option", zap.String("options", optionLogFacilityKey))
+					wait, cancel := context.WithTimeout(ctx, time.Second*60)
+					<-wait.Done()
+					cancel()
+					continue
+				}
+				err := c.tail(ctx, lineCh, dnsmasqLogQueriesFile, firstStart)
 				if err != nil {
 					zap.L().Error("failed tailing", zap.Error(err))
 					wait, cancel := context.WithTimeout(ctx, time.Second)
