@@ -174,6 +174,60 @@ func TestGetConntrackRecords(t *testing.T) {
 				State:    StateUnreplied,
 			},
 		},
+		"unknown:unreplied": {
+			line: "unknown  2 232 src=192.168.3.1 dst=224.0.0.251 packets=7 bytes=224 [UNREPLIED] src=224.0.0.251 dst=192.168.3.1 packets=0 bytes=0 mark=0 use=2",
+			record: &Record{
+				From: &Track{
+					Quad: &Quad{
+						Source:          "192.168.3.1",
+						SourcePort:      0,
+						Destination:     "224.0.0.251",
+						DestinationPort: 0,
+					},
+					Bytes:   224,
+					Packets: 7,
+				},
+				To: &Track{
+					Quad: &Quad{
+						Source:          "224.0.0.251",
+						SourcePort:      0,
+						Destination:     "192.168.3.1",
+						DestinationPort: 0,
+					},
+					Bytes:   0,
+					Packets: 0,
+				},
+				Protocol: "unknown",
+				State:    StateUnreplied,
+			},
+		},
+		"unknown:replied": {
+			line: "unknown  2 232 src=192.168.3.1 dst=224.0.0.251 packets=7 bytes=224 src=224.0.0.251 dst=192.168.3.1 packets=2 bytes=42 mark=0 use=2",
+			record: &Record{
+				From: &Track{
+					Quad: &Quad{
+						Source:          "192.168.3.1",
+						SourcePort:      0,
+						Destination:     "224.0.0.251",
+						DestinationPort: 0,
+					},
+					Bytes:   224,
+					Packets: 7,
+				},
+				To: &Track{
+					Quad: &Quad{
+						Source:          "224.0.0.251",
+						SourcePort:      0,
+						Destination:     "192.168.3.1",
+						DestinationPort: 0,
+					},
+					Bytes:   42,
+					Packets: 2,
+				},
+				Protocol: "unknown",
+				State:    StateReplied,
+			},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			r, err := parseRecordFromLine([]byte(tc.line))
@@ -192,5 +246,5 @@ func TestGetConntrackRecords(t *testing.T) {
 func TestGetConntrackRecords2(t *testing.T) {
 	r, _, err := GetConntrackRecords("fixtures/conntrack.txt")
 	require.NoError(t, err)
-	require.Len(t, r, 150)
+	require.Len(t, r, 153)
 }

@@ -1,3 +1,5 @@
+unknown  2 232 src=192.168.3.1 dst=224.0.0.251 packets=7 bytes=224 [UNREPLIED] src=224.0.0.251 dst=192.168.3.1 packets=0 bytes=0 mark=0 use=2
+unknown  2 232 src=192.168.3.1 dst=224.0.0.251 packets=7 bytes=224 src=224.0.0.251 dst=192.168.3.1 packets=42 bytes=4242 mark=0 use=2
 icmp     1 2 src=192.168.1.1 dst=192.168.1.123 type=8 code=0 id=35924 packets=1 bytes=48 [UNREPLIED] src=192.168.1.123 dst=192.168.1.1 type=0 code=0 id=35924 packets=0 bytes=0 mark=0 use=2
 tcp      6 120 SYN_SENT src=192.168.1.114 dst=54.87.184.7 sport=50691 dport=443 packets=1 bytes=48 [UNREPLIED] src=54.87.184.7 dst=78.194.244.189 sport=443 dport=50691 packets=0 bytes=0 mark=0 use=2
 tcp      6 680 ESTABLISHED src=192.168.1.123 dst=64.233.167.188 sport=51874 dport=5228 packets=33 bytes=2835 src=64.233.167.188 dst=78.194.244.189 sport=5228 dport=51874 packets=32 bytes=6121 [ASSURED] mark=0 use=2

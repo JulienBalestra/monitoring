@@ -7,7 +7,7 @@ VERSION_FLAGS=-ldflags '-s -w \
     -X github.com/JulienBalestra/monitoring/cmd/version.Commit=$(COMMIT)'
 
 arm:
-	GOARCH=$@ GOARM=7 go build -i -o $(TARGET)-$@ $(VERSION_FLAGS) .
+	GOARCH=$@ GOARM=$(GOARM) go build -i -o $(TARGET)-$@ $(VERSION_FLAGS) .
 
 arm64:
 	GOARCH=$@ go build -i -o $(TARGET)-$@ $(VERSION_FLAGS) .
