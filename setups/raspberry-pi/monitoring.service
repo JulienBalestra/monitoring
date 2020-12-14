@@ -9,8 +9,6 @@ Environment=DATADOG_APP_KEY=
 # IOT
 Environment=SHELLY_URL=
 
-# DDOG employees
-Environment=DDOG_STOCK_FILE=/home/pi/ddog-stock.json
 EnvironmentFile=/etc/monitoring/environment
 
 ExecStart=/usr/local/bin/monitoring \
