@@ -1,4 +1,4 @@
-package dnsmasq
+package dnslogs
 
 import (
 	"bufio"
@@ -10,12 +10,11 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/zap"
-
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
+	"go.uber.org/zap"
 )
 
 const (
@@ -59,11 +58,11 @@ func newLog(conf *collector.Config) *Log {
 
 		// these domains are ignored and not submitted as metrics
 		ignoreDomains: map[string]struct{}{
-			hitsQueryBind:       {},
-			missesQueryBind:     {},
-			insertionsQueryBind: {},
-			evictionsQueryBind:  {},
-			cachesizeQueryBind:  {},
+			exported.HitsQueryBind:       {},
+			exported.MissesQueryBind:     {},
+			exported.InsertionsQueryBind: {},
+			exported.EvictionsQueryBind:  {},
+			exported.CachesizeQueryBind:  {},
 		},
 	}
 }

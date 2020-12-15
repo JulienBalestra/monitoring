@@ -3,19 +3,27 @@ package catalog
 import (
 	"io/ioutil"
 	"os"
+	"sort"
 	"time"
+
+	"github.com/JulienBalestra/monitoring/pkg/collector/temperature/ddwrt"
+	"github.com/JulienBalestra/monitoring/pkg/collector/temperature/raspberrypi"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/bluetooth"
 	"github.com/JulienBalestra/monitoring/pkg/collector/datadog"
-	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq"
+	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/dhcp"
+	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/dnslogs"
+	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/dnsqueries"
 	"github.com/JulienBalestra/monitoring/pkg/collector/load"
 	"github.com/JulienBalestra/monitoring/pkg/collector/lunar"
 	"github.com/JulienBalestra/monitoring/pkg/collector/memory"
-	"github.com/JulienBalestra/monitoring/pkg/collector/network"
+	"github.com/JulienBalestra/monitoring/pkg/collector/network/arp"
+	"github.com/JulienBalestra/monitoring/pkg/collector/network/conntrack"
+	"github.com/JulienBalestra/monitoring/pkg/collector/network/statistics"
+	"github.com/JulienBalestra/monitoring/pkg/collector/network/wireless"
 	"github.com/JulienBalestra/monitoring/pkg/collector/shelly"
 	"github.com/JulienBalestra/monitoring/pkg/collector/tagger"
-	"github.com/JulienBalestra/monitoring/pkg/collector/temperature"
 	"github.com/JulienBalestra/monitoring/pkg/collector/wl"
 	datadogClient "github.com/JulienBalestra/monitoring/pkg/datadog"
 	tagStore "github.com/JulienBalestra/monitoring/pkg/tagger"
@@ -26,27 +34,30 @@ func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 	return map[string]func(*collector.Config) collector.Collector{
 		bluetooth.CollectorLoadName:          bluetooth.NewBluetooth,
 		lunar.CollectorLoadName:              lunar.NewAcaia,
-		dnsmasq.CollectorDnsMasqName:         dnsmasq.NewDnsMasq,
-		dnsmasq.CollectorDnsMasqLogName:      dnsmasq.NewDnsMasqLog,
+		dnsqueries.CollectorDnsMasqName:      dnsqueries.NewDNSMasqQueries,
+		dnslogs.CollectorDnsMasqLogName:      dnslogs.NewDnsMasqLog,
 		load.CollectorLoadName:               load.NewLoad,
 		memory.CollectorMemoryName:           memory.NewMemory,
-		network.CollectorARPName:             network.NewARP,
-		network.CollectorConntrackName:       network.NewConntrack,
-		network.CollectorStatisticsName:      network.NewStatistics,
-		network.CollectorWirelessName:        network.NewWireless,
+		arp.CollectorARPName:                 arp.NewARP,
+		conntrack.CollectorConntrackName:     conntrack.NewConntrack,
+		statistics.CollectorStatisticsName:   statistics.NewStatistics,
+		wireless.CollectorWirelessName:       wireless.NewWireless,
 		shelly.CollectorShellyName:           shelly.NewShelly,
-		temperature.CollectorTemperatureName: temperature.NewTemperature,
+		ddwrt.CollectorTemperatureName:       ddwrt.NewTemperature,
 		tagger.CollectorName:                 tagger.NewTagger,
 		wl.CollectorWLName:                   wl.NewWL,
 		datadog.CollectorName:                datadog.NewClient,
+		dhcp.CollectorDnsMasqName:            dhcp.NewDNSMasqDHCP,
+		raspberrypi.CollectorTemperatureName: raspberrypi.NewTemperature,
 	}
 }
 
 type ConfigFile struct {
-	Collectors map[string]Collector `yaml:"collectors"`
+	Collectors []Collector `yaml:"collectors"`
 }
 
 type Collector struct {
+	Name     string            `yaml:"name"`
 	Interval time.Duration     `yaml:"interval"`
 	Options  map[string]string `yaml:"options"`
 }
@@ -70,11 +81,9 @@ func GenerateCollectorConfigFile(f string) error {
 		return err
 	}
 	defer fd.Close()
-	catalog := CollectorCatalog()
-	c := &ConfigFile{
-		Collectors: make(map[string]Collector, len(catalog)),
-	}
 
+	c := &ConfigFile{}
+	catalog := CollectorCatalog()
 	tag := tagStore.NewTagger()
 	metricsClient := datadogClient.NewClient(&datadogClient.Config{})
 	for name, newCollector := range catalog {
@@ -82,11 +91,15 @@ func GenerateCollectorConfigFile(f string) error {
 			Tagger:        tag,
 			MetricsClient: metricsClient,
 		})
-		c.Collectors[name] = Collector{
+		c.Collectors = append(c.Collectors, Collector{
+			Name:     name,
 			Interval: coll.DefaultCollectInterval(),
 			Options:  coll.DefaultOptions(),
-		}
+		})
 	}
+	sort.Slice(c.Collectors, func(i, j int) bool {
+		return c.Collectors[i].Name < c.Collectors[j].Name
+	})
 	b, err := yaml.Marshal(c)
 	if err != nil {
 		return err

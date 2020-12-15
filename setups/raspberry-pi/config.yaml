@@ -1,62 +1,34 @@
 collectors:
-#  acaia-lunar:
-#    interval: 10s
-#    options:
-#      lunar-service-uuid: 00002a80-0000-1000-8000-00805f9b34fb
-#      lunar-uuid: 00001820-0000-1000-8000-00805f9b34fb
-#  bluetooth:
-#    interval: 30s
-#    options: {}
-  datadog-client:
+  - name: bluetooth
+    interval: 30s
+    options: {}
+  - name: datadog-client
     interval: 2m0s
     options: {}
-#  dnsmasq:
-#    interval: 30s
-#    options:
-#      leases-file: /tmp/dnsmasq.leases
-#  dnsmasq-log:
-#    interval: 10s
-#    options:
-#      log-facility: /tmp/dnsmasq.log
-  load:
+  - name: load
     interval: 30s
     options:
       load-average-file: /proc/loadavg
-  memory:
+  - name: memory
     interval: 1m0s
     options:
       meminfo-file: /proc/meminfo
-  network-arp:
+  - name: network-arp
     interval: 10s
     options:
       arp-file: /proc/self/net/arp
-  network-conntrack:
+  - name: network-conntrack
     interval: 10s
     options:
       conntrack-file: /proc/net/ip_conntrack
-  network-statistics:
+  - name: network-statistics
     interval: 10s
     options:
       device-path: /sys/class/net/
-#  network-wireless:
-#    interval: 10s
-#    options:
-#      proc-net-wireless-path: /proc/net/wireless
-#      sys-class-net-path: /sys/class/net/
-#  shelly:
-#    interval: 5s
-#    options:
-#      endpoint: http://192.168.1.2
-  tagger:
+  - name: tagger
     interval: 2m0s
     options: {}
-  temperature:
+  - name: temperature-rpi
     interval: 2m0s
     options:
-      temperature-divide: "1000"
       temperature-file: /sys/class/thermal/thermal_zone0/temp
-#  wl:
-#    interval: 15s
-#    options:
-#      proc-net-wireless-path: /proc/net/wireless
-#      wl-file: /usr/sbin/wl

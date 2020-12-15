@@ -1,9 +1,8 @@
 collectors:
-  shelly:
+  - name: shelly
     interval: 5s
 
-  temperature:
+  - name: temperature
     interval: 2m0s
     options:
-      temperature-divide: "10"
       temperature-file: /proc/dmu/temperature

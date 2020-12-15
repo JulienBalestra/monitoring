@@ -153,28 +153,38 @@ func main() {
 			case <-ctx.Done():
 				break
 			default:
-				cf, ok := catalogConfig.Collectors[name]
-				if !ok {
-					zap.L().Info("ignoring collector", zap.String("collector", name))
+				nb := 0
+				zctx := zap.L().With(
+					zap.String("collector", name),
+				)
+				for _, collectorToStart := range catalogConfig.Collectors {
+					if collectorToStart.Name != name {
+						continue
+					}
+					if collectorToStart.Interval <= 0 {
+						zctx.Warn("invalid collector internal, ignoring")
+						continue
+					}
+					nb++
+					config := &collector.Config{
+						MetricsClient:   client,
+						Tagger:          tag,
+						Host:            hostname,
+						CollectInterval: collectorToStart.Interval,
+						Options:         collectorToStart.Options,
+					}
+					c := newFn(config)
+					waitGroup.Add(1)
+					go func(coll collector.Collector) {
+						errorsChan <- collector.RunCollection(ctx, coll)
+						waitGroup.Done()
+					}(c)
+				}
+				if nb == 0 {
+					zctx.Info("ignoring collector")
 					continue
 				}
-				if cf.Interval <= 0 {
-					zap.L().Warn("ignoring collector", zap.String("collector", name))
-					continue
-				}
-				config := &collector.Config{
-					MetricsClient:   client,
-					Tagger:          tag,
-					Host:            hostname,
-					CollectInterval: cf.Interval,
-					Options:         cf.Options,
-				}
-				c := newFn(config)
-				waitGroup.Add(1)
-				go func(coll collector.Collector) {
-					errorsChan <- collector.RunCollection(ctx, coll)
-					waitGroup.Done()
-				}(c)
+				zctx.Info("collector started", zap.Int("instances", nb))
 			}
 		}
 		tags := append(tag.GetUnstable(hostname),

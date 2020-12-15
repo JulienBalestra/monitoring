@@ -23,7 +23,7 @@ import (
 const (
 	CollectorWLName = "wl"
 
-	optionWLBinaryFile = "wl-file"
+	optionWLBinary     = "wl-exe"
 	optionWirelessPath = "proc-net-wireless-path"
 
 	wirelessMetricPrefix = "network.wireless."
@@ -57,7 +57,7 @@ func NewWL(conf *collector.Config) collector.Collector {
 
 func (c *WL) DefaultOptions() map[string]string {
 	return map[string]string{
-		optionWLBinaryFile: "/usr/sbin/wl",
+		optionWLBinary:     "/usr/sbin/wl",
 		optionWirelessPath: "/proc/net/wireless",
 	}
 }
@@ -107,10 +107,10 @@ func (c *WL) getSSID(b []byte) (string, error) {
 func (c *WL) getWLCommands(ctx context.Context) ([]*wlCommand, error) {
 	var wlCommands []*wlCommand
 
-	wlBinaryFile, ok := c.conf.Options[optionWLBinaryFile]
+	wlBinaryFile, ok := c.conf.Options[optionWLBinary]
 	if !ok {
-		zap.L().Error("missing option", zap.String("options", optionWLBinaryFile))
-		return wlCommands, errors.New("missing option " + optionWLBinaryFile)
+		zap.L().Error("missing option", zap.String("options", optionWLBinary))
+		return wlCommands, errors.New("missing option " + optionWLBinary)
 	}
 
 	procNetWirelessPath, ok := c.conf.Options[optionWirelessPath]
@@ -187,10 +187,10 @@ func (c *WL) getMacs(b []byte) []string {
 }
 
 func (c *WL) Collect(ctx context.Context) error {
-	wlBinaryFile, ok := c.conf.Options[optionWLBinaryFile]
+	wlBinary, ok := c.conf.Options[optionWLBinary]
 	if !ok {
-		zap.L().Error("missing option", zap.String("options", optionWLBinaryFile))
-		return errors.New("missing option " + optionWLBinaryFile)
+		zap.L().Error("missing option", zap.String("options", optionWLBinary))
+		return errors.New("missing option " + optionWLBinary)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, c.conf.CollectInterval)
@@ -201,13 +201,13 @@ func (c *WL) Collect(ctx context.Context) error {
 	}
 	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
 	for _, command := range wlCommands {
-		b, err := exec.CommandContext(ctx, wlBinaryFile, "-i", command.device, "assoclist").CombinedOutput()
+		b, err := exec.CommandContext(ctx, wlBinary, "-i", command.device, "assoclist").CombinedOutput()
 		if err != nil {
 			log.Printf("failed to run command: %v", err)
 			continue
 		}
 		for _, mac := range c.getMacs(b) {
-			b, err := exec.CommandContext(ctx, wlBinaryFile, "-i", command.device, "rssi", mac).CombinedOutput()
+			b, err := exec.CommandContext(ctx, wlBinary, "-i", command.device, "rssi", mac).CombinedOutput()
 			if err != nil {
 				log.Printf("failed to run command: %v", err)
 				continue
