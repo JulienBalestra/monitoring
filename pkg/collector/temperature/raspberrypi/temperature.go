@@ -1,4 +1,4 @@
-package temperature
+package raspberrypi
 
 import (
 	"context"
@@ -15,10 +15,9 @@ import (
 )
 
 const (
-	CollectorTemperatureName = "temperature"
+	CollectorTemperatureName = "temperature-rpi"
 
-	optionTemperatureFile   = "temperature-file"
-	optionDivideTemperature = "temperature-divide"
+	optionTemperatureFile = "temperature-file"
 )
 
 type Temperature struct {
@@ -35,15 +34,7 @@ func NewTemperature(conf *collector.Config) collector.Collector {
 
 func (c *Temperature) DefaultOptions() map[string]string {
 	return map[string]string{
-		/*
-			raspberry pi:
-
-			optionTemperatureFile: "/sys/class/thermal/thermal_zone0/temp",
-			optionDivideTemperature: "1000",
-		*/
-
-		optionTemperatureFile:   "/proc/dmu/temperature",
-		optionDivideTemperature: "10",
+		optionTemperatureFile: "/sys/class/thermal/thermal_zone0/temp",
 	}
 }
 
@@ -68,18 +59,10 @@ func (c *Temperature) Collect(_ context.Context) error {
 		return errors.New("missing option " + optionTemperatureFile)
 	}
 
-	var err error
-	divideBy := 1.
-	divideString, ok := c.conf.Options[optionDivideTemperature]
-	if ok {
-		divideBy, err = strconv.ParseFloat(divideString, 10)
-		if err != nil {
-			return err
-		}
-	}
+	divideBy := 1000.
 
 	// example content:
-	// 669 / 37552
+	// 37552
 	temp, err := ioutil.ReadFile(tempFile)
 	if err != nil {
 		return err

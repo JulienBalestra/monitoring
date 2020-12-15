@@ -1,4 +1,4 @@
-package network
+package arp
 
 import (
 	"context"
@@ -7,12 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
-
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	exportedTags "github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
+	"go.uber.org/zap"
 )
 
 const (

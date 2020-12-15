@@ -1,4 +1,4 @@
-package dnsmasq
+package dnslogs
 
 import (
 	"bytes"
@@ -6,9 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JulienBalestra/monitoring/pkg/datadog"
-
 	"github.com/JulienBalestra/monitoring/pkg/collector"
+	"github.com/JulienBalestra/monitoring/pkg/datadog"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
