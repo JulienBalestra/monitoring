@@ -62,6 +62,10 @@ collectors:
   interval: 2m0s
   options:
     temperature-file: /sys/class/thermal/thermal_zone0/temp
+- name: wireguard
+  interval: 30s
+  options:
+    wg-exe: /usr/bin/wg
 - name: wl
   interval: 15s
   options:

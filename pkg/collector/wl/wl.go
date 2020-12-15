@@ -5,19 +5,17 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"log"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
-
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	exportedTags "github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
+	"go.uber.org/zap"
 )
 
 const (
@@ -203,18 +201,18 @@ func (c *WL) Collect(ctx context.Context) error {
 	for _, command := range wlCommands {
 		b, err := exec.CommandContext(ctx, wlBinary, "-i", command.device, "assoclist").CombinedOutput()
 		if err != nil {
-			log.Printf("failed to run command: %v", err)
+			zap.L().Error("failed to run commmand", zap.Error(err))
 			continue
 		}
 		for _, mac := range c.getMacs(b) {
 			b, err := exec.CommandContext(ctx, wlBinary, "-i", command.device, "rssi", mac).CombinedOutput()
 			if err != nil {
-				log.Printf("failed to run command: %v", err)
+				zap.L().Error("failed to run commmand", zap.Error(err))
 				continue
 			}
 			rssi, err := strconv.ParseFloat(string(b[:len(b)-1]), 10)
 			if err != nil {
-				log.Printf("failed to parse rssi: %v", err)
+				zap.L().Error("failed to parse rssi", zap.Error(err))
 				continue
 			}
 			macAddress := strings.ToLower(strings.ReplaceAll(mac, ":", "-"))
