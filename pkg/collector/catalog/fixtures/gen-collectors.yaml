@@ -65,7 +65,7 @@ collectors:
 - name: wireguard
   interval: 30s
   options:
-    wg-file: /usr/bin/wg
+    wg-exe: /usr/bin/wg
 - name: wl
   interval: 15s
   options:

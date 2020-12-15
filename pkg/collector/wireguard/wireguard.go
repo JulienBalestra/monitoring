@@ -17,7 +17,7 @@ import (
 const (
 	CollectorWireguardName = "wireguard"
 
-	optionWgFile = "wg-file"
+	optionWgBin = "wg-exe"
 
 	wireguardMetricPrefix = "wireguard."
 )
@@ -42,7 +42,7 @@ func NewWireguard(conf *collector.Config) collector.Collector {
 
 func (c *Wireguard) DefaultOptions() map[string]string {
 	return map[string]string{
-		optionWgFile: "/usr/bin/wg",
+		optionWgBin: "/usr/bin/wg",
 	}
 }
 
@@ -62,7 +62,7 @@ func (c *Wireguard) Name() string {
 
 func (c *Wireguard) wgShow(ctx context.Context, interfaceName, display string) ([]string, error) {
 	var line []string
-	b, err := exec.CommandContext(ctx, c.conf.Options[optionWgFile], "show", interfaceName, display).CombinedOutput()
+	b, err := exec.CommandContext(ctx, c.conf.Options[optionWgBin], "show", interfaceName, display).CombinedOutput()
 	if err != nil {
 		return line, err
 	}
@@ -73,10 +73,10 @@ func (c *Wireguard) wgShow(ctx context.Context, interfaceName, display string) (
 }
 
 func (c *Wireguard) Collect(ctx context.Context) error {
-	wgExec, ok := c.conf.Options[optionWgFile]
+	wgExec, ok := c.conf.Options[optionWgBin]
 	if !ok {
-		zap.L().Error("missing option", zap.String("options", optionWgFile))
-		return errors.New("missing option " + optionWgFile)
+		zap.L().Error("missing option", zap.String("options", optionWgBin))
+		return errors.New("missing option " + optionWgBin)
 	}
 	b, err := exec.CommandContext(ctx, wgExec, "show", "interfaces").CombinedOutput()
 	if err != nil {
