@@ -5,14 +5,10 @@ Documentation=https://github.com/JulienBalestra/monitoring
 [Service]
 Environment=DATADOG_API_KEY=
 Environment=DATADOG_APP_KEY=
-
-# IOT
-Environment=SHELLY_URL=
-
 EnvironmentFile=/etc/monitoring/environment
 
 ExecStart=/usr/local/bin/monitoring \
-    --datadog-host-tags=os:raspbian \
+    --datadog-host-tags=os:2004.1 \
     --pid-file=/run/monitoring.pid \
     --log-output=stdout,datadog://zap \
     --config-file=/etc/monitoring/config.yaml

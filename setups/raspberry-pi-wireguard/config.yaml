@@ -1,7 +1,4 @@
 collectors:
-  - name: bluetooth
-    interval: 30s
-    options: {}
   - name: datadog-client
     interval: 2m0s
     options: {}
@@ -16,10 +13,6 @@ collectors:
     interval: 10s
     options:
       arp-file: /proc/self/net/arp
-  - name: network-conntrack
-    interval: 10s
-    options:
-      conntrack-file: /proc/net/ip_conntrack
   - name: network-statistics
     interval: 10s
     options:
@@ -31,3 +24,7 @@ collectors:
     interval: 2m0s
     options:
       temperature-file: /sys/class/thermal/thermal_zone0/temp
+  - name: wireguard
+    interval: 30s
+    options:
+      wg-exe: /usr/bin/wg
