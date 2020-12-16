@@ -3,7 +3,10 @@ package wireguard
 import (
 	"context"
 	"encoding/base32"
+	"net"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
@@ -48,6 +51,22 @@ func (c *Wireguard) Name() string {
 	return CollectorWireguardName
 }
 
+func getAllowedIPsTag(n []net.IPNet) string {
+	if len(n) == 0 {
+		return "none"
+	}
+	if len(n) == 1 {
+		return n[0].String()
+	}
+	var allowedIps []string
+	for _, i := range n {
+		s := i.String()
+		allowedIps = append(allowedIps, s)
+	}
+	sort.Strings(allowedIps)
+	return strings.Join(allowedIps, ",")
+}
+
 func (c *Wireguard) Collect(_ context.Context) error {
 	wgc, err := wgctrl.New()
 	if err != nil {
@@ -70,6 +89,7 @@ func (c *Wireguard) Collect(_ context.Context) error {
 				tagger.NewTagUnsafe("port", strconv.Itoa(peer.Endpoint.Port)),
 				tagger.NewTagUnsafe("device", device.Name),
 				tagger.NewTagUnsafe("pub-b32hex", peerPublicKeyB32),
+				tagger.NewTagUnsafe("allowed-ips", getAllowedIPsTag(peer.AllowedIPs)),
 			)
 			tags := c.conf.Tagger.GetUnstable(peer.PublicKey.String())
 			_ = c.measures.Count(&metrics.Sample{
@@ -86,9 +106,13 @@ func (c *Wireguard) Collect(_ context.Context) error {
 				Host:      c.conf.Host,
 				Tags:      tags,
 			})
+			age := now.Sub(peer.LastHandshakeTime)
+			if age > time.Minute*5 {
+				continue
+			}
 			c.measures.Gauge(&metrics.Sample{
 				Name:      wireguardMetricPrefix + "handshake.age",
-				Value:     now.Sub(peer.LastHandshakeTime).Seconds(),
+				Value:     age.Seconds(),
 				Timestamp: now,
 				Host:      c.conf.Host,
 				Tags:      tags,
