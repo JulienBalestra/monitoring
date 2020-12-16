@@ -6,6 +6,6 @@ collectors:
   - name: network-arp
   - name: network-statistics
   - name: tagger
-  - name: temperature-rpi
+  - name: temperature-raspberry-pi
   - name: uptime
   - name: wireguard

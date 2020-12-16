@@ -15,7 +15,7 @@ collectors:
 - name: dnsmasq-log
   interval: 10s
   options:
-    log-facility: /tmp/dnsmasq.log
+    log-facility-file: /tmp/dnsmasq.log
 - name: dnsmasq-queries
   interval: 30s
   options:
@@ -41,7 +41,7 @@ collectors:
 - name: network-wireless
   interval: 10s
   options:
-    proc-net-wireless-path: /proc/net/wireless
+    proc-net-wireless-file: /proc/net/wireless
     sys-class-net-path: /sys/class/net/
 - name: shelly
   interval: 5s
@@ -49,11 +49,11 @@ collectors:
     endpoint: http://192.168.1.2
 - name: tagger
   interval: 2m0s
-- name: temperature-ddwrt
+- name: temperature-dd-wrt
   interval: 2m0s
   options:
     temperature-file: /proc/dmu/temperature
-- name: temperature-rpi
+- name: temperature-raspberry-pi
   interval: 2m0s
   options:
     temperature-file: /sys/class/thermal/thermal_zone0/temp

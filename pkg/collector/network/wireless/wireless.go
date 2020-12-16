@@ -25,7 +25,7 @@ const (
 	wirelessDiscardRetryMetric = wirelessMetricPrefix + "discard.retry"
 
 	optionSysClassPath = "sys-class-net-path"
-	optionWirelessPath = "proc-net-wireless-path"
+	optionWirelessFile = "proc-net-wireless-file"
 )
 
 /*
@@ -52,7 +52,7 @@ func NewWireless(conf *collector.Config) collector.Collector {
 func (c *Wireless) DefaultOptions() map[string]string {
 	return map[string]string{
 		optionSysClassPath: "/sys/class/net/",
-		optionWirelessPath: "/proc/net/wireless",
+		optionWirelessFile: "/proc/net/wireless",
 	}
 }
 
@@ -71,10 +71,10 @@ func (c *Wireless) Name() string {
 }
 
 func (c *Wireless) Collect(_ context.Context) error {
-	wirelessPath, ok := c.conf.Options[optionWirelessPath]
+	wirelessPath, ok := c.conf.Options[optionWirelessFile]
 	if !ok {
-		zap.L().Error("missing option", zap.String("options", optionWirelessPath))
-		return errors.New("missing option " + optionWirelessPath)
+		zap.L().Error("missing option", zap.String("options", optionWirelessFile))
+		return errors.New("missing option " + optionWirelessFile)
 	}
 
 	sysClassPath, ok := c.conf.Options[optionSysClassPath]

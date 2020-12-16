@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	CollectorTemperatureName = "temperature-rpi"
+	CollectorTemperatureName = "temperature-raspberry-pi"
 
 	optionTemperatureFile = "temperature-file"
 )

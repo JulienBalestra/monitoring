@@ -46,12 +46,8 @@ func RunCollection(ctx context.Context, c Collector) error {
 	zctx := zap.L().With(
 		zap.String("collector", c.Name()),
 		zap.Duration("collectionInterval", config.CollectInterval),
+		zap.Any("options", config.Options),
 	)
-	for k, v := range config.Options {
-		zctx = zctx.With(
-			zap.String(k, v),
-		)
-	}
 
 	if c.IsDaemon() {
 		zctx.Info("collecting metrics continuously")

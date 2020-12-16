@@ -11,6 +11,6 @@ collectors:
   - name: network-statistics
   - name: network-wireless
   - name: tagger
-  - name: temperature-ddwrt
+  - name: temperature-dd-wrt
   - name: uptime
   - name: wl
