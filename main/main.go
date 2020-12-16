@@ -32,7 +32,7 @@ const (
 )
 
 func main() {
-	ctx, cancel := context.WithCancel(context.TODO())
+	mainCtx, mainCancel := context.WithCancel(context.TODO())
 	zapConfig := zap.NewProductionConfig()
 	zapConfig.OutputPaths = append(zapConfig.OutputPaths, forward.DatadogZapOutput)
 	zapLevel := zapConfig.Level.String()
@@ -89,7 +89,7 @@ func main() {
 			return err
 		}
 		client = datadog.NewClient(datadogClientConfig)
-		err = zap.RegisterSink(forward.DatadogZapScheme, forward.NewDatadogForwarder(ctx, client))
+		err = zap.RegisterSink(forward.DatadogZapScheme, forward.NewDatadogForwarder(mainCtx, client))
 		if err != nil {
 			return err
 		}
@@ -127,6 +127,7 @@ func main() {
 		}
 		zap.L().Info("wrote pid file", zap.Int("pid", os.Getpid()), zap.String("file", pidFilePath))
 
+		ctx, cancel := context.WithCancel(mainCtx)
 		waitGroup := &sync.WaitGroup{}
 
 		tag := tagger.NewTagger()
@@ -214,5 +215,6 @@ func main() {
 		zap.L().Info("program exit", zap.Int("exitCode", exitCode))
 	}
 	_ = zap.L().Sync()
+	mainCancel()
 	os.Exit(exitCode)
 }
