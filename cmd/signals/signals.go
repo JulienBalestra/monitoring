@@ -7,11 +7,10 @@ import (
 	"runtime/pprof"
 	"syscall"
 
-	"github.com/JulienBalestra/monitoring/pkg/tagger"
 	"go.uber.org/zap"
 )
 
-func NotifySignals(ctx context.Context, cancel context.CancelFunc, tag *tagger.Tagger) {
+func NotifySignals(ctx context.Context, cancel context.CancelFunc, sigusr1 func()) {
 	signals := make(chan os.Signal)
 	defer close(signals)
 	defer signal.Stop(signals)
@@ -28,7 +27,7 @@ func NotifySignals(ctx context.Context, cancel context.CancelFunc, tag *tagger.T
 			zap.L().Info("signal received", zap.String("signal", sig.String()))
 			switch sig {
 			case syscall.SIGUSR1:
-				tag.Print()
+				sigusr1()
 			case syscall.SIGUSR2:
 				_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 2)
 
