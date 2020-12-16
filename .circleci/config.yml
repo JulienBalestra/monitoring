@@ -59,6 +59,18 @@ jobs:
     - run: make amd64
     - run: ./main/monitoring-amd64 version
 
+  monitoring-arm:
+    <<: *base
+    steps:
+    - checkout
+    - run: make arm
+
+  monitoring-arm64:
+    <<: *base
+    steps:
+    - checkout
+    - run: make arm64
+
   example:
     <<: *base
     steps:
@@ -76,4 +88,6 @@ workflows:
     - test
     - ineffassign
     - monitoring-amd64
+    - monitoring-arm
+    - monitoring-arm64
     - example
