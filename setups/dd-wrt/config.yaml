@@ -45,6 +45,9 @@ collectors:
     interval: 2m0s
     options:
       temperature-file: /proc/dmu/temperature
+  - name: uptime
+    interval: 5m0s
+    options: {}
   - name: wl
     interval: 15s
     options:
