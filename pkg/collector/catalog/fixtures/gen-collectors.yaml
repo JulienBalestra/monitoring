@@ -6,10 +6,8 @@ collectors:
     lunar-uuid: 00001820-0000-1000-8000-00805f9b34fb
 - name: bluetooth
   interval: 30s
-  options: {}
 - name: datadog-client
   interval: 2m0s
-  options: {}
 - name: dnsmasq-dhcp
   interval: 30s
   options:
@@ -24,11 +22,8 @@ collectors:
     address: 127.0.0.1:53
 - name: load
   interval: 30s
-  options: {}
 - name: memory
   interval: 1m0s
-  options:
-    meminfo-file: /proc/meminfo
 - name: network-arp
   interval: 10s
   options:
@@ -52,7 +47,6 @@ collectors:
     endpoint: http://192.168.1.2
 - name: tagger
   interval: 2m0s
-  options: {}
 - name: temperature-ddwrt
   interval: 2m0s
   options:
@@ -63,7 +57,6 @@ collectors:
     temperature-file: /sys/class/thermal/thermal_zone0/temp
 - name: uptime
   interval: 5m0s
-  options: {}
 - name: wireguard
   interval: 30s
   options:

@@ -35,6 +35,9 @@ type Collector interface {
 
 func RunCollection(ctx context.Context, c Collector) error {
 	config := c.Config()
+	if config.Options == nil {
+		config.Options = make(map[string]string, 0)
+	}
 	measures := metrics.NewMeasures(config.MetricsClient.ChanSeries)
 
 	zctx := zap.L().With(

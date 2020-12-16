@@ -1,14 +1,10 @@
 collectors:
   - name: datadog-client
     interval: 2m0s
-    options: {}
   - name: load
     interval: 30s
-    options: {}
   - name: memory
     interval: 1m0s
-    options:
-      meminfo-file: /proc/meminfo
   - name: network-arp
     interval: 10s
     options:
@@ -19,14 +15,12 @@ collectors:
       device-path: /sys/class/net/
   - name: tagger
     interval: 2m0s
-    options: {}
   - name: temperature-rpi
     interval: 2m0s
     options:
       temperature-file: /sys/class/thermal/thermal_zone0/temp
   - name: uptime
     interval: 5m0s
-    options: {}
   - name: wireguard
     interval: 30s
     options:
