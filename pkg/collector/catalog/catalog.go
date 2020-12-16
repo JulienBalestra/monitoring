@@ -62,7 +62,7 @@ type ConfigFile struct {
 type Collector struct {
 	Name     string            `yaml:"name"`
 	Interval time.Duration     `yaml:"interval"`
-	Options  map[string]string `yaml:"options"`
+	Options  map[string]string `yaml:"options,omitempty"`
 }
 
 func ParseConfigFile(f string) (*ConfigFile, error) {

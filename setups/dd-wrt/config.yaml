@@ -1,7 +1,6 @@
 collectors:
   - name: datadog-client
     interval: 2m0s
-    options: {}
   - name: dnsmasq-dhcp
     interval: 30s
     options:
@@ -16,11 +15,8 @@ collectors:
       address: 127.0.0.1:53
   - name: load
     interval: 30s
-    options: {}
   - name: memory
     interval: 1m0s
-    options:
-      meminfo-file: /proc/meminfo
   - name: network-arp
     interval: 10s
     options:
@@ -40,14 +36,12 @@ collectors:
       sys-class-net-path: /sys/class/net/
   - name: tagger
     interval: 2m0s
-    options: {}
   - name: temperature-ddwrt
     interval: 2m0s
     options:
       temperature-file: /proc/dmu/temperature
   - name: uptime
     interval: 5m0s
-    options: {}
   - name: wl
     interval: 15s
     options:
