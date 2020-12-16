@@ -44,8 +44,8 @@ func (c *Load) Name() string {
 	return CollectorLoadName
 }
 
-func formatLoad(f uint64) float64 {
-	v := float64(f) / (1 << 16.)
+func formatLoad(f float64) float64 {
+	v := f / (1 << 16.)
 	v *= 100
 	v = math.Round(v)
 	return v / 100
@@ -61,21 +61,21 @@ func (c *Load) Collect(_ context.Context) error {
 	now, tags := time.Now(), c.conf.Tagger.GetUnstable(c.conf.Host)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:      "load.1",
-		Value:     formatLoad(info.Loads[0]),
+		Value:     formatLoad(float64(info.Loads[0])),
 		Timestamp: now,
 		Host:      c.conf.Host,
 		Tags:      tags,
 	}, c.conf.CollectInterval*3)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:      "load.5",
-		Value:     formatLoad(info.Loads[1]),
+		Value:     formatLoad(float64(info.Loads[1])),
 		Timestamp: now,
 		Host:      c.conf.Host,
 		Tags:      tags,
 	}, c.conf.CollectInterval*3)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:      "load.15",
-		Value:     formatLoad(info.Loads[2]),
+		Value:     formatLoad(float64(info.Loads[2])),
 		Timestamp: now,
 		Host:      c.conf.Host,
 		Tags:      tags,
