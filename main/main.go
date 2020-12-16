@@ -161,10 +161,6 @@ func main() {
 					if collectorToStart.Name != name {
 						continue
 					}
-					if collectorToStart.Interval <= 0 {
-						zctx.Warn("invalid collector internal, ignoring")
-						continue
-					}
 					nb++
 					config := &collector.Config{
 						MetricsClient:   client,

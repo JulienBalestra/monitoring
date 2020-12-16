@@ -23,7 +23,7 @@ const (
 	dnsmasqDateFormat  = "2006Jan 2 15:04:05"
 	dnsmasqQueryMetric = "dnsmasq.dns.query"
 
-	optionLogFacilityKey = "log-facility"
+	optionLogFacilityKey = "log-facility-file"
 )
 
 type Log struct {

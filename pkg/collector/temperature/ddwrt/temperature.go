@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	CollectorTemperatureName = "temperature-ddwrt"
+	CollectorTemperatureName = "temperature-dd-wrt"
 
 	optionTemperatureFile = "temperature-file"
 )
