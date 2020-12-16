@@ -32,7 +32,7 @@ const (
 )
 
 func main() {
-	mainCtx, mainCancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.TODO())
 	zapConfig := zap.NewProductionConfig()
 	zapConfig.OutputPaths = append(zapConfig.OutputPaths, forward.DatadogZapOutput)
 	zapLevel := zapConfig.Level.String()
@@ -89,7 +89,7 @@ func main() {
 			return err
 		}
 		client = datadog.NewClient(datadogClientConfig)
-		err = zap.RegisterSink(forward.DatadogZapScheme, forward.NewDatadogForwarder(mainCtx, client))
+		err = zap.RegisterSink(forward.DatadogZapScheme, forward.NewDatadogForwarder(ctx, client))
 		if err != nil {
 			return err
 		}
@@ -127,19 +127,19 @@ func main() {
 		}
 		zap.L().Info("wrote pid file", zap.Int("pid", os.Getpid()), zap.String("file", pidFilePath))
 
-		ctx, cancel := context.WithCancel(mainCtx)
+		runCtx, runCancel := context.WithCancel(ctx)
 		waitGroup := &sync.WaitGroup{}
 
 		tag := tagger.NewTagger()
 		waitGroup.Add(1)
 		go func() {
-			signals.NotifySignals(ctx, cancel, tag)
+			signals.NotifySignals(runCtx, runCancel, tag.Print)
 			waitGroup.Done()
 		}()
 
 		waitGroup.Add(1)
 		go func() {
-			client.Run(ctx)
+			client.Run(runCtx)
 			waitGroup.Done()
 		}()
 		// TODO lifecycle of this chan / create outside ? Wrap ?
@@ -150,7 +150,7 @@ func main() {
 
 		for name, newFn := range catalog.CollectorCatalog() {
 			select {
-			case <-ctx.Done():
+			case <-runCtx.Done():
 				break
 			default:
 				nb := 0
@@ -172,7 +172,7 @@ func main() {
 					c := newFn(config)
 					waitGroup.Add(1)
 					go func(coll collector.Collector) {
-						errorsChan <- collector.RunCollection(ctx, coll)
+						errorsChan <- collector.RunCollection(runCtx, coll)
 						waitGroup.Done()
 					}(c)
 				}
@@ -188,17 +188,17 @@ func main() {
 			"commit:"+version.Commit[:8],
 		)
 		client.MetricClientUp(hostname, tags...)
-		_ = client.UpdateHostTags(ctx, hostTagsStrings)
+		_ = client.UpdateHostTags(runCtx, hostTagsStrings)
 		select {
-		case <-ctx.Done():
+		case <-runCtx.Done():
 		case err := <-errorsChan:
 			zap.L().Error("failed to run collection", zap.Error(err))
-			cancel()
+			runCancel()
 		}
 
-		ctxShutdown, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		ctxShutdown, runCancel := context.WithTimeout(context.Background(), time.Second*5)
 		_ = client.MetricClientShutdown(ctxShutdown, hostname, tags...)
-		cancel()
+		runCancel()
 		waitGroup.Wait()
 		return nil
 	}
@@ -211,6 +211,6 @@ func main() {
 		zap.L().Info("program exit", zap.Int("exitCode", exitCode))
 	}
 	_ = zap.L().Sync()
-	mainCancel()
+	cancel()
 	os.Exit(exitCode)
 }
