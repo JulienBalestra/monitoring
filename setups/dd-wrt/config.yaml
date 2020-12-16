@@ -28,12 +28,12 @@ collectors:
   - name: network-statistics
     interval: 10s
     options:
-      device-path: /sys/class/net/
+      sys-class-net-path: /sys/class/net/
   - name: network-wireless
     interval: 10s
     options:
-      proc-net-wireless-path: /proc/net/wireless
       sys-class-net-path: /sys/class/net/
+      proc-net-wireless-path: /proc/net/wireless
   - name: tagger
     interval: 2m0s
   - name: temperature-ddwrt
