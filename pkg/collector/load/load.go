@@ -2,22 +2,16 @@ package load
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"io/ioutil"
-	"strconv"
-	"strings"
+	"math"
+	"syscall"
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
-	"go.uber.org/zap"
 )
 
 const (
 	CollectorLoadName = "load"
-
-	optionProcLoadAvgFile = "load-average-file"
 )
 
 type Load struct {
@@ -33,9 +27,7 @@ func NewLoad(conf *collector.Config) collector.Collector {
 }
 
 func (c *Load) DefaultOptions() map[string]string {
-	return map[string]string{
-		optionProcLoadAvgFile: "/proc/loadavg",
-	}
+	return map[string]string{}
 }
 
 func (c *Load) DefaultCollectInterval() time.Duration {
@@ -52,55 +44,38 @@ func (c *Load) Name() string {
 	return CollectorLoadName
 }
 
+func formatLoad(f uint64) float64 {
+	v := float64(f) / (1 << 16.)
+	v *= 100
+	v = math.Round(v)
+	return v / 100
+}
+
 func (c *Load) Collect(_ context.Context) error {
-	loadAverageFile, ok := c.conf.Options[optionProcLoadAvgFile]
-	if !ok {
-		zap.L().Error("missing option", zap.String("options", optionProcLoadAvgFile))
-		return errors.New("missing option " + optionProcLoadAvgFile)
-	}
-	// example content:
-	// 0.65 0.86 0.99 1/737 37114
-	load, err := ioutil.ReadFile(loadAverageFile)
-	if err != nil {
-		zap.L().Error("failed to parse metrics", zap.Error(err))
-		return err
-	}
-	parts := strings.Fields(string(load))
-	if len(parts) != 5 {
-		return fmt.Errorf("failed to parse %s: %q", parts, string(load))
-	}
-	load1, err := strconv.ParseFloat(parts[0], 10)
-	if err != nil {
-		return err
-	}
-	load5, err := strconv.ParseFloat(parts[1], 10)
-	if err != nil {
-		return err
-	}
-	load10, err := strconv.ParseFloat(parts[2], 10)
+	info := &syscall.Sysinfo_t{}
+	err := syscall.Sysinfo(info)
 	if err != nil {
 		return err
 	}
 
-	// newMetric is a convenient way to DRY the following gauges
 	now, tags := time.Now(), c.conf.Tagger.GetUnstable(c.conf.Host)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:      "load.1",
-		Value:     load1,
+		Value:     formatLoad(info.Loads[0]),
 		Timestamp: now,
 		Host:      c.conf.Host,
 		Tags:      tags,
 	}, c.conf.CollectInterval*3)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:      "load.5",
-		Value:     load5,
+		Value:     formatLoad(info.Loads[1]),
 		Timestamp: now,
 		Host:      c.conf.Host,
 		Tags:      tags,
 	}, c.conf.CollectInterval*3)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "load.10",
-		Value:     load10,
+		Name:      "load.15",
+		Value:     formatLoad(info.Loads[2]),
 		Timestamp: now,
 		Host:      c.conf.Host,
 		Tags:      tags,
