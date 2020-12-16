@@ -2,31 +2,21 @@ package wireguard
 
 import (
 	"context"
-	"errors"
-	"os/exec"
+	"encoding/base32"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
-	"go.uber.org/zap"
+	"golang.zx2c4.com/wireguard/wgctrl"
 )
 
 const (
 	CollectorWireguardName = "wireguard"
 
-	optionWgBin = "wg-exe"
-
 	wireguardMetricPrefix = "wireguard."
 )
-
-/*
-Built with:
-wg --version
-wireguard-tools v1.0.20200827 - https://git.zx2c4.com/wireguard-tools/
-*/
 
 type Wireguard struct {
 	conf     *collector.Config
@@ -41,9 +31,7 @@ func NewWireguard(conf *collector.Config) collector.Collector {
 }
 
 func (c *Wireguard) DefaultOptions() map[string]string {
-	return map[string]string{
-		optionWgBin: "/usr/bin/wg",
-	}
+	return map[string]string{}
 }
 
 func (c *Wireguard) DefaultCollectInterval() time.Duration {
@@ -60,105 +48,47 @@ func (c *Wireguard) Name() string {
 	return CollectorWireguardName
 }
 
-func (c *Wireguard) wgShow(ctx context.Context, interfaceName, display string) ([]string, error) {
-	var line []string
-	b, err := exec.CommandContext(ctx, c.conf.Options[optionWgBin], "show", interfaceName, display).CombinedOutput()
-	if err != nil {
-		return line, err
-	}
-	if b[len(b)-1] == '\n' {
-		b = b[:len(b)-1]
-	}
-	return strings.Split(string(b), "\n"), nil
-}
-
-func (c *Wireguard) Collect(ctx context.Context) error {
-	wgExec, ok := c.conf.Options[optionWgBin]
-	if !ok {
-		zap.L().Error("missing option", zap.String("options", optionWgBin))
-		return errors.New("missing option " + optionWgBin)
-	}
-	b, err := exec.CommandContext(ctx, wgExec, "show", "interfaces").CombinedOutput()
+func (c *Wireguard) Collect(_ context.Context) error {
+	wgc, err := wgctrl.New()
 	if err != nil {
 		return err
 	}
-	output := string(b)
-	var interfaces []string
-	for _, i := range strings.Split(output, "\n") {
-		if i == "" {
-			continue
-		}
-		interfaces = append(interfaces, i)
+	defer wgc.Close()
+
+	devices, err := wgc.Devices()
+	if err != nil {
+		return err
 	}
 
-	for _, interfaceName := range interfaces {
-		/*
-			wg show wg0 endpoints
-			5+gsKzJeB8+sOqJ+yL/ItneCZfI8O2cEaOG5Gc3HHlQ=	192.168.2.251:51871
-		*/
-		lines, err := c.wgShow(ctx, interfaceName, "endpoints")
-		if err != nil {
-			return err
-		}
-		for _, line := range lines {
-			fields := strings.Fields(line)
-			if len(fields) != 2 {
-				zap.L().Warn("incoherent output of endpoints", zap.String("line", line))
-				continue
-			}
-			peerID, endpoint := fields[0], fields[1]
-			index := strings.IndexByte(endpoint, ':')
-			ip := endpoint
-			if index != -1 {
-				ip = endpoint[:index]
-			}
-			c.conf.Tagger.Update(peerID,
-				tagger.NewTagUnsafe("endpoint", endpoint),
-				tagger.NewTagUnsafe("ip", ip),
+	now := time.Now()
+	for _, device := range devices {
+		for _, peer := range device.Peers {
+			peerPublicKeyB32 := base32.HexEncoding.EncodeToString([]byte(peer.PublicKey.String()))
+			c.conf.Tagger.Update(peer.PublicKey.String(),
+				tagger.NewTagUnsafe("endpoint", peer.Endpoint.String()),
+				tagger.NewTagUnsafe("ip", peer.Endpoint.IP.String()),
+				tagger.NewTagUnsafe("port", strconv.Itoa(peer.Endpoint.Port)),
+				tagger.NewTagUnsafe("device", device.Name),
+				tagger.NewTagUnsafe("pub-b32hex", peerPublicKeyB32),
 			)
-			c.conf.Tagger.Update(ip,
-				tagger.NewTagUnsafe("peer-id", peerID),
-				tagger.NewTagUnsafe("endpoint", endpoint),
-			)
-		}
-
-		/*
-			wg show wg0 transfer
-			5+gsKzJeB8+sOqJ+yL/ItneCZfI8O2cEuOG5Gn3HHlQ=	14513347932	343873344
-		*/
-		lines, err = c.wgShow(ctx, interfaceName, "transfer")
-		if err != nil {
-			return err
-		}
-		for _, line := range lines {
-			fields := strings.Fields(line)
-			if len(fields) != 3 {
-				zap.L().Warn("incoherent output of transfer", zap.String("line", line))
-				continue
-			}
-			peerID, received, sent := fields[0], fields[1], fields[2]
-			receivedBytes, err := strconv.ParseFloat(received, 10)
-			if err != nil {
-				zap.L().Error("cannot parse received from transfer", zap.String("line", line), zap.Error(err))
-				continue
-			}
-			sentBytes, err := strconv.ParseFloat(sent, 10)
-			if err != nil {
-				zap.L().Error("cannot parse received from transfer", zap.String("line", line), zap.Error(err))
-				continue
-			}
-			now := time.Now()
-			tags := c.conf.Tagger.GetUnstable(peerID)
+			tags := c.conf.Tagger.GetUnstable(peer.PublicKey.String())
 			_ = c.measures.Count(&metrics.Sample{
 				Name:      wireguardMetricPrefix + "transfer.received",
-				Value:     receivedBytes,
+				Value:     float64(peer.ReceiveBytes),
 				Timestamp: now,
 				Host:      c.conf.Host,
 				Tags:      tags,
 			})
 			_ = c.measures.Count(&metrics.Sample{
 				Name:      wireguardMetricPrefix + "transfer.sent",
-				Value:     sentBytes,
+				Value:     float64(peer.TransmitBytes),
+				Timestamp: now,
+				Host:      c.conf.Host,
+				Tags:      tags,
+			})
+			c.measures.Gauge(&metrics.Sample{
+				Name:      wireguardMetricPrefix + "handshake.age",
+				Value:     now.Sub(peer.LastHandshakeTime).Seconds(),
 				Timestamp: now,
 				Host:      c.conf.Host,
 				Tags:      tags,
