@@ -20,6 +20,8 @@ collectors:
   interval: 30s
   options:
     address: 127.0.0.1:53
+- name: golang
+  interval: 2m0s
 - name: load
   interval: 30s
 - name: memory
