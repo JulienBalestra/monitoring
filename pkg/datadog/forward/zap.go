@@ -25,6 +25,7 @@ type Forwarder struct {
 	c *datadog.Client
 
 	lastSync time.Time
+	ctx      context.Context
 }
 
 func (f *Forwarder) Write(p []byte) (n int, err error) {
@@ -43,7 +44,7 @@ func (f *Forwarder) Write(p []byte) (n int, err error) {
 }
 
 func (f *Forwarder) Sync() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*45)
+	ctx, cancel := context.WithTimeout(f.ctx, time.Second*45)
 	defer cancel()
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -60,13 +61,14 @@ func (f *Forwarder) Close() error {
 	return f.Sync()
 }
 
-func NewDatadogForwarder(c *datadog.Client) func(*url.URL) (zap.Sink, error) {
+func NewDatadogForwarder(ctx context.Context, c *datadog.Client) func(*url.URL) (zap.Sink, error) {
 	return func(_ *url.URL) (zap.Sink, error) {
 		return &Forwarder{
 			mu:       &sync.Mutex{},
 			buffer:   bytes.NewBuffer(make([]byte, 0, bufferSize)),
 			c:        c,
 			lastSync: time.Now(),
+			ctx:      ctx,
 		}, nil
 	}
 }
