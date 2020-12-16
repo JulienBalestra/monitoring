@@ -23,6 +23,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/tagger"
 	"github.com/JulienBalestra/monitoring/pkg/collector/temperature/ddwrt"
 	"github.com/JulienBalestra/monitoring/pkg/collector/temperature/raspberrypi"
+	"github.com/JulienBalestra/monitoring/pkg/collector/uptime"
 	"github.com/JulienBalestra/monitoring/pkg/collector/wireguard"
 	"github.com/JulienBalestra/monitoring/pkg/collector/wl"
 	datadogClient "github.com/JulienBalestra/monitoring/pkg/datadog"
@@ -50,6 +51,7 @@ func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 		dhcp.CollectorDnsMasqName:            dhcp.NewDNSMasqDHCP,
 		raspberrypi.CollectorTemperatureName: raspberrypi.NewTemperature,
 		wireguard.CollectorWireguardName:     wireguard.NewWireguard,
+		uptime.CollectorUptimeName:           uptime.NewUptime,
 	}
 }
 

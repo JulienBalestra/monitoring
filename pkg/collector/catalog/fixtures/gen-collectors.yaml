@@ -61,6 +61,9 @@ collectors:
   interval: 2m0s
   options:
     temperature-file: /sys/class/thermal/thermal_zone0/temp
+- name: uptime
+  interval: 5m0s
+  options: {}
 - name: wireguard
   interval: 30s
   options:
