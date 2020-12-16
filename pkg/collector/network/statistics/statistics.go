@@ -15,7 +15,7 @@ import (
 const (
 	CollectorStatisticsName = "network-statistics"
 
-	optionDevicePath = "device-path"
+	optionSysClassPath = "sys-class-net-path"
 )
 
 type statisticFile struct {
@@ -40,7 +40,7 @@ func NewStatistics(conf *collector.Config) collector.Collector {
 
 func (c *Statistics) DefaultOptions() map[string]string {
 	return map[string]string{
-		optionDevicePath: "/sys/class/net/",
+		optionSysClassPath: "/sys/class/net/",
 	}
 }
 
@@ -98,10 +98,10 @@ func (c *Statistics) getStatisticsFiles() (map[string]*statisticFile, error) {
 		return c.statisticsFiles, nil
 	}
 
-	devicesPath, ok := c.conf.Options[optionDevicePath]
+	devicesPath, ok := c.conf.Options[optionSysClassPath]
 	if !ok {
-		zap.L().Error("missing option", zap.String("options", optionDevicePath))
-		return nil, errors.New("missing option " + optionDevicePath)
+		zap.L().Error("missing option", zap.String("options", optionSysClassPath))
+		return nil, errors.New("missing option " + optionSysClassPath)
 	}
 
 	devices, err := ioutil.ReadDir(devicesPath)
