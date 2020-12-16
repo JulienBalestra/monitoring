@@ -63,7 +63,7 @@ type ConfigFile struct {
 
 type Collector struct {
 	Name     string            `yaml:"name"`
-	Interval time.Duration     `yaml:"interval"`
+	Interval time.Duration     `yaml:"interval,omitempty"`
 	Options  map[string]string `yaml:"options,omitempty"`
 }
 

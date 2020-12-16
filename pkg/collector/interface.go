@@ -34,16 +34,24 @@ type Collector interface {
 }
 
 func RunCollection(ctx context.Context, c Collector) error {
+	// manage defaults
 	config := c.Config()
 	if config.Options == nil {
-		config.Options = make(map[string]string, 0)
+		config.Options = c.DefaultOptions()
 	}
-	measures := metrics.NewMeasures(config.MetricsClient.ChanSeries)
+	if config.CollectInterval == 0 {
+		config.CollectInterval = c.DefaultCollectInterval()
+	}
 
 	zctx := zap.L().With(
 		zap.String("collector", c.Name()),
 		zap.Duration("collectionInterval", config.CollectInterval),
 	)
+	for k, v := range config.Options {
+		zctx = zctx.With(
+			zap.String(k, v),
+		)
+	}
 
 	if c.IsDaemon() {
 		zctx.Info("collecting metrics continuously")
@@ -58,6 +66,7 @@ func RunCollection(ctx context.Context, c Collector) error {
 	defer ticker.Stop()
 	zctx.Info("collecting metrics periodically")
 	collectorTag := "collector:" + c.Name()
+	measures := metrics.NewMeasures(config.MetricsClient.ChanSeries)
 	for {
 		select {
 		case <-ctx.Done():
