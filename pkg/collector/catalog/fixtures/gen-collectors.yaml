@@ -24,8 +24,7 @@ collectors:
     address: 127.0.0.1:53
 - name: load
   interval: 30s
-  options:
-    load-average-file: /proc/loadavg
+  options: {}
 - name: memory
   interval: 1m0s
   options:
