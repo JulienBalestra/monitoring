@@ -12,6 +12,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/dhcp"
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/dnslogs"
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/dnsqueries"
+	"github.com/JulienBalestra/monitoring/pkg/collector/golang"
 	"github.com/JulienBalestra/monitoring/pkg/collector/load"
 	"github.com/JulienBalestra/monitoring/pkg/collector/lunar"
 	"github.com/JulienBalestra/monitoring/pkg/collector/memory"
@@ -52,6 +53,7 @@ func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 		raspberrypi.CollectorTemperatureName: raspberrypi.NewTemperature,
 		wireguard.CollectorWireguardName:     wireguard.NewWireguard,
 		uptime.CollectorUptimeName:           uptime.NewUptime,
+		golang.CollectorGolangName:           golang.NewGolang,
 	}
 }
 

@@ -3,6 +3,8 @@ collectors:
     interval: 2m0s
   - name: load
     interval: 30s
+  - name: golang
+    interval: 2m0s
   - name: memory
     interval: 1m0s
   - name: network-arp
