@@ -83,13 +83,17 @@ func (c *Wireguard) Collect(_ context.Context) error {
 	for _, device := range devices {
 		for _, peer := range device.Peers {
 			peerPublicKeyB32 := base32.HexEncoding.EncodeToString([]byte(peer.PublicKey.String()))
+			endpointTag := tagger.NewTagUnsafe("endpoint", "none")
+			if peer.Endpoint != nil {
+				endpointTag = tagger.NewTagUnsafe("endpoint", peer.Endpoint.String())
+			}
 			c.conf.Tagger.Update(peer.PublicKey.String(),
-				tagger.NewTagUnsafe("endpoint", peer.Endpoint.String()),
 				tagger.NewTagUnsafe("ip", peer.Endpoint.IP.String()),
 				tagger.NewTagUnsafe("port", strconv.Itoa(peer.Endpoint.Port)),
 				tagger.NewTagUnsafe("device", device.Name),
 				tagger.NewTagUnsafe("pub-b32hex", peerPublicKeyB32),
 				tagger.NewTagUnsafe("allowed-ips", getAllowedIPsTag(peer.AllowedIPs)),
+				endpointTag,
 			)
 			tags := c.conf.Tagger.GetUnstable(peer.PublicKey.String())
 			_ = c.measures.Count(&metrics.Sample{

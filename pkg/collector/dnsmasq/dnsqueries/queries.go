@@ -93,11 +93,11 @@ func (c *Queries) Name() string {
 	return CollectorDnsMasqName
 }
 
-func (c *Queries) Collect(_ context.Context) error {
+func (c *Queries) Collect(ctx context.Context) error {
 	now := time.Now()
 	hostTags := c.conf.Tagger.Get(c.conf.Host)
 	for metricName, dnsQuestion := range c.dnsCounterQuestions {
-		v, err := c.queryDnsmasqMetric(&dnsQuestion)
+		v, err := c.queryDnsmasqMetric(ctx, &dnsQuestion)
 		if err != nil {
 			zap.L().Error("failed to query dnsmasq",
 				zap.Error(err),
@@ -114,7 +114,7 @@ func (c *Queries) Collect(_ context.Context) error {
 		})
 	}
 	for metricName, dnsQuestion := range c.dnsGaugeQuestions {
-		v, err := c.queryDnsmasqMetric(&dnsQuestion)
+		v, err := c.queryDnsmasqMetric(ctx, &dnsQuestion)
 		if err != nil {
 			zap.L().Error("failed to query dnsmasq",
 				zap.Error(err),
@@ -134,7 +134,7 @@ func (c *Queries) Collect(_ context.Context) error {
 	return nil
 }
 
-func (c *Queries) queryDnsmasqMetric(question *dns.Question) (float64, error) {
+func (c *Queries) queryDnsmasqMetric(ctx context.Context, question *dns.Question) (float64, error) {
 	address, ok := c.conf.Options[optionDNSMasqAddress]
 	if !ok {
 		zap.L().Error("missing option", zap.String("options", optionDNSMasqAddress))
@@ -146,7 +146,7 @@ func (c *Queries) queryDnsmasqMetric(question *dns.Question) (float64, error) {
 	msg.Id = dns.Id()
 	msg.RecursionDesired = true
 
-	in, _, err := c.dnsClient.Exchange(msg, address)
+	in, _, err := c.dnsClient.ExchangeContext(ctx, msg, address)
 	if err != nil {
 		return 0, err
 	}
