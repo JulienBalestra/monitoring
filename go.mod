@@ -3,6 +3,7 @@ module github.com/JulienBalestra/monitoring
 go 1.15
 
 require (
+	github.com/JulienBalestra/wireguard-stun v0.0.0-20201217210548-22f31bbd499a
 	github.com/godbus/dbus v4.1.0+incompatible // indirect
 	github.com/godbus/dbus/v5 v5.0.3
 	github.com/magiconair/properties v1.8.4

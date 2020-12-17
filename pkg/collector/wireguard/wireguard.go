@@ -2,7 +2,6 @@ package wireguard
 
 import (
 	"context"
-	"encoding/base32"
 	"net"
 	"sort"
 	"strconv"
@@ -12,6 +11,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
+	stun "github.com/JulienBalestra/wireguard-stun/pkg/wireguard"
 	"golang.zx2c4.com/wireguard/wgctrl"
 )
 
@@ -38,7 +38,7 @@ func (c *Wireguard) DefaultOptions() map[string]string {
 }
 
 func (c *Wireguard) DefaultCollectInterval() time.Duration {
-	return time.Second * 30
+	return time.Second * 10
 }
 
 func (c *Wireguard) Config() *collector.Config {
@@ -82,7 +82,7 @@ func (c *Wireguard) Collect(_ context.Context) error {
 	now := time.Now()
 	for _, device := range devices {
 		for _, peer := range device.Peers {
-			peerPublicKeyB32 := base32.HexEncoding.EncodeToString([]byte(peer.PublicKey.String()))
+			peer := stun.NewPeer(&peer)
 			endpointTag := tagger.NewTagUnsafe("endpoint", "none")
 			if peer.Endpoint != nil {
 				endpointTag = tagger.NewTagUnsafe("endpoint", peer.Endpoint.String())
@@ -91,7 +91,7 @@ func (c *Wireguard) Collect(_ context.Context) error {
 				tagger.NewTagUnsafe("ip", peer.Endpoint.IP.String()),
 				tagger.NewTagUnsafe("port", strconv.Itoa(peer.Endpoint.Port)),
 				tagger.NewTagUnsafe("device", device.Name),
-				tagger.NewTagUnsafe("pub-b32hex", peerPublicKeyB32),
+				tagger.NewTagUnsafe("pub-key-sha1", peer.PublicKeyHash),
 				tagger.NewTagUnsafe("allowed-ips", getAllowedIPsTag(peer.AllowedIPs)),
 				endpointTag,
 			)
