@@ -19,6 +19,8 @@ const (
 	CollectorWireguardName = "wireguard"
 
 	wireguardMetricPrefix = "wireguard."
+
+	none = "none"
 )
 
 type Wireguard struct {
@@ -53,7 +55,7 @@ func (c *Wireguard) Name() string {
 
 func getAllowedIPsTag(n []net.IPNet) string {
 	if len(n) == 0 {
-		return "none"
+		return none
 	}
 	if len(n) == 1 {
 		return n[0].String()
@@ -83,17 +85,19 @@ func (c *Wireguard) Collect(_ context.Context) error {
 	for _, device := range devices {
 		for _, peer := range device.Peers {
 			peer := stun.NewPeer(&peer)
-			endpointTag := tagger.NewTagUnsafe("endpoint", "none")
+			endpointTag := tagger.NewTagUnsafe("endpoint", none)
+			ipTag := tagger.NewTagUnsafe("ip", none)
+			portTag := tagger.NewTagUnsafe("port", none)
 			if peer.Endpoint != nil {
 				endpointTag = tagger.NewTagUnsafe("endpoint", peer.Endpoint.String())
+				ipTag = tagger.NewTagUnsafe("ip", peer.Endpoint.IP.String())
+				portTag = tagger.NewTagUnsafe("port", strconv.Itoa(peer.Endpoint.Port))
 			}
 			c.conf.Tagger.Update(peer.PublicKey.String(),
-				tagger.NewTagUnsafe("ip", peer.Endpoint.IP.String()),
-				tagger.NewTagUnsafe("port", strconv.Itoa(peer.Endpoint.Port)),
 				tagger.NewTagUnsafe("device", device.Name),
 				tagger.NewTagUnsafe("pub-key-sha1", peer.PublicKeyHash),
 				tagger.NewTagUnsafe("allowed-ips", getAllowedIPsTag(peer.AllowedIPs)),
-				endpointTag,
+				endpointTag, ipTag, portTag,
 			)
 			tags := c.conf.Tagger.GetUnstable(peer.PublicKey.String())
 			_ = c.measures.Count(&metrics.Sample{
