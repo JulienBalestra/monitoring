@@ -57,7 +57,7 @@ jobs:
     steps:
     - checkout
     - run: make amd64
-    - run: ./main/monitoring-amd64 version
+    - run: ./bin/monitoring-amd64 version
 
   monitoring-arm:
     <<: *base

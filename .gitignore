@@ -1,4 +1,2 @@
 /vendor
-/main/monitoring-amd64
-/main/monitoring-arm
-/main/monitoring-arm64
+/bin/*
