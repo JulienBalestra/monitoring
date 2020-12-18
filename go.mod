@@ -3,12 +3,12 @@ module github.com/JulienBalestra/monitoring
 go 1.15
 
 require (
-	github.com/JulienBalestra/wireguard-stun v0.0.0-20201217210548-22f31bbd499a
-	github.com/godbus/dbus v4.1.0+incompatible // indirect
+	github.com/JulienBalestra/dry v0.2.1
+	github.com/JulienBalestra/wireguard-stun v0.0.0-20201217225749-413e1af04638
 	github.com/godbus/dbus/v5 v5.0.3
 	github.com/magiconair/properties v1.8.4
 	github.com/miekg/dns v1.1.35
-	github.com/muka/go-bluetooth v0.0.0-20200928120822-44d49b402aee
+	github.com/muka/go-bluetooth v0.0.0-20201211051136-07f31c601d33
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5

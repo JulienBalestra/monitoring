@@ -60,7 +60,7 @@ collectors:
 - name: uptime
   interval: 5m0s
 - name: wireguard
-  interval: 30s
+  interval: 10s
 - name: wl
   interval: 15s
   options:

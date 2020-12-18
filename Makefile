@@ -1,14 +1,22 @@
+TARGET=monitoring
+COMMIT=$(shell git rev-parse HEAD)
+VERSION=$(shell git describe --exact-match --tags $(git log -n1 --pretty='%h'))
+
+VERSION_FLAGS=-ldflags '-s -w \
+    -X github.com/JulienBalestra/dry/pkg/version.Version=$(VERSION) \
+    -X github.com/JulienBalestra/dry/pkg/version.Commit=$(COMMIT)'
+
 arm:
-	$(MAKE) -C main $@
+	GOARCH=$@ GOARM=$(GOARM) go build -i -o bin/$(TARGET)-$@ $(VERSION_FLAGS) main/main.go
 
 arm64:
-	$(MAKE) -C main $@
+	GOARCH=$@ go build -i -o bin/$(TARGET)-$@ $(VERSION_FLAGS) main/main.go
 
 amd64:
-	$(MAKE) -C main $@
+	go build -o bin/$(TARGET)-$@ $(VERSION_FLAGS) main/main.go
 
-clean:
-	$(MAKE) -C main $@
+clean: fmt lint import ineffassign test vet
+	$(RM) -v bin/*
 
 re: clean amd64 arm arm64
 
@@ -19,7 +27,7 @@ lint:
 	golint -set_exit_status $(go list ./...)
 
 import:
-	goimports -w pkg/ cmd/ main/
+	goimports -w pkg/ main/ cmd/
 
 ineffassign:
 	ineffassign ./
