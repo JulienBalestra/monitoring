@@ -103,6 +103,39 @@ func TestMetricCount(t *testing.T) {
 	}
 }
 
+func TestMetricCountIsCountNegative(t *testing.T) {
+	now := time.Now()
+	for name, tc := range map[string]struct {
+		prevMetric *Sample
+		newMetric  *Sample
+		err        bool
+	}{
+		"2-1": {
+			&Sample{
+				Name:      "metric",
+				Value:     2,
+				Timestamp: now,
+				Host:      "host",
+				Tags:      []string{},
+			},
+			&Sample{
+				Name:      "metric",
+				Value:     1,
+				Timestamp: now.Add(time.Second),
+				Host:      "host",
+				Tags:      []string{},
+			},
+			false,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			m, err := tc.prevMetric.Count(tc.newMetric)
+			require.True(t, IsCountNegative(err))
+			require.Nil(t, m)
+		})
+	}
+}
+
 func TestMetricHash(t *testing.T) {
 	now := time.Now()
 	for name, tc := range map[string]struct {
