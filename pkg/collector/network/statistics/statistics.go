@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	CollectorStatisticsName = "network-statistics"
+	CollectorName = "network-statistics"
 
 	optionSysClassPath = "sys-class-net-path"
 )
@@ -55,7 +55,7 @@ func (c *Statistics) Config() *collector.Config {
 func (c *Statistics) IsDaemon() bool { return false }
 
 func (c *Statistics) Name() string {
-	return CollectorStatisticsName
+	return CollectorName
 }
 
 func (c *Statistics) Collect(_ context.Context) error {

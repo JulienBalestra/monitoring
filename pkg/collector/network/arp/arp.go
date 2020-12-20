@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	CollectorARPName = "network-arp"
+	CollectorName = "network-arp"
 
 	optionARPFile = "arp-file"
 )
@@ -63,7 +63,7 @@ func (c *ARP) Config() *collector.Config {
 func (c *ARP) IsDaemon() bool { return false }
 
 func (c *ARP) Name() string {
-	return CollectorARPName
+	return CollectorName
 }
 
 func (c *ARP) Collect(_ context.Context) error {

@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	CollectorWireguardName = "wireguard"
+	CollectorName = "wireguard"
 
 	wireguardMetricPrefix = "wireguard."
 
@@ -50,7 +50,7 @@ func (c *Wireguard) Config() *collector.Config {
 func (c *Wireguard) IsDaemon() bool { return false }
 
 func (c *Wireguard) Name() string {
-	return CollectorWireguardName
+	return CollectorName
 }
 
 func getAllowedIPsTag(n []net.IPNet) string {

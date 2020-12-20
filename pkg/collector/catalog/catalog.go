@@ -20,6 +20,8 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/network/conntrack"
 	"github.com/JulienBalestra/monitoring/pkg/collector/network/statistics"
 	"github.com/JulienBalestra/monitoring/pkg/collector/network/wireless"
+	"github.com/JulienBalestra/monitoring/pkg/collector/prometheus/coredns"
+	"github.com/JulienBalestra/monitoring/pkg/collector/prometheus/exporter"
 	"github.com/JulienBalestra/monitoring/pkg/collector/shelly"
 	"github.com/JulienBalestra/monitoring/pkg/collector/tagger"
 	"github.com/JulienBalestra/monitoring/pkg/collector/temperature/ddwrt"
@@ -34,26 +36,28 @@ import (
 
 func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 	return map[string]func(*collector.Config) collector.Collector{
-		bluetooth.CollectorLoadName:          bluetooth.NewBluetooth,
-		lunar.CollectorLoadName:              lunar.NewAcaia,
-		dnsqueries.CollectorDnsMasqName:      dnsqueries.NewDNSMasqQueries,
-		dnslogs.CollectorDnsMasqLogName:      dnslogs.NewDnsMasqLog,
-		load.CollectorLoadName:               load.NewLoad,
-		memory.CollectorMemoryName:           memory.NewMemory,
-		arp.CollectorARPName:                 arp.NewARP,
-		conntrack.CollectorConntrackName:     conntrack.NewConntrack,
-		statistics.CollectorStatisticsName:   statistics.NewStatistics,
-		wireless.CollectorWirelessName:       wireless.NewWireless,
-		shelly.CollectorShellyName:           shelly.NewShelly,
-		ddwrt.CollectorTemperatureName:       ddwrt.NewTemperature,
-		tagger.CollectorName:                 tagger.NewTagger,
-		wl.CollectorWLName:                   wl.NewWL,
-		datadog.CollectorName:                datadog.NewClient,
-		dhcp.CollectorDnsMasqName:            dhcp.NewDNSMasqDHCP,
-		raspberrypi.CollectorTemperatureName: raspberrypi.NewTemperature,
-		wireguard.CollectorWireguardName:     wireguard.NewWireguard,
-		uptime.CollectorUptimeName:           uptime.NewUptime,
-		golang.CollectorGolangName:           golang.NewGolang,
+		bluetooth.CollectorName:   bluetooth.NewBluetooth,
+		lunar.CollectorName:       lunar.NewAcaia,
+		dnsqueries.CollectorName:  dnsqueries.NewDNSMasqQueries,
+		dnslogs.CollectorName:     dnslogs.NewDnsMasqLog,
+		load.CollectorName:        load.NewLoad,
+		memory.CollectorName:      memory.NewMemory,
+		arp.CollectorName:         arp.NewARP,
+		conntrack.CollectorName:   conntrack.NewConntrack,
+		statistics.CollectorName:  statistics.NewStatistics,
+		wireless.CollectorName:    wireless.NewWireless,
+		shelly.CollectorName:      shelly.NewShelly,
+		ddwrt.CollectorName:       ddwrt.NewTemperature,
+		tagger.CollectorName:      tagger.NewTagger,
+		wl.CollectorName:          wl.NewWL,
+		datadog.CollectorName:     datadog.NewClient,
+		dhcp.CollectorName:        dhcp.NewDNSMasqDHCP,
+		raspberrypi.CollectorName: raspberrypi.NewTemperature,
+		wireguard.CollectorName:   wireguard.NewWireguard,
+		uptime.CollectorName:      uptime.NewUptime,
+		golang.CollectorName:      golang.NewGolang,
+		exporter.CollectorName:    exporter.NewPrometheusExporter,
+		coredns.CollectorName:     coredns.NewCoredns,
 	}
 }
 

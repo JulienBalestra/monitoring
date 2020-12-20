@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	CollectorDnsMasqLogName = "dnsmasq-log"
+	CollectorName = "dnsmasq-log"
 
 	dnsmasqDateFormat  = "2006Jan 2 15:04:05"
 	dnsmasqQueryMetric = "dnsmasq.dns.query"
@@ -93,7 +93,7 @@ func (c *Log) Config() *collector.Config {
 }
 
 func (c *Log) Name() string {
-	return CollectorDnsMasqLogName
+	return CollectorName
 }
 
 func (c *Log) queryToSample(query *dnsQuery) *metrics.Sample {

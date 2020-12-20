@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	CollectorLoadName = "acaia-lunar"
+	CollectorName = "acaia-lunar"
 
 	optionLunarServiceUUID = "lunar-service-uuid"
 	optionLunarUUID        = "lunar-uuid"
@@ -54,7 +54,7 @@ func (c *Lunar) Config() *collector.Config {
 func (c *Lunar) IsDaemon() bool { return true }
 
 func (c *Lunar) Name() string {
-	return CollectorLoadName
+	return CollectorName
 }
 
 func (c *Lunar) lunar(d *device.Device1) error {

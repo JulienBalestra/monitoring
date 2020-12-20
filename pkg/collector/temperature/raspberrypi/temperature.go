@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	CollectorTemperatureName = "temperature-raspberry-pi"
+	CollectorName = "temperature-raspberry-pi"
 
 	optionTemperatureFile = "temperature-file"
 )
@@ -49,7 +49,7 @@ func (c *Temperature) Config() *collector.Config {
 func (c *Temperature) IsDaemon() bool { return false }
 
 func (c *Temperature) Name() string {
-	return CollectorTemperatureName
+	return CollectorName
 }
 
 func (c *Temperature) Collect(_ context.Context) error {

@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	CollectorUptimeName = "uptime"
+	CollectorName = "uptime"
 )
 
 type Uptime struct {
@@ -40,7 +40,7 @@ func (c *Uptime) Config() *collector.Config {
 func (c *Uptime) IsDaemon() bool { return false }
 
 func (c *Uptime) Name() string {
-	return CollectorUptimeName
+	return CollectorName
 }
 
 func (c *Uptime) Collect(_ context.Context) error {

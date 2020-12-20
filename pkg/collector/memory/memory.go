@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	CollectorMemoryName = "memory"
+	CollectorName = "memory"
 )
 
 type Memory struct {
@@ -40,7 +40,7 @@ func (c *Memory) DefaultCollectInterval() time.Duration {
 func (c *Memory) IsDaemon() bool { return false }
 
 func (c *Memory) Name() string {
-	return CollectorMemoryName
+	return CollectorName
 }
 
 func (c *Memory) Collect(_ context.Context) error {
