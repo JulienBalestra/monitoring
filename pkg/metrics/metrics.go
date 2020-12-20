@@ -18,7 +18,8 @@ const (
 )
 
 var (
-	errCountZero = errors.New("count value is zero")
+	errCountZero     = errors.New("count value is zero")
+	errCountNegative = errors.New("count value is negative")
 )
 
 type Series struct {
@@ -57,9 +58,9 @@ func (s *Sample) Count(newMetric *Sample) (*Series, error) {
 	if metricsValue == 0 {
 		return nil, errCountZero
 	}
-	// There is a logic error that should never happen
+	// the counter might has been reset
 	if metricsValue < 0 {
-		return nil, fmt.Errorf("invalid value %.2f for %q <-> %q", metricsValue, s, newMetric)
+		return nil, errCountNegative
 	}
 	return &Series{
 		Metric: newMetric.Name,
@@ -181,6 +182,14 @@ func (m *Measures) Incr(newSample *Sample) error {
 }
 
 func (m *Measures) Count(newSample *Sample) error {
+	return m.count(newSample, false)
+}
+
+func (m *Measures) CountWithNegativeReset(newSample *Sample) error {
+	return m.count(newSample, true)
+}
+
+func (m *Measures) count(newSample *Sample, resetNegative bool) error {
 	h := newSample.Hash()
 	oldSample, ok := m.counter[h]
 	if !ok {
@@ -188,18 +197,29 @@ func (m *Measures) Count(newSample *Sample) error {
 		return nil
 	}
 	s, err := oldSample.Count(newSample)
-	if err != nil {
-		if err != errCountZero {
-			return err
-		}
+	if err == nil {
+		m.counter[h] = newSample
+		m.ch <- *s
+		return nil
+	}
+	if IsCountZero(err) {
 		m.counter[h] = newSample
 		return nil
 	}
+	if !resetNegative {
+		return err
+	}
+	if !IsCountNegative(err) {
+		return err
+	}
 	m.counter[h] = newSample
-	m.ch <- *s
 	return nil
 }
 
 func IsCountZero(err error) bool {
 	return err == errCountZero
+}
+
+func IsCountNegative(err error) bool {
+	return err == errCountNegative
 }

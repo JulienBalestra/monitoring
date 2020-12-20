@@ -100,14 +100,14 @@ func (c *Wireguard) Collect(_ context.Context) error {
 				endpointTag, ipTag, portTag,
 			)
 			tags := c.conf.Tagger.GetUnstable(peer.PublicKey.String())
-			_ = c.measures.Count(&metrics.Sample{
+			_ = c.measures.CountWithNegativeReset(&metrics.Sample{
 				Name:      wireguardMetricPrefix + "transfer.received",
 				Value:     float64(peer.ReceiveBytes),
 				Timestamp: now,
 				Host:      c.conf.Host,
 				Tags:      tags,
 			})
-			_ = c.measures.Count(&metrics.Sample{
+			_ = c.measures.CountWithNegativeReset(&metrics.Sample{
 				Name:      wireguardMetricPrefix + "transfer.sent",
 				Value:     float64(peer.TransmitBytes),
 				Timestamp: now,
