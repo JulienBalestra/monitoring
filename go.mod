@@ -7,9 +7,12 @@ require (
 	github.com/JulienBalestra/wireguard-stun v0.0.0-20201217225749-413e1af04638
 	github.com/godbus/dbus/v5 v5.0.3
 	github.com/magiconair/properties v1.8.4
+	github.com/matttproud/golang_protobuf_extensions v1.0.1
 	github.com/miekg/dns v1.1.35
 	github.com/muka/go-bluetooth v0.0.0-20201211051136-07f31c601d33
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
+	github.com/prometheus/common v0.4.0
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1

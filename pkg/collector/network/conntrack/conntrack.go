@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	CollectorConntrackName = "network-conntrack"
+	CollectorName = "network-conntrack"
 
 	optionConntrackFile = "conntrack-file"
 
@@ -61,7 +61,7 @@ func (c *Conntrack) Config() *collector.Config {
 func (c *Conntrack) IsDaemon() bool { return true }
 
 func (c *Conntrack) Name() string {
-	return CollectorConntrackName
+	return CollectorName
 }
 
 func getPortRange(port int) string {

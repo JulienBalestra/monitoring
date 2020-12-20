@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	CollectorDnsMasqName = "dnsmasq-queries"
+	CollectorName = "dnsmasq-queries"
 
 	optionDNSMasqAddress = "address"
 )
@@ -90,7 +90,7 @@ func (c *Queries) Config() *collector.Config {
 }
 
 func (c *Queries) Name() string {
-	return CollectorDnsMasqName
+	return CollectorName
 }
 
 func (c *Queries) Collect(ctx context.Context) error {

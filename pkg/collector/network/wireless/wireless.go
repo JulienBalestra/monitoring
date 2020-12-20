@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	CollectorWirelessName = "network-wireless"
+	CollectorName = "network-wireless"
 
 	wirelessMetricPrefix       = "network.wireless."
 	wirelessDiscardRetryMetric = wirelessMetricPrefix + "discard.retry"
@@ -67,7 +67,7 @@ func (c *Wireless) Config() *collector.Config {
 func (c *Wireless) IsDaemon() bool { return false }
 
 func (c *Wireless) Name() string {
-	return CollectorWirelessName
+	return CollectorName
 }
 
 func (c *Wireless) Collect(_ context.Context) error {

@@ -6,6 +6,12 @@ collectors:
     lunar-uuid: 00001820-0000-1000-8000-00805f9b34fb
 - name: bluetooth
   interval: 30s
+- name: coredns
+  interval: 30s
+  options:
+    coredns_dns_requests_total: coredns.dns.requests
+    coredns_dns_responses_total: coredns.dns.responses
+    exporter-url: http://127.0.0.1:9153
 - name: datadog-client
   interval: 2m0s
 - name: dnsmasq-dhcp
@@ -43,6 +49,8 @@ collectors:
   options:
     proc-net-wireless-file: /proc/net/wireless
     sys-class-net-path: /sys/class/net/
+- name: prometheus-exporter
+  interval: 30s
 - name: shelly
   interval: 5s
   options:

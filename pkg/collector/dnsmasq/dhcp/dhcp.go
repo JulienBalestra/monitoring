@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	CollectorDnsMasqName = "dnsmasq-dhcp"
+	CollectorName = "dnsmasq-dhcp"
 
 	optionDNSMasqLeaseFile = "leases-file"
 
@@ -68,7 +68,7 @@ func (c *DHCP) Config() *collector.Config {
 }
 
 func (c *DHCP) Name() string {
-	return CollectorDnsMasqName
+	return CollectorName
 }
 
 func (c *DHCP) Collect(_ context.Context) error {

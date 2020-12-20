@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	CollectorShellyName = "shelly"
+	CollectorName = "shelly"
 
 	optionEndpoint = "endpoint"
 )
@@ -78,7 +78,7 @@ func (c *Shelly) Config() *collector.Config {
 func (c *Shelly) IsDaemon() bool { return false }
 
 func (c *Shelly) Name() string {
-	return CollectorShellyName
+	return CollectorName
 }
 
 func parseMac(m string) string {

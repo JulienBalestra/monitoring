@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	CollectorGolangName = "golang"
+	CollectorName = "golang"
 )
 
 type Golang struct {
@@ -40,7 +40,7 @@ func (c *Golang) Config() *collector.Config {
 func (c *Golang) IsDaemon() bool { return false }
 
 func (c *Golang) Name() string {
-	return CollectorGolangName
+	return CollectorName
 }
 
 func (c *Golang) Collect(_ context.Context) error {

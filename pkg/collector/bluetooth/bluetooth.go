@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	CollectorLoadName = "bluetooth"
+	CollectorName = "bluetooth"
 )
 
 type Bluetooth struct {
@@ -55,7 +55,7 @@ func (c *Bluetooth) DefaultCollectInterval() time.Duration {
 func (c *Bluetooth) IsDaemon() bool { return true }
 
 func (c *Bluetooth) Name() string {
-	return CollectorLoadName
+	return CollectorName
 }
 
 func (c *Bluetooth) Collect(ctx context.Context) error {

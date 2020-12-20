@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	CollectorLoadName = "load"
+	CollectorName = "load"
 )
 
 type Load struct {
@@ -41,7 +41,7 @@ func (c *Load) Config() *collector.Config {
 func (c *Load) IsDaemon() bool { return false }
 
 func (c *Load) Name() string {
-	return CollectorLoadName
+	return CollectorName
 }
 
 func formatLoad(f float64) float64 {

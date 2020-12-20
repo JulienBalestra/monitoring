@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	CollectorWLName = "wl"
+	CollectorName = "wl"
 
 	optionWLBinary     = "wl-exe"
 	optionWirelessPath = "proc-net-wireless-path"
@@ -87,7 +87,7 @@ func (c *WL) Config() *collector.Config {
 func (c *WL) IsDaemon() bool { return false }
 
 func (c *WL) Name() string {
-	return CollectorWLName
+	return CollectorName
 }
 
 func (c *WL) getSSID(b []byte) (string, error) {
