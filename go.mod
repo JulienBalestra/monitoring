@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/JulienBalestra/dry v0.2.1
-	github.com/JulienBalestra/wireguard-stun v0.0.0-20201217225749-413e1af04638
+	github.com/JulienBalestra/wireguard-stun v0.1.0
 	github.com/godbus/dbus/v5 v5.0.3
 	github.com/magiconair/properties v1.8.4
 	github.com/matttproud/golang_protobuf_extensions v1.0.1

@@ -1,4 +1,5 @@
 collectors:
+  #- name: coredns
   - name: datadog-client
   - name: load
   - name: golang
