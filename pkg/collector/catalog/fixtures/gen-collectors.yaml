@@ -11,7 +11,7 @@ collectors:
   options:
     coredns_dns_requests_total: coredns.dns.requests
     coredns_dns_responses_total: coredns.dns.responses
-    exporter-url: http://127.0.0.1:9153
+    exporter-url: http://127.0.0.1:9153/metrics
 - name: datadog-client
   interval: 2m0s
 - name: dnsmasq-dhcp
@@ -69,6 +69,8 @@ collectors:
   interval: 5m0s
 - name: wireguard
   interval: 10s
+  options:
+    ignore-endpoint: 127.0.0.1:9
 - name: wl
   interval: 15s
   options:
