@@ -20,7 +20,8 @@ const (
 
 	wireguardMetricPrefix = "wireguard."
 
-	none = "none"
+	none                 = "none"
+	optionIgnoreEndpoint = "ignore-endpoint"
 )
 
 type Wireguard struct {
@@ -36,7 +37,9 @@ func NewWireguard(conf *collector.Config) collector.Collector {
 }
 
 func (c *Wireguard) DefaultOptions() map[string]string {
-	return map[string]string{}
+	return map[string]string{
+		optionIgnoreEndpoint: "127.0.0.1:9",
+	}
 }
 
 func (c *Wireguard) DefaultCollectInterval() time.Duration {
@@ -84,6 +87,10 @@ func (c *Wireguard) Collect(_ context.Context) error {
 	now := time.Now()
 	for _, device := range devices {
 		for _, peer := range device.Peers {
+			// do not report metrics with black listed endpoints
+			if peer.Endpoint != nil && peer.Endpoint.String() == c.conf.Options[optionIgnoreEndpoint] {
+				continue
+			}
 			peer := stun.NewPeer(&peer)
 			endpointTag := tagger.NewTagUnsafe("endpoint", none)
 			ipTag := tagger.NewTagUnsafe("ip", none)
@@ -127,5 +134,6 @@ func (c *Wireguard) Collect(_ context.Context) error {
 			})
 		}
 	}
+	c.measures.Purge()
 	return nil
 }
