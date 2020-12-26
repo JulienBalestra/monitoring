@@ -49,7 +49,7 @@ collectors:
   options:
     proc-net-wireless-file: /proc/net/wireless
     sys-class-net-path: /sys/class/net/
-- name: prometheus-exporter
+- name: prometheus
   interval: 30s
 - name: shelly
   interval: 5s
@@ -71,6 +71,14 @@ collectors:
   interval: 10s
   options:
     ignore-endpoint: 127.0.0.1:9
+- name: wireguard-stun-pubsub
+  interval: 30s
+  options:
+    exporter-url: http://127.0.0.1:8989/metrics
+    wireguard_stun_pubsub_active_peers: wireguard_stun.pubsub.active.peers
+    wireguard_stun_pubsub_active_subscriptions: wireguard_stun.pubsub.active.subscriptions
+    wireguard_stun_pubsub_new_subscriptions: wireguard_stun.pubsub.new.subscriptions
+    wireguard_stun_pubsub_sent_events: wireguard_stun.pubsub.sent.events
 - name: wl
   interval: 15s
   options:

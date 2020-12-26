@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	CollectorName = "prometheus-exporter"
+	CollectorName = "prometheus"
 
 	optionURL = "exporter-url"
 

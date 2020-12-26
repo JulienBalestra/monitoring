@@ -10,3 +10,4 @@ collectors:
   - name: temperature-raspberry-pi
   - name: uptime
   - name: wireguard
+  #- name: wireguard-stun-pubsub
