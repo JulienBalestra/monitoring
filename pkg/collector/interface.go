@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/datadog"
@@ -80,15 +81,13 @@ func RunCollection(ctx context.Context, c Collector) error {
 				Tags:      append(config.Tagger.GetUnstable(config.Host), collectorTag),
 			}
 			err := c.Collect(ctx)
+			s.Tags = append(s.Tags, "success:"+strconv.FormatBool(err == nil))
+			_ = measures.Incr(s)
 			if err != nil {
 				extCtx.Error("failed collection", zap.Error(err))
-				s.Tags = append(s.Tags, "success:false")
-				_ = measures.Incr(s)
 				continue
 			}
 			zctx.Info("successfully run collection")
-			s.Tags = append(s.Tags, "success:true")
-			_ = measures.Incr(s)
 		}
 	}
 }

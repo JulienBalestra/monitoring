@@ -75,7 +75,6 @@ func NewMonitoring(conf *Config) (*Monitoring, error) {
 	if err != nil {
 		return nil, err
 	}
-	logger = logger.With(zap.Int("pid", os.Getpid()))
 	zap.ReplaceGlobals(logger)
 	zap.RedirectStdLog(logger)
 	return &Monitoring{
@@ -87,7 +86,7 @@ func NewMonitoring(conf *Config) (*Monitoring, error) {
 }
 
 func (m *Monitoring) Start(ctx context.Context) error {
-
+	zap.L().With(zap.Int("pid", os.Getpid())).Info("starting monitoring")
 	runCtx, runCancel := context.WithCancel(ctx)
 	waitGroup := &sync.WaitGroup{}
 
@@ -144,7 +143,7 @@ func (m *Monitoring) Start(ctx context.Context) error {
 	select {
 	case <-runCtx.Done():
 	case err := <-errorsChan:
-		zap.L().Error("failed to run collection", zap.Error(err))
+		zap.L().With(zap.Int("pid", os.Getpid())).Error("failed to run collection", zap.Error(err))
 		runCancel()
 	}
 
