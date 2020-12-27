@@ -45,12 +45,14 @@ func RunCollection(ctx context.Context, c Collector) error {
 
 	zctx := zap.L().With(
 		zap.String("collector", c.Name()),
+	)
+	extCtx := zctx.With(
 		zap.Duration("collectionInterval", config.CollectInterval),
 		zap.Any("options", config.Options),
 	)
 
 	if c.IsDaemon() {
-		zctx.Info("collecting metrics continuously")
+		extCtx.Info("collecting metrics continuously")
 		err := c.Collect(ctx)
 		if err != nil {
 			return err
@@ -60,13 +62,13 @@ func RunCollection(ctx context.Context, c Collector) error {
 
 	ticker := time.NewTicker(config.CollectInterval)
 	defer ticker.Stop()
-	zctx.Info("collecting metrics periodically")
+	extCtx.Info("collecting metrics periodically")
 	collectorTag := "collector:" + c.Name()
 	measures := metrics.NewMeasures(config.MetricsClient.ChanSeries)
 	for {
 		select {
 		case <-ctx.Done():
-			zctx.Info("end of collection")
+			extCtx.Info("end of collection")
 			return ctx.Err()
 
 		case <-ticker.C:
@@ -79,7 +81,7 @@ func RunCollection(ctx context.Context, c Collector) error {
 			}
 			err := c.Collect(ctx)
 			if err != nil {
-				zctx.Error("failed collection", zap.Error(err))
+				extCtx.Error("failed collection", zap.Error(err))
 				s.Tags = append(s.Tags, "success:false")
 				_ = measures.Incr(s)
 				continue
