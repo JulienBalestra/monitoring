@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/datadog"
@@ -45,12 +46,14 @@ func RunCollection(ctx context.Context, c Collector) error {
 
 	zctx := zap.L().With(
 		zap.String("collector", c.Name()),
+	)
+	extCtx := zctx.With(
 		zap.Duration("collectionInterval", config.CollectInterval),
 		zap.Any("options", config.Options),
 	)
 
 	if c.IsDaemon() {
-		zctx.Info("collecting metrics continuously")
+		extCtx.Info("collecting metrics continuously")
 		err := c.Collect(ctx)
 		if err != nil {
 			return err
@@ -60,13 +63,13 @@ func RunCollection(ctx context.Context, c Collector) error {
 
 	ticker := time.NewTicker(config.CollectInterval)
 	defer ticker.Stop()
-	zctx.Info("collecting metrics periodically")
+	extCtx.Info("collecting metrics periodically")
 	collectorTag := "collector:" + c.Name()
 	measures := metrics.NewMeasures(config.MetricsClient.ChanSeries)
 	for {
 		select {
 		case <-ctx.Done():
-			zctx.Info("end of collection")
+			extCtx.Info("end of collection")
 			return ctx.Err()
 
 		case <-ticker.C:
@@ -78,15 +81,13 @@ func RunCollection(ctx context.Context, c Collector) error {
 				Tags:      append(config.Tagger.GetUnstable(config.Host), collectorTag),
 			}
 			err := c.Collect(ctx)
+			s.Tags = append(s.Tags, "success:"+strconv.FormatBool(err == nil))
+			_ = measures.Incr(s)
 			if err != nil {
-				zctx.Error("failed collection", zap.Error(err))
-				s.Tags = append(s.Tags, "success:false")
-				_ = measures.Incr(s)
+				extCtx.Error("failed collection", zap.Error(err))
 				continue
 			}
 			zctx.Info("successfully run collection")
-			s.Tags = append(s.Tags, "success:true")
-			_ = measures.Incr(s)
 		}
 	}
 }
