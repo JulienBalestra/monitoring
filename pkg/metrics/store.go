@@ -1,11 +1,15 @@
 package metrics
 
 import (
+	"math"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/fnv"
 )
+
+const maxSerieAge = time.Minute * 59
 
 type AggregationStore struct {
 	mu    *sync.RWMutex
@@ -19,11 +23,40 @@ func NewAggregationStore() *AggregationStore {
 	}
 }
 
-// Reset with 75% of the previous size
+// Reset with 90% of the previous size
 func (st *AggregationStore) Reset() {
 	st.mu.Lock()
-	st.store = make(map[uint64]*Series, int(float64(len(st.store))*0.75))
+	st.store = make(map[uint64]*Series, int(math.Round(float64(len(st.store))*0.9)))
 	st.mu.Unlock()
+}
+
+func (st *AggregationStore) GarbageCollect() int {
+	threshold := float64(time.Now().Add(-time.Hour).Unix())
+	gc := 0
+	st.mu.Lock()
+	for k, v := range st.store {
+		i := 0
+		for _, p := range v.Points {
+			if p[0] < threshold {
+				gc++
+				continue
+			}
+			v.Points[i] = p
+			i++
+		}
+		for j := i; j < len(v.Points); j++ {
+			v.Points[j][0] = 0
+			v.Points[j][1] = 0
+			v.Points[j] = nil
+		}
+		if i == 0 {
+			delete(st.store, k)
+			continue
+		}
+		v.Points = v.Points[:i]
+	}
+	st.mu.Unlock()
+	return gc
 }
 
 func (st *AggregationStore) Series() []Series {

@@ -3,6 +3,7 @@ package metrics
 import (
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -12,13 +13,12 @@ const (
 	metricName = "custom.metric"
 	tag1       = "role:web"
 	tag2       = "tier:db"
-
-	ts1 = 1587310001
-	ts2 = 1587310002
 )
 
 func TestNewAggregateStore(t *testing.T) {
-
+	ts1 := float64(time.Now().Unix())
+	ts2 := float64(time.Now().Unix() + 1)
+	old := float64(time.Now().Add(-time.Hour * 2).Unix())
 	for n, tc := range map[string]struct {
 		series         []*Series
 		expectedSeries []Series
@@ -157,6 +157,65 @@ func TestNewAggregateStore(t *testing.T) {
 				},
 			},
 		},
+		"garbage collection of one point": {
+			[]*Series{
+				{
+					Metric: metricName,
+					Points: [][]float64{
+						{
+							ts1,
+							2,
+						},
+						{
+							ts2,
+							4,
+						},
+						{
+							old,
+							6,
+						},
+					},
+					Type: TypeGauge,
+					Host: host,
+					Tags: []string{tag2},
+				},
+			},
+			[]Series{
+				{
+					Metric: metricName,
+					Points: [][]float64{
+						{
+							ts1,
+							2,
+						},
+						{
+							ts2,
+							4,
+						},
+					},
+					Type: TypeGauge,
+					Host: host,
+					Tags: []string{tag2},
+				},
+			},
+		},
+		"garbage collection of all points": {
+			[]*Series{
+				{
+					Metric: metricName,
+					Points: [][]float64{
+						{
+							old,
+							6,
+						},
+					},
+					Type: TypeGauge,
+					Host: host,
+					Tags: []string{tag2},
+				},
+			},
+			[]Series{},
+		},
 	} {
 		t.Run(n, func(t *testing.T) {
 			s := NewAggregationStore()
@@ -164,12 +223,12 @@ func TestNewAggregateStore(t *testing.T) {
 			for _, se := range tc.series {
 				l += s.Aggregate(se)
 			}
+			s.GarbageCollect()
 			r := s.Series()
 			sort.Slice(r, func(i, j int) bool {
 				return len(r[i].Tags) < len(r[j].Tags)
 			})
 			assert.Equal(t, tc.expectedSeries, r)
-			assert.Equal(t, len(tc.series)-len(tc.expectedSeries), l)
 		})
 	}
 }

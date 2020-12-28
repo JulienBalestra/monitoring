@@ -166,9 +166,7 @@ func (c *Client) UpdateHostTags(ctx context.Context, tags []string) error {
 }
 
 func (c *Client) Run(ctx context.Context) {
-	// TODO explain these magic numbers
 	const timeout = 5 * time.Second
-	failures, failuresDropThreshold := 0, 300/int(c.conf.SendInterval.Seconds())
 
 	store := metrics.NewAggregationStore()
 
@@ -235,24 +233,14 @@ func (c *Client) Run(ctx context.Context) {
 			cancel()
 			if err == nil {
 				zctx.Info("successfully sent series")
-				failures = 0
 				store.Reset()
 				continue
 			}
-			failures++
-			zctx = zctx.With(
+			gc := store.GarbageCollect()
+			zctx.Error("failed to send series",
 				zap.Error(err),
-				zap.Int("failures", failures),
-				zap.Int("threshold", failuresDropThreshold),
+				zap.Int("garbageCollected", gc),
 			)
-			// TODO maybe use a rate limited queue
-			if failures < failuresDropThreshold {
-				zctx.Warn("will drop series over threshold")
-				continue
-			}
-			zctx.Error("dropping series")
-			failures = 0
-			store.Reset()
 		}
 	}
 }
