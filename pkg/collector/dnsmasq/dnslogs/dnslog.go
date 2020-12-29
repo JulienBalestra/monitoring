@@ -101,11 +101,11 @@ func (c *Log) queryToSample(query *dnsQuery) *metrics.Sample {
 		c.conf.Tagger.GetUnstable(c.conf.Host)...)
 	tags = append(tags, "domain:"+query.domain, "type:"+query.queryType)
 	return &metrics.Sample{
-		Name:      dnsmasqQueryMetric,
-		Value:     query.count,
-		Timestamp: time.Now(),
-		Host:      c.conf.Host,
-		Tags:      tags,
+		Name:  dnsmasqQueryMetric,
+		Value: query.count,
+		Time:  time.Now(),
+		Host:  c.conf.Host,
+		Tags:  tags,
 	}
 }
 

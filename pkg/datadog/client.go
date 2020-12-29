@@ -236,10 +236,12 @@ func (c *Client) Run(ctx context.Context) {
 				store.Reset()
 				continue
 			}
-			gc := store.GarbageCollect()
+			gcThreshold := metrics.DatadogMetricsMaxAge()
+			gc := store.GarbageCollect(gcThreshold)
 			zctx.Error("failed to send series",
 				zap.Error(err),
 				zap.Int("garbageCollected", gc),
+				zap.Float64("garbageCollectionThreshold", gcThreshold),
 			)
 		}
 	}

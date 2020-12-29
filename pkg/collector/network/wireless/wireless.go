@@ -124,11 +124,11 @@ func (c *Wireless) Collect(_ context.Context) error {
 			continue
 		}
 		c.measures.GaugeDeviation(&metrics.Sample{
-			Name:      wirelessMetricPrefix + "noise",
-			Value:     noiseV,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      tags,
+			Name:  wirelessMetricPrefix + "noise",
+			Value: noiseV,
+			Time:  now,
+			Host:  c.conf.Host,
+			Tags:  tags,
 		}, c.conf.CollectInterval*3)
 
 		discardRetryV, err := strconv.ParseFloat(discardRetry, 10)
@@ -137,11 +137,11 @@ func (c *Wireless) Collect(_ context.Context) error {
 			continue
 		}
 		_ = c.measures.Count(&metrics.Sample{
-			Name:      wirelessDiscardRetryMetric,
-			Value:     discardRetryV,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      tags,
+			Name:  wirelessDiscardRetryMetric,
+			Value: discardRetryV,
+			Time:  now,
+			Host:  c.conf.Host,
+			Tags:  tags,
 		})
 	}
 	return nil

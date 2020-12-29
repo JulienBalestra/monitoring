@@ -53,46 +53,46 @@ func (c *Memory) Collect(_ context.Context) error {
 	now := time.Now()
 	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "memory.ram.total",
-		Value:     float64(info.Totalram),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      hostTags,
+		Name:  "memory.ram.total",
+		Value: float64(info.Totalram),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  hostTags,
 	}, time.Minute*5)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "memory.ram.free",
-		Value:     float64(info.Freeram),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      hostTags,
+		Name:  "memory.ram.free",
+		Value: float64(info.Freeram),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  hostTags,
 	}, c.conf.CollectInterval*3)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "memory.ram.shared",
-		Value:     float64(info.Sharedram),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      hostTags,
+		Name:  "memory.ram.shared",
+		Value: float64(info.Sharedram),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  hostTags,
 	}, c.conf.CollectInterval*3)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "memory.ram.buffer",
-		Value:     float64(info.Bufferram),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      hostTags,
+		Name:  "memory.ram.buffer",
+		Value: float64(info.Bufferram),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  hostTags,
 	}, c.conf.CollectInterval*3)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "memory.swap.total",
-		Value:     float64(info.Totalswap),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      hostTags,
+		Name:  "memory.swap.total",
+		Value: float64(info.Totalswap),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  hostTags,
 	}, time.Minute*5)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "memory.swap.free",
-		Value:     float64(info.Freeswap),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      hostTags,
+		Name:  "memory.swap.free",
+		Value: float64(info.Freeswap),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  hostTags,
 	}, c.conf.CollectInterval*3)
 	return nil
 }

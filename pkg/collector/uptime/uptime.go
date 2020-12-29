@@ -51,11 +51,11 @@ func (c *Uptime) Collect(_ context.Context) error {
 	}
 
 	c.measures.Gauge(&metrics.Sample{
-		Name:      "uptime.seconds",
-		Value:     float64(info.Uptime),
-		Timestamp: time.Now(),
-		Host:      c.conf.Host,
-		Tags:      c.conf.Tagger.GetUnstable(c.conf.Host),
+		Name:  "uptime.seconds",
+		Value: float64(info.Uptime),
+		Time:  time.Now(),
+		Host:  c.conf.Host,
+		Tags:  c.conf.Tagger.GetUnstable(c.conf.Host),
 	})
 	return nil
 }

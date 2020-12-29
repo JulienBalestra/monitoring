@@ -18,18 +18,18 @@ func TestMetricCount(t *testing.T) {
 	}{
 		"1": {
 			&Sample{
-				Name:      "metric",
-				Value:     1,
-				Timestamp: now,
-				Host:      "host",
-				Tags:      []string{},
+				Name:  "metric",
+				Value: 1,
+				Time:  now,
+				Host:  "host",
+				Tags:  []string{},
 			},
 			&Sample{
-				Name:      "metric",
-				Value:     2,
-				Timestamp: now.Add(time.Second),
-				Host:      "host",
-				Tags:      []string{},
+				Name:  "metric",
+				Value: 2,
+				Time:  now.Add(time.Second),
+				Host:  "host",
+				Tags:  []string{},
 			},
 			&Series{
 				Metric: "metric",
@@ -45,18 +45,18 @@ func TestMetricCount(t *testing.T) {
 		},
 		"1:tags": {
 			&Sample{
-				Name:      "metric",
-				Value:     1,
-				Timestamp: now,
-				Host:      "host",
-				Tags:      []string{},
+				Name:  "metric",
+				Value: 1,
+				Time:  now,
+				Host:  "host",
+				Tags:  []string{},
 			},
 			&Sample{
-				Name:      "metric",
-				Value:     2,
-				Timestamp: now.Add(time.Second),
-				Host:      "host",
-				Tags:      []string{"1:1"},
+				Name:  "metric",
+				Value: 2,
+				Time:  now.Add(time.Second),
+				Host:  "host",
+				Tags:  []string{"1:1"},
 			},
 			&Series{
 				Metric: "metric",
@@ -72,18 +72,18 @@ func TestMetricCount(t *testing.T) {
 		},
 		"-1": {
 			&Sample{
-				Name:      "metric",
-				Value:     1,
-				Timestamp: now,
-				Host:      "host",
-				Tags:      []string{},
+				Name:  "metric",
+				Value: 1,
+				Time:  now,
+				Host:  "host",
+				Tags:  []string{},
 			},
 			&Sample{
-				Name:      "metric",
-				Value:     0,
-				Timestamp: now.Add(time.Second),
-				Host:      "host",
-				Tags:      []string{"1:1"},
+				Name:  "metric",
+				Value: 0,
+				Time:  now.Add(time.Second),
+				Host:  "host",
+				Tags:  []string{"1:1"},
 			},
 			nil,
 			true,
@@ -112,18 +112,18 @@ func TestMetricCountIsCountNegative(t *testing.T) {
 	}{
 		"2-1": {
 			&Sample{
-				Name:      "metric",
-				Value:     2,
-				Timestamp: now,
-				Host:      "host",
-				Tags:      []string{},
+				Name:  "metric",
+				Value: 2,
+				Time:  now,
+				Host:  "host",
+				Tags:  []string{},
 			},
 			&Sample{
-				Name:      "metric",
-				Value:     1,
-				Timestamp: now.Add(time.Second),
-				Host:      "host",
-				Tags:      []string{},
+				Name:  "metric",
+				Value: 1,
+				Time:  now.Add(time.Second),
+				Host:  "host",
+				Tags:  []string{},
 			},
 			false,
 		},
@@ -144,18 +144,18 @@ func TestMetricHash(t *testing.T) {
 	}{
 		"1": {
 			&Sample{
-				Name:      "metric",
-				Value:     1,
-				Timestamp: now,
-				Host:      "host",
-				Tags:      []string{"one", "two"},
+				Name:  "metric",
+				Value: 1,
+				Time:  now,
+				Host:  "host",
+				Tags:  []string{"one", "two"},
 			},
 			&Sample{
-				Name:      "metric",
-				Value:     1,
-				Timestamp: now,
-				Host:      "host",
-				Tags:      []string{"two", "one"},
+				Name:  "metric",
+				Value: 1,
+				Time:  now,
+				Host:  "host",
+				Tags:  []string{"two", "one"},
 			},
 		},
 	} {
@@ -175,11 +175,11 @@ func TestGaugeDeviation(t *testing.T) {
 	}{
 		"true:0:2": {
 			&Sample{
-				Name:      "metric",
-				Value:     1,
-				Timestamp: now,
-				Host:      "host",
-				Tags:      []string{"one", "two"},
+				Name:  "metric",
+				Value: 1,
+				Time:  now,
+				Host:  "host",
+				Tags:  []string{"one", "two"},
 			},
 			true,
 			0,
@@ -187,11 +187,11 @@ func TestGaugeDeviation(t *testing.T) {
 		},
 		"false:0:1": {
 			&Sample{
-				Name:      "metric",
-				Value:     1,
-				Timestamp: now,
-				Host:      "host",
-				Tags:      []string{"one", "two"},
+				Name:  "metric",
+				Value: 1,
+				Time:  now,
+				Host:  "host",
+				Tags:  []string{"one", "two"},
 			},
 			false,
 			time.Hour,
@@ -218,11 +218,11 @@ func TestGaugeDeviation(t *testing.T) {
 
 func BenchmarkSampleHash(b *testing.B) {
 	s := &Sample{
-		Name:      "metric",
-		Value:     1,
-		Timestamp: time.Now(),
-		Host:      "host",
-		Tags:      []string{"one", "two"},
+		Name:  "metric",
+		Value: 1,
+		Time:  time.Now(),
+		Host:  "host",
+		Tags:  []string{"one", "two"},
 	}
 	s.Hash()
 }

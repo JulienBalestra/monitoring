@@ -82,11 +82,11 @@ func (c *Statistics) Collect(_ context.Context) error {
 			continue
 		}
 		_ = c.measures.Count(&metrics.Sample{
-			Name:      "network.statistics." + statistic.fileName,
-			Value:     i,
-			Host:      c.conf.Host,
-			Timestamp: now,
-			Tags:      append(hostTags, "device:"+statistic.deviceName),
+			Name:  "network.statistics." + statistic.fileName,
+			Value: i,
+			Host:  c.conf.Host,
+			Time:  now,
+			Tags:  append(hostTags, "device:"+statistic.deviceName),
 		})
 	}
 	return nil

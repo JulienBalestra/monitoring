@@ -98,11 +98,11 @@ func (c *Conntrack) aggregationToSamples(now time.Time, aggr *aggregation) *metr
 		"state:"+aggr.state,
 	)
 	return &metrics.Sample{
-		Name:      "network.conntrack.entries",
-		Value:     aggr.count,
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      tags,
+		Name:  "network.conntrack.entries",
+		Value: aggr.count,
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  tags,
 	}
 }
 

@@ -223,11 +223,11 @@ func (c *WL) Collect(ctx context.Context) error {
 			tags := append(hostTags, c.conf.Tagger.GetUnstableWithDefault(macAddress, c.leaseTag)...)
 			tags = append(tags, "mac:"+macAddress)
 			s := &metrics.Sample{
-				Name:      wirelessMetricPrefix + "rssi.dbm",
-				Value:     rssi,
-				Timestamp: time.Now(),
-				Host:      c.conf.Host,
-				Tags:      tags,
+				Name:  wirelessMetricPrefix + "rssi.dbm",
+				Value: rssi,
+				Time:  time.Now(),
+				Host:  c.conf.Host,
+				Tags:  tags,
 			}
 			c.measures.GaugeDeviation(s, c.conf.CollectInterval*3)
 		}

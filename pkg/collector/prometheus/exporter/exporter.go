@@ -166,11 +166,11 @@ func (c *Exporter) Collect(ctx context.Context) error {
 			tags := c.conf.Tagger.GetUnstable(c.conf.Host)
 			tags = c.getTagsFromLabels(tags, m.Label)
 			_ = c.measures.CountWithNegativeReset(&metrics.Sample{
-				Name:      c.conf.Options[*mf.Name],
-				Value:     *m.Counter.Value,
-				Timestamp: now,
-				Host:      c.conf.Host,
-				Tags:      tags,
+				Name:  c.conf.Options[*mf.Name],
+				Value: *m.Counter.Value,
+				Time:  now,
+				Host:  c.conf.Host,
+				Tags:  tags,
 			})
 		case dto.MetricType_GAUGE:
 			if len(mf.Metric) != 1 {
@@ -180,11 +180,11 @@ func (c *Exporter) Collect(ctx context.Context) error {
 			tags := c.conf.Tagger.GetUnstable(c.conf.Host)
 			tags = c.getTagsFromLabels(tags, m.Label)
 			c.measures.GaugeDeviation(&metrics.Sample{
-				Name:      c.conf.Options[*mf.Name],
-				Value:     *m.Gauge.Value,
-				Timestamp: now,
-				Host:      c.conf.Host,
-				Tags:      tags,
+				Name:  c.conf.Options[*mf.Name],
+				Value: *m.Gauge.Value,
+				Time:  now,
+				Host:  c.conf.Host,
+				Tags:  tags,
 			}, c.conf.CollectInterval*3)
 		}
 	}

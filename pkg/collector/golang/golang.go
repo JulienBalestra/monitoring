@@ -50,18 +50,18 @@ func (c *Golang) Collect(_ context.Context) error {
 	runtime.ReadMemStats(memstat)
 
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "golang.runtime.goroutines",
-		Value:     float64(runtime.NumGoroutine()),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      tags,
+		Name:  "golang.runtime.goroutines",
+		Value: float64(runtime.NumGoroutine()),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  tags,
 	}, c.conf.CollectInterval*3)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "golang.heap.alloc",
-		Value:     float64(memstat.HeapAlloc),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      tags,
+		Name:  "golang.heap.alloc",
+		Value: float64(memstat.HeapAlloc),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  tags,
 	}, c.conf.CollectInterval*3)
 
 	return nil

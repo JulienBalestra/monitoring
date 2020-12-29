@@ -9,7 +9,11 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/fnv"
 )
 
-const maxSerieAge = time.Minute * 59
+const SeriesMaxAge = time.Hour
+
+func DatadogMetricsMaxAge() float64 {
+	return float64(time.Now().Add(-SeriesMaxAge).Unix())
+}
 
 type AggregationStore struct {
 	mu    *sync.RWMutex
@@ -30,14 +34,17 @@ func (st *AggregationStore) Reset() {
 	st.mu.Unlock()
 }
 
-func (st *AggregationStore) GarbageCollect() int {
-	threshold := float64(time.Now().Add(-time.Hour).Unix())
+func (st *AggregationStore) GarbageCollect(threshold float64) int {
 	gc := 0
+	if threshold == 0 {
+		return gc
+	}
 	st.mu.Lock()
 	for k, v := range st.store {
 		i := 0
 		for _, p := range v.Points {
-			if p[0] < threshold {
+			ts := p[0]
+			if ts < threshold {
 				gc++
 				continue
 			}

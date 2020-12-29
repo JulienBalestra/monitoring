@@ -131,11 +131,11 @@ func (c *DHCP) Collect(_ context.Context) error {
 			c.conf.Tagger.Update(macAddress, ipAddressTag, leaseNameTag)
 		}
 		c.measures.Gauge(&metrics.Sample{
-			Name:      "dnsmasq.dhcp.lease",
-			Value:     leaseStarted - timestampSeconds,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      append(hostTags, leaseNameTag.String(), macAddressTag.String(), ipAddressTag.String()),
+			Name:  "dnsmasq.dhcp.lease",
+			Value: leaseStarted - timestampSeconds,
+			Time:  now,
+			Host:  c.conf.Host,
+			Tags:  append(hostTags, leaseNameTag.String(), macAddressTag.String(), ipAddressTag.String()),
 		})
 	}
 	c.measures.Purge()

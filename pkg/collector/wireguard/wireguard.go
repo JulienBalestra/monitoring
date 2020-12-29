@@ -108,29 +108,29 @@ func (c *Wireguard) Collect(_ context.Context) error {
 			)
 			tags := c.conf.Tagger.GetUnstable(peer.PublicKey.String())
 			_ = c.measures.CountWithNegativeReset(&metrics.Sample{
-				Name:      wireguardMetricPrefix + "transfer.received",
-				Value:     float64(peer.ReceiveBytes),
-				Timestamp: now,
-				Host:      c.conf.Host,
-				Tags:      tags,
+				Name:  wireguardMetricPrefix + "transfer.received",
+				Value: float64(peer.ReceiveBytes),
+				Time:  now,
+				Host:  c.conf.Host,
+				Tags:  tags,
 			})
 			_ = c.measures.CountWithNegativeReset(&metrics.Sample{
-				Name:      wireguardMetricPrefix + "transfer.sent",
-				Value:     float64(peer.TransmitBytes),
-				Timestamp: now,
-				Host:      c.conf.Host,
-				Tags:      tags,
+				Name:  wireguardMetricPrefix + "transfer.sent",
+				Value: float64(peer.TransmitBytes),
+				Time:  now,
+				Host:  c.conf.Host,
+				Tags:  tags,
 			})
 			age := now.Sub(peer.LastHandshakeTime)
 			if age > time.Minute*5 {
 				continue
 			}
 			c.measures.Gauge(&metrics.Sample{
-				Name:      wireguardMetricPrefix + "handshake.age",
-				Value:     age.Seconds(),
-				Timestamp: now,
-				Host:      c.conf.Host,
-				Tags:      tags,
+				Name:  wireguardMetricPrefix + "handshake.age",
+				Value: age.Seconds(),
+				Time:  now,
+				Host:  c.conf.Host,
+				Tags:  tags,
 			})
 		}
 	}

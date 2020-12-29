@@ -180,11 +180,11 @@ func (c *Bluetooth) Collect(ctx context.Context) error {
 				dzctx.Debug("found device")
 
 				c.measures.GaugeDeviation(&metrics.Sample{
-					Name:      "bluetooth.rssi.dbm",
-					Value:     float64(device.Properties.RSSI),
-					Timestamp: time.Now(),
-					Host:      c.conf.Host,
-					Tags:      tags,
+					Name:  "bluetooth.rssi.dbm",
+					Value: float64(device.Properties.RSSI),
+					Time:  time.Now(),
+					Host:  c.conf.Host,
+					Tags:  tags,
 				}, c.conf.CollectInterval*3)
 
 				err = a.RemoveDevice(device.Path())
@@ -204,10 +204,10 @@ func (c *Bluetooth) Collect(ctx context.Context) error {
 			for vendor := range seenDevices {
 				nb := len(seenDevices[vendor])
 				c.measures.GaugeDeviation(&metrics.Sample{
-					Name:      "bluetooth.devices",
-					Value:     float64(nb),
-					Timestamp: time.Now(),
-					Host:      c.conf.Host,
+					Name:  "bluetooth.devices",
+					Value: float64(nb),
+					Time:  time.Now(),
+					Host:  c.conf.Host,
 					Tags: []string{
 						"vendor:" + vendor,
 					},

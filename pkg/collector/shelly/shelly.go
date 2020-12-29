@@ -128,70 +128,70 @@ func (c *Shelly) Collect(ctx context.Context) error {
 	)
 	now := time.Now()
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "temperature.celsius",
-		Value:     s.Temperature,
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      append(tags, "sensor:shelly"),
+		Name:  "temperature.celsius",
+		Value: s.Temperature,
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  append(tags, "sensor:shelly"),
 	}, time.Minute)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "network.wireless.rssi.dbm",
-		Value:     float64(s.WifiSTA.RSSI),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      append(tags, "ssid:"+s.WifiSTA.SSID),
+		Name:  "network.wireless.rssi.dbm",
+		Value: float64(s.WifiSTA.RSSI),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  append(tags, "ssid:"+s.WifiSTA.SSID),
 	}, time.Minute)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "memory.free",
-		Value:     float64(s.RamFree),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      tags,
+		Name:  "memory.free",
+		Value: float64(s.RamFree),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  tags,
 	}, time.Minute)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "memory.total",
-		Value:     float64(s.RamTotal),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      tags,
+		Name:  "memory.total",
+		Value: float64(s.RamTotal),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  tags,
 	}, time.Minute)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "filesystem.free",
-		Value:     float64(s.FSFree),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      tags,
+		Name:  "filesystem.free",
+		Value: float64(s.FSFree),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  tags,
 	}, time.Minute)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "filesystem.size",
-		Value:     float64(s.FSSize),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      tags,
+		Name:  "filesystem.size",
+		Value: float64(s.FSSize),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  tags,
 	}, time.Minute)
 	c.measures.Gauge(&metrics.Sample{
-		Name:      "uptime",
-		Value:     float64(s.Uptime),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      tags,
+		Name:  "uptime",
+		Value: float64(s.Uptime),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  tags,
 	})
 
 	for i, meter := range s.Meters {
 		meterTag := "meter:" + strconv.Itoa(i)
 		c.measures.GaugeDeviation(&metrics.Sample{
-			Name:      "power.current",
-			Value:     meter.Power,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      append(tags, meterTag),
+			Name:  "power.current",
+			Value: meter.Power,
+			Time:  now,
+			Host:  c.conf.Host,
+			Tags:  append(tags, meterTag),
 		}, time.Minute)
 		_ = c.measures.Count(&metrics.Sample{
-			Name:      "power.total",
-			Value:     meter.Total,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      append(tags, meterTag),
+			Name:  "power.total",
+			Value: meter.Total,
+			Time:  now,
+			Host:  c.conf.Host,
+			Tags:  append(tags, meterTag),
 		})
 	}
 	for i, relay := range s.Relays {
@@ -200,11 +200,11 @@ func (c *Shelly) Collect(ctx context.Context) error {
 			boolAsFloat = 1.
 		}
 		c.measures.GaugeDeviation(&metrics.Sample{
-			Name:      "power.on",
-			Value:     boolAsFloat,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      append(tags, "relay:"+strconv.Itoa(i)),
+			Name:  "power.on",
+			Value: boolAsFloat,
+			Time:  now,
+			Host:  c.conf.Host,
+			Tags:  append(tags, "relay:"+strconv.Itoa(i)),
 		}, time.Minute)
 	}
 	return nil
