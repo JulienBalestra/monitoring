@@ -223,7 +223,7 @@ func TestNewAggregateStore(t *testing.T) {
 			for _, se := range tc.series {
 				l += s.Aggregate(se)
 			}
-			s.GarbageCollect()
+			s.GarbageCollect(DatadogMetricsMaxAge())
 			r := s.Series()
 			sort.Slice(r, func(i, j int) bool {
 				return len(r[i].Tags) < len(r[j].Tags)

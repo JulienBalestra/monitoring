@@ -60,25 +60,25 @@ func (c *Load) Collect(_ context.Context) error {
 
 	now, tags := time.Now(), c.conf.Tagger.GetUnstable(c.conf.Host)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "load.1",
-		Value:     formatLoad(float64(info.Loads[0])),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      tags,
+		Name:  "load.1",
+		Value: formatLoad(float64(info.Loads[0])),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  tags,
 	}, c.conf.CollectInterval*3)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "load.5",
-		Value:     formatLoad(float64(info.Loads[1])),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      tags,
+		Name:  "load.5",
+		Value: formatLoad(float64(info.Loads[1])),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  tags,
 	}, c.conf.CollectInterval*3)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:      "load.15",
-		Value:     formatLoad(float64(info.Loads[2])),
-		Timestamp: now,
-		Host:      c.conf.Host,
-		Tags:      tags,
+		Name:  "load.15",
+		Value: formatLoad(float64(info.Loads[2])),
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  tags,
 	}, c.conf.CollectInterval*3)
 	return nil
 }

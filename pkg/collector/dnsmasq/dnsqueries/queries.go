@@ -106,11 +106,11 @@ func (c *Queries) Collect(ctx context.Context) error {
 			continue
 		}
 		_ = c.measures.Count(&metrics.Sample{
-			Name:      metricName,
-			Value:     v,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      hostTags,
+			Name:  metricName,
+			Value: v,
+			Time:  now,
+			Host:  c.conf.Host,
+			Tags:  hostTags,
 		})
 	}
 	for metricName, dnsQuestion := range c.dnsGaugeQuestions {
@@ -123,11 +123,11 @@ func (c *Queries) Collect(ctx context.Context) error {
 			continue
 		}
 		c.measures.GaugeDeviation(&metrics.Sample{
-			Name:      metricName,
-			Value:     v,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      hostTags,
+			Name:  metricName,
+			Value: v,
+			Time:  now,
+			Host:  c.conf.Host,
+			Tags:  hostTags,
 		}, time.Minute*30)
 	}
 	c.measures.Purge()

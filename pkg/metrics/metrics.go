@@ -32,10 +32,10 @@ type Series struct {
 }
 
 type Sample struct {
-	Name      string
-	Value     float64
-	Timestamp time.Time
-	Host      string
+	Name  string
+	Value float64
+	Time  time.Time
+	Host  string
 
 	Tags []string
 }
@@ -50,7 +50,7 @@ type Measures struct {
 }
 
 func (s *Sample) Count(newMetric *Sample) (*Series, error) {
-	interval := newMetric.Timestamp.Sub(s.Timestamp).Seconds()
+	interval := newMetric.Time.Sub(s.Time).Seconds()
 	if interval <= 0 {
 		return nil, fmt.Errorf("invalid interval for %q <-> %q : %.2f", s, newMetric, interval)
 	}
@@ -65,7 +65,7 @@ func (s *Sample) Count(newMetric *Sample) (*Series, error) {
 	return &Series{
 		Metric: newMetric.Name,
 		Points: [][]float64{
-			{float64(newMetric.Timestamp.Unix()), metricsValue},
+			{float64(newMetric.Time.Unix()), metricsValue},
 		},
 		Type: TypeCount,
 		// Datadog resolution is at the second
@@ -76,7 +76,7 @@ func (s *Sample) Count(newMetric *Sample) (*Series, error) {
 }
 
 func (s *Sample) String() string {
-	return fmt.Sprintf("%s %.2f %s %s %s %d", s.Name, s.Value, s.Timestamp.Format(time.RFC3339), s.Host, s.Tags, s.Hash())
+	return fmt.Sprintf("%s %.2f %s %s %s %d", s.Name, s.Value, s.Time.Format(time.RFC3339), s.Host, s.Tags, s.Hash())
 }
 
 func (s *Sample) Hash() uint64 {
@@ -111,13 +111,13 @@ func (m *Measures) Purge() (float64, float64) {
 		return counts, deviations
 	}
 	for key, sample := range m.counter {
-		if time.Since(sample.Timestamp) > m.maxAge {
+		if time.Since(sample.Time) > m.maxAge {
 			delete(m.counter, key)
 			counts++
 		}
 	}
 	for key, sample := range m.deviation {
-		if time.Since(sample.Timestamp) > m.maxAge {
+		if time.Since(sample.Time) > m.maxAge {
 			delete(m.deviation, key)
 			deviations++
 		}
@@ -136,7 +136,7 @@ func (m *Measures) Gauge(newSample *Sample) {
 	m.ch <- Series{
 		Metric: newSample.Name,
 		Points: [][]float64{
-			{float64(newSample.Timestamp.Unix()), newSample.Value},
+			{float64(newSample.Time.Unix()), newSample.Value},
 		},
 		Type: TypeGauge,
 		Host: newSample.Host,
@@ -147,7 +147,7 @@ func (m *Measures) Gauge(newSample *Sample) {
 func (m *Measures) GaugeDeviation(newSample *Sample, maxAge time.Duration) bool {
 	h := newSample.Hash()
 	oldSample, ok := m.deviation[h]
-	if ok && newSample.Value == oldSample.Value && time.Since(oldSample.Timestamp) < maxAge {
+	if ok && newSample.Value == oldSample.Value && time.Since(oldSample.Time) < maxAge {
 		return false
 	}
 	m.deviation[h] = newSample
@@ -163,11 +163,11 @@ func (m *Measures) Incr(newSample *Sample) error {
 		return nil
 	}
 	s, err := oldSample.Count(&Sample{
-		Name:      newSample.Name,
-		Value:     newSample.Value + oldSample.Value,
-		Timestamp: newSample.Timestamp,
-		Host:      newSample.Host,
-		Tags:      newSample.Tags, // keep the same underlying array
+		Name:  newSample.Name,
+		Value: newSample.Value + oldSample.Value,
+		Time:  newSample.Time,
+		Host:  newSample.Host,
+		Tags:  newSample.Tags, // keep the same underlying array
 	})
 	if err != nil {
 		if err != errCountZero {

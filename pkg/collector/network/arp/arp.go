@@ -108,11 +108,11 @@ func (c *ARP) Collect(_ context.Context) error {
 		tags := append(hostTags, c.conf.Tagger.GetUnstableWithDefault(macAddress, c.leaseTag)...)
 		tags = append(tags, deviceTag.String(), macAddressTag.String())
 		c.measures.GaugeDeviation(&metrics.Sample{
-			Name:      "network.arp",
-			Value:     1,
-			Timestamp: now,
-			Host:      c.conf.Host,
-			Tags:      tags,
+			Name:  "network.arp",
+			Value: 1,
+			Time:  now,
+			Host:  c.conf.Host,
+			Tags:  tags,
 		}, c.conf.CollectInterval*3)
 	}
 	c.measures.Purge()

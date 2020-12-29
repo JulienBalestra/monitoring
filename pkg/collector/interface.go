@@ -74,11 +74,11 @@ func RunCollection(ctx context.Context, c Collector) error {
 
 		case <-ticker.C:
 			s := &metrics.Sample{
-				Name:      "collector.runs",
-				Value:     1,
-				Timestamp: time.Now(),
-				Host:      config.Host,
-				Tags:      append(config.Tagger.GetUnstable(config.Host), collectorTag),
+				Name:  "collector.runs",
+				Value: 1,
+				Time:  time.Now(),
+				Host:  config.Host,
+				Tags:  append(config.Tagger.GetUnstable(config.Host), collectorTag),
 			}
 			err := c.Collect(ctx)
 			s.Tags = append(s.Tags, "success:"+strconv.FormatBool(err == nil))
