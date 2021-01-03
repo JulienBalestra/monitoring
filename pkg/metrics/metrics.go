@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	TypeCount = "count"
-	TypeGauge = "gauge"
+	TypeCount        = "count"
+	TypeGauge        = "gauge"
+	TypeDefaultGauge = ""
 
 	DefaultMeasureMaxAgeSample = time.Hour * 12
 )
@@ -138,6 +139,7 @@ func (m *Measures) Gauge(newSample *Sample) {
 		Points: [][]float64{
 			{float64(newSample.Time.Unix()), newSample.Value},
 		},
+		Type: TypeDefaultGauge,
 		Host: newSample.Host,
 		Tags: newSample.Tags,
 	}
