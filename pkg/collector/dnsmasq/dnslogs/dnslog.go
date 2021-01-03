@@ -32,7 +32,6 @@ type Log struct {
 
 	firstSep, secondSep, thirdSep []byte
 	startTailing                  time.Time
-	year                          string
 	leaseTag                      *tagger.Tag
 
 	ignoreDomains map[string]struct{}
@@ -53,7 +52,6 @@ func newLog(conf *collector.Config) *Log {
 		firstSep:  []byte("]: query["),
 		secondSep: []byte("] "),
 		thirdSep:  []byte{' '},
-		year:      time.Now().Format("2006"),
 		leaseTag:  tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
 
 		// these domains are ignored and not submitted as metrics
@@ -261,7 +259,7 @@ func (c *Log) processLine(counters map[string]*dnsQuery, line []byte) {
 	}
 	// Apr 20 21:35:07
 	// 2006Apr 20 21:35:07
-	t, err := time.Parse(dnsmasqDateFormat, c.year+string(line[:15]))
+	t, err := time.Parse(dnsmasqDateFormat, c.startTailing.Format("2006")+string(line[:15]))
 	if err != nil {
 		zap.L().Error("failed to parse date in line", zap.Error(err), zap.ByteString("line", line))
 		return

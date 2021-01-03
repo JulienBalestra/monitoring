@@ -122,6 +122,11 @@ func (c *Client) UpdateHostTags(ctx context.Context, tags []string) error {
 	if len(tags) == 0 {
 		return nil
 	}
+
+	// TODO find a good logger/workflow to debug this
+	zap.L().Debug("sending host tags", zap.Strings("tags", tags))
+	//return nil
+
 	var buff bytes.Buffer
 	err := json.NewEncoder(&buff).Encode(&HostTags{
 		Host: c.conf.Host,
@@ -326,6 +331,11 @@ func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {
 	if bufferLen == 0 {
 		return nil
 	}
+
+	// TODO find a good logger/workflow to debug this
+	//zap.L().Debug("sending logs", zap.String("logs", buffer.String()))
+	//return nil
+
 	var zb bytes.Buffer
 	w, err := zlib.NewWriterLevel(&zb, zlib.BestCompression)
 	if err != nil {
