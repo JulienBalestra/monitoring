@@ -83,6 +83,9 @@ func (st *AggregationStore) Aggregate(series ...*Series) int {
 		h := fnv.NewHash()
 		h = fnv.AddString(h, s.Metric)
 		h = fnv.AddString(h, s.Host)
+		if s.Type == TypeGauge {
+			s.Type = TypeDefaultGauge
+		}
 		h = fnv.AddString(h, s.Type)
 		h = fnv.AddString(h, strconv.FormatInt(int64(s.Interval), 10))
 

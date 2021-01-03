@@ -3,7 +3,7 @@ module github.com/JulienBalestra/monitoring
 go 1.15
 
 require (
-	github.com/JulienBalestra/dry v0.2.1
+	github.com/JulienBalestra/dry v0.3.5
 	github.com/JulienBalestra/wireguard-stun v0.1.0
 	github.com/godbus/dbus/v5 v5.0.3
 	github.com/magiconair/properties v1.8.4
