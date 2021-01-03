@@ -20,6 +20,16 @@ github.com/JulienBalestra/dry v0.2.0 h1:zZYqjGOK+Xi07HfgLrpv0QHkypBIqTMgQsSqJcYD
 github.com/JulienBalestra/dry v0.2.0/go.mod h1:AevxP9+U5pu13uIL3WY7FprEq45vpWOzlFa2I3+wIOo=
 github.com/JulienBalestra/dry v0.2.1 h1:jQie7r15cdiDHZUZlMnHA+XpXQcv0diDiAu/TgwgyGQ=
 github.com/JulienBalestra/dry v0.2.1/go.mod h1:ZkKhwz4gW7yY2TGnXcY5jtPzKcuIurCxLtPRJNCl73s=
+github.com/JulienBalestra/dry v0.3.0 h1:cIv/7bRKCySmCFrC9hSDngo5Y1ae3hPvYGZsZs+SztI=
+github.com/JulienBalestra/dry v0.3.0/go.mod h1:ZkKhwz4gW7yY2TGnXcY5jtPzKcuIurCxLtPRJNCl73s=
+github.com/JulienBalestra/dry v0.3.1 h1:jxpAscgMT3HcPVyh836bND0QEjDh8NNh01eQWSOQfHc=
+github.com/JulienBalestra/dry v0.3.1/go.mod h1:ZkKhwz4gW7yY2TGnXcY5jtPzKcuIurCxLtPRJNCl73s=
+github.com/JulienBalestra/dry v0.3.2 h1:pD33FCRm1ICM1cx9RgLG18Ps2zHMqlaS09Df36X6d4E=
+github.com/JulienBalestra/dry v0.3.2/go.mod h1:ZkKhwz4gW7yY2TGnXcY5jtPzKcuIurCxLtPRJNCl73s=
+github.com/JulienBalestra/dry v0.3.3 h1:jA76iZQ4HhOWK0GLAs6f0FQnOhyGt8kgHzLlaogBRvo=
+github.com/JulienBalestra/dry v0.3.3/go.mod h1:ZkKhwz4gW7yY2TGnXcY5jtPzKcuIurCxLtPRJNCl73s=
+github.com/JulienBalestra/dry v0.3.5 h1:XPsNkfkgItq3rU/60NyPXmF5WaZEo3z1+4OeCewJN3E=
+github.com/JulienBalestra/dry v0.3.5/go.mod h1:ZkKhwz4gW7yY2TGnXcY5jtPzKcuIurCxLtPRJNCl73s=
 github.com/JulienBalestra/wireguard-stun v0.0.0-20201217210548-22f31bbd499a h1:GOAXMLp8hV38LqcfPZQcw1h3rKaAnp9zTNQnmM8Nuqc=
 github.com/JulienBalestra/wireguard-stun v0.0.0-20201217210548-22f31bbd499a/go.mod h1:t6NMz0mm9nGCtsaNo90uaJMtoc67AMF1WjIXQD02Rd0=
 github.com/JulienBalestra/wireguard-stun v0.0.0-20201217225749-413e1af04638 h1:DT91r9PyX7OCpfTMU3nM0SuqU8LzTJ2uSFgJBnjY4GA=

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/JulienBalestra/dry/pkg/version"
+	"github.com/JulienBalestra/dry/pkg/zapconfig"
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/catalog"
 	"github.com/JulienBalestra/monitoring/pkg/datadog"
@@ -17,12 +18,11 @@ import (
 )
 
 func NewDefaultConfig() *Config {
-	zapConfig := zap.NewProductionConfig()
 	return &Config{
 		DatadogClientConfig: &datadog.Config{
 			ClientMetrics: &datadog.ClientMetrics{},
 		},
-		ZapConfig: &zapConfig,
+		ZapConfig: zapconfig.NewZapConfig(),
 	}
 }
 

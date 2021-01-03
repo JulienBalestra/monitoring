@@ -45,7 +45,7 @@ func RunCollection(ctx context.Context, c Collector) error {
 	}
 
 	zctx := zap.L().With(
-		zap.String("collector", c.Name()),
+		zap.String("co", c.Name()),
 	)
 	extCtx := zctx.With(
 		zap.Duration("collectionInterval", config.CollectInterval),
@@ -87,7 +87,7 @@ func RunCollection(ctx context.Context, c Collector) error {
 				extCtx.Error("failed collection", zap.Error(err))
 				continue
 			}
-			zctx.Info("successfully run collection")
+			zctx.Info("ok")
 		}
 	}
 }
