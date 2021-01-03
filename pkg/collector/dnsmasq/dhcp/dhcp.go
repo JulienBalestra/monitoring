@@ -11,6 +11,7 @@ import (
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
+	"github.com/JulienBalestra/monitoring/pkg/mac"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
 	"go.uber.org/zap"
@@ -119,23 +120,29 @@ func (c *DHCP) Collect(_ context.Context) error {
 		}
 		macAddress = strings.ReplaceAll(macAddress, ":", "-")
 		macAddressTag := tagger.NewTagUnsafe("mac", macAddress)
+		vendorTag := tagger.NewTagUnsafe("vendor", mac.GetVendorWithMacOrUnknown(macAddress))
 		ipAddressTag := tagger.NewTagUnsafe("ip", ipAddress)
 		leaseNameTag := tagger.NewTagUnsafe(exported.LeaseKey, leaseName)
 		if leaseName == "*" {
 			leaseNameTag = tagger.NewTagUnsafe(exported.LeaseKey, dhcpWildcardLeaseValue)
-			c.conf.Tagger.Update(ipAddress, macAddressTag)
-			c.conf.Tagger.Update(macAddress, ipAddressTag)
+			c.conf.Tagger.Update(ipAddress, macAddressTag, vendorTag)
+			c.conf.Tagger.Update(macAddress, ipAddressTag, vendorTag)
 		} else {
-			c.conf.Tagger.Update(leaseName, macAddressTag, ipAddressTag)
-			c.conf.Tagger.Update(ipAddress, leaseNameTag, macAddressTag)
-			c.conf.Tagger.Update(macAddress, ipAddressTag, leaseNameTag)
+			c.conf.Tagger.Update(leaseName, macAddressTag, ipAddressTag, vendorTag)
+			c.conf.Tagger.Update(ipAddress, leaseNameTag, macAddressTag, vendorTag)
+			c.conf.Tagger.Update(macAddress, ipAddressTag, leaseNameTag, vendorTag)
 		}
 		c.measures.Gauge(&metrics.Sample{
 			Name:  "dnsmasq.dhcp.lease",
 			Value: leaseStarted - timestampSeconds,
 			Time:  now,
 			Host:  c.conf.Host,
-			Tags:  append(hostTags, leaseNameTag.String(), macAddressTag.String(), ipAddressTag.String()),
+			Tags: append(hostTags,
+				leaseNameTag.String(),
+				macAddressTag.String(),
+				ipAddressTag.String(),
+				vendorTag.String(),
+			),
 		})
 	}
 	c.measures.Purge()
