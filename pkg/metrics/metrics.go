@@ -25,10 +25,10 @@ var (
 type Series struct {
 	Metric   string      `json:"metric"`
 	Points   [][]float64 `json:"points"`
-	Type     string      `json:"type"`
+	Type     string      `json:"type,omitempty"`
 	Interval float64     `json:"interval,omitempty"`
 	Host     string      `json:"host"`
-	Tags     []string    `json:"tags"`
+	Tags     []string    `json:"tags,omitempty"`
 }
 
 type Sample struct {
@@ -138,7 +138,6 @@ func (m *Measures) Gauge(newSample *Sample) {
 		Points: [][]float64{
 			{float64(newSample.Time.Unix()), newSample.Value},
 		},
-		Type: TypeGauge,
 		Host: newSample.Host,
 		Tags: newSample.Tags,
 	}

@@ -33,6 +33,7 @@ func main() {
 					2,
 				},
 			},
+			// Gauge is optional as it's the default type
 			Type: metrics.TypeGauge,
 			// take leverage of the tagger to manage tags
 			// import "github.com/JulienBalestra/monitoring/pkg/tagger"

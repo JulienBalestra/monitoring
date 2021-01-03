@@ -404,7 +404,6 @@ func (c *Client) MetricClientUp(host string, tags ...string) {
 				1.0,
 			},
 		},
-		Type: metrics.TypeGauge,
 		Host: host,
 		Tags: tags,
 	}
@@ -420,7 +419,6 @@ func (c *Client) MetricClientShutdown(ctx context.Context, host string, tags ...
 					1.0,
 				},
 			},
-			Type: metrics.TypeGauge,
 			Host: host,
 			Tags: tags,
 		},
