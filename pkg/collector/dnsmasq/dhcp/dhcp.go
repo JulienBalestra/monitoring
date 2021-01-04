@@ -98,7 +98,7 @@ func (c *DHCP) Collect(_ context.Context) error {
 	}
 	now := time.Now()
 	timestampSeconds := float64(now.Unix())
-	hostTags := c.conf.Tagger.Get(c.conf.Host)
+	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
 	for _, line := range lines {
 		raw := bytes.Fields(line)
 		if len(raw) != 5 {

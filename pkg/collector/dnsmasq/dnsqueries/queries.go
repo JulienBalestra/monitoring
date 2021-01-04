@@ -95,7 +95,7 @@ func (c *Queries) Name() string {
 
 func (c *Queries) Collect(ctx context.Context) error {
 	now := time.Now()
-	hostTags := c.conf.Tagger.Get(c.conf.Host)
+	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
 	for metricName, dnsQuestion := range c.dnsCounterQuestions {
 		v, err := c.queryDnsmasqMetric(ctx, &dnsQuestion)
 		if err != nil {

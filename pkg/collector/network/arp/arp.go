@@ -85,7 +85,7 @@ func (c *ARP) Collect(_ context.Context) error {
 		return nil
 	}
 	now := time.Now()
-	hostTags := c.conf.Tagger.Get(c.conf.Host)
+	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
 	for _, line := range lines[1:] {
 		raw := strings.Fields(line)
 		if len(raw) != 6 {
