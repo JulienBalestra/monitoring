@@ -64,7 +64,7 @@ func (c *Statistics) Collect(_ context.Context) error {
 		return err
 	}
 
-	hostTags := c.conf.Tagger.Get(c.conf.Host)
+	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
 	now := time.Now()
 	for metricPath, statistic := range statistics {
 		// TODO use a buffer

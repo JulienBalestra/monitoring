@@ -89,7 +89,7 @@ func (c *Wireless) Collect(_ context.Context) error {
 	}
 	defer file.Close()
 	reader := bufio.NewReader(file)
-	hostTags := c.conf.Tagger.Get(c.conf.Host)
+	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
 	now := time.Now()
 	l := 0
 	for {

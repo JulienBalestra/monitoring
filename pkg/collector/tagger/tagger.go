@@ -44,7 +44,7 @@ func (c *Tagger) Name() string {
 
 func (c *Tagger) Collect(_ context.Context) error {
 	now := time.Now()
-	tags := c.conf.Tagger.Get(c.conf.Host)
+	tags := c.conf.Tagger.GetUnstable(c.conf.Host)
 
 	entities, keys, tagsNumber := c.conf.Tagger.Stats()
 	c.measures.GaugeDeviation(&metrics.Sample{
