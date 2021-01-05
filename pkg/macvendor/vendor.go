@@ -1,9 +1,9 @@
-package mac
+package macvendor
 
 import (
 	"strings"
 
-	"github.com/JulienBalestra/monitoring/pkg/mac/generated"
+	"github.com/JulienBalestra/monitoring/pkg/macvendor/generated"
 )
 
 const UnknownVendor = "unknown"

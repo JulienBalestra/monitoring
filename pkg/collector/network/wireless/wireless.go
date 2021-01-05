@@ -129,7 +129,7 @@ func (c *Wireless) Collect(_ context.Context) error {
 			Time:  now,
 			Host:  c.conf.Host,
 			Tags:  tags,
-		}, c.conf.CollectInterval*3)
+		}, c.conf.CollectInterval*60)
 
 		discardRetryV, err := strconv.ParseFloat(discardRetry, 10)
 		if err != nil {

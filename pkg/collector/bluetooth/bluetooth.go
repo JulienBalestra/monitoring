@@ -10,7 +10,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/bluetooth/exported"
 	"github.com/JulienBalestra/monitoring/pkg/fnv"
-	"github.com/JulienBalestra/monitoring/pkg/mac"
+	"github.com/JulienBalestra/monitoring/pkg/macvendor"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
 	"github.com/godbus/dbus/v5"
@@ -144,7 +144,7 @@ func (c *Bluetooth) Collect(ctx context.Context) error {
 				}
 
 				macAddress := c.replacer.Replace(device.Properties.Address)
-				vendor, ok := mac.GetVendor(macAddress)
+				vendor, ok := macvendor.GetVendor(macAddress)
 				if ok {
 					newTags = append(newTags, tagger.NewTagUnsafe(exported.MacVendorKey, vendor))
 				}

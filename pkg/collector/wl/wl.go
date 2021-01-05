@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/JulienBalestra/monitoring/pkg/macvendor"
+
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	exportedTags "github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
@@ -39,9 +41,7 @@ type WL struct {
 	wlCommands         []*wlCommand
 	wlCommandsToUpdate time.Time
 
-	leaseTag *tagger.Tag
-
-	deviationCache map[string]*metrics.Sample
+	defaultLeaseTag *tagger.Tag
 }
 
 type wlCommand struct {
@@ -70,13 +70,11 @@ func newWL(conf *collector.Config) *WL {
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 
 		// alloc once
-		commaByte:      []byte{'"'},
-		endlineByte:    []byte{'\n'},
-		spaceByte:      []byte{' '},
-		semiCoByte:     []byte{':'},
-		deviationCache: make(map[string]*metrics.Sample),
-
-		leaseTag: tagger.NewTagUnsafe(exportedTags.LeaseKey, tagger.MissingTagValue),
+		commaByte:       []byte{'"'},
+		endlineByte:     []byte{'\n'},
+		spaceByte:       []byte{' '},
+		semiCoByte:      []byte{':'},
+		defaultLeaseTag: tagger.NewTagUnsafe(exportedTags.LeaseKey, tagger.MissingTagValue),
 	}
 }
 
@@ -201,26 +199,46 @@ func (c *WL) Collect(ctx context.Context) error {
 	for _, command := range wlCommands {
 		b, err := exec.CommandContext(ctx, wlBinary, "-i", command.device, "assoclist").CombinedOutput()
 		if err != nil {
-			zap.L().Error("failed to run commmand", zap.Error(err))
+			zap.L().Error("failed to run command", zap.Error(err),
+				zap.String("device", command.device),
+			)
 			continue
 		}
 		for _, mac := range c.getMacs(b) {
+			macAddress := strings.ToLower(strings.ReplaceAll(mac, ":", "-"))
+			vendor := macvendor.GetVendorWithMacOrUnknown(macAddress)
 			b, err := exec.CommandContext(ctx, wlBinary, "-i", command.device, "rssi", mac).CombinedOutput()
 			if err != nil {
-				zap.L().Error("failed to run commmand", zap.Error(err))
+				zap.L().Error("failed to run command", zap.Error(err),
+					zap.String("device", command.device),
+					zap.String("mac", mac),
+					zap.String("vendor", vendor),
+				)
 				continue
 			}
 			rssi, err := strconv.ParseFloat(string(b[:len(b)-1]), 10)
 			if err != nil {
-				zap.L().Error("failed to parse rssi", zap.Error(err))
+				zap.L().Error("failed to parse rssi", zap.Error(err),
+					zap.String("device", command.device),
+					zap.String("mac", mac),
+					zap.String("vendor", vendor),
+				)
 				continue
 			}
-			macAddress := strings.ToLower(strings.ReplaceAll(mac, ":", "-"))
+			if rssi >= 0. {
+				zap.L().Warn("invalid rssi", zap.Float64("rssi", rssi),
+					zap.String("device", command.device),
+					zap.String("mac", mac),
+					zap.String("vendor", vendor),
+				)
+				continue
+			}
 			deviceTag := tagger.NewTagUnsafe("device", command.device)
 			ssidTag := tagger.NewTagUnsafe("ssid", command.ssid)
-			c.conf.Tagger.Update(macAddress, deviceTag, ssidTag)
+			vendorTag := tagger.NewTagUnsafe("vendor", vendor)
+			c.conf.Tagger.Update(macAddress, deviceTag, ssidTag, vendorTag)
 
-			tags := append(hostTags, c.conf.Tagger.GetUnstableWithDefault(macAddress, c.leaseTag)...)
+			tags := append(hostTags, c.conf.Tagger.GetUnstableWithDefault(macAddress, c.defaultLeaseTag)...)
 			tags = append(tags, "mac:"+macAddress)
 			s := &metrics.Sample{
 				Name:  wirelessMetricPrefix + "rssi.dbm",
