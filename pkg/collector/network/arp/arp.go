@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JulienBalestra/monitoring/pkg/mac"
+	"github.com/JulienBalestra/monitoring/pkg/macvendor"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	exportedTags "github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
@@ -103,7 +103,7 @@ func (c *ARP) Collect(_ context.Context) error {
 		}
 		macAddress = strings.ReplaceAll(macAddress, ":", "-")
 		macAddressTag, ipAddressTag, deviceTag := tagger.NewTagUnsafe("mac", macAddress), tagger.NewTagUnsafe("ip", ipAddress), tagger.NewTagUnsafe("device", device)
-		vendorTag := tagger.NewTagUnsafe("vendor", mac.GetVendorWithMacOrUnknown(macAddress))
+		vendorTag := tagger.NewTagUnsafe("vendor", macvendor.GetVendorWithMacOrUnknown(macAddress))
 		c.conf.Tagger.Update(ipAddress, macAddressTag, deviceTag, vendorTag)
 		c.conf.Tagger.Update(macAddress, ipAddressTag, deviceTag, vendorTag)
 

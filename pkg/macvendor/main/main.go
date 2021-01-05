@@ -102,7 +102,7 @@ func generateCode() error {
 	}
 	sort.Strings(macs)
 	t := template.Must(template.New("").Parse(packageTemplate))
-	f, err := os.Create(os.Getenv("GOPATH") + "/src/github.com/JulienBalestra/monitoring/pkg/mac/generated/generated.go")
+	f, err := os.Create(os.Getenv("GOPATH") + "/src/github.com/JulienBalestra/monitoring/pkg/macvendor/generated/generated.go")
 	if err != nil {
 		return err
 	}
