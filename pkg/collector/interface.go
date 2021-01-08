@@ -79,16 +79,18 @@ func RunCollection(ctx context.Context, c Collector) error {
 			return ctx.Err()
 
 		case <-ticker.C:
-			s := &metrics.Sample{
-				Name:  "collector.runs",
-				Value: 1,
-				Time:  time.Now(),
-				Host:  config.Host,
-				Tags:  append(config.Tagger.GetUnstable(config.Host), collectorTag),
-			}
+			now := time.Now()
 			err := c.Collect(ctx)
-			s.Tags = append(s.Tags, "success:"+strconv.FormatBool(err == nil))
-			_ = measures.Incr(s)
+			_ = measures.Incr(&metrics.Sample{
+				Name:  "collector.collections",
+				Value: 1,
+				Time:  now,
+				Host:  config.Host,
+				Tags: append(config.Tagger.GetUnstable(config.Host),
+					collectorTag,
+					"success:"+strconv.FormatBool(err == nil),
+				),
+			})
 			if err != nil {
 				extCtx.Error("failed collection", zap.Error(err))
 				continue
