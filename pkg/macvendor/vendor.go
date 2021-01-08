@@ -8,20 +8,22 @@ import (
 
 const UnknownVendor = "unknown"
 
-func GetVendorWithPrefix(macPrefix string) (string, bool) {
-	v, ok := generated.MacPrefixToVendor[macPrefix]
+func GetVendorWithPrefix(p string) (string, bool) {
+	p = strings.ToLower(p)
+	p = strings.ReplaceAll(p, ":", "-")
+	v, ok := generated.MacPrefixToVendor[p]
 	return v, ok
 }
 
-func GetVendorWithMac(mac string) (string, bool) {
-	if len(mac) < 8 {
+func GetVendorWithMac(s string) (string, bool) {
+	if len(s) < 8 {
 		return "", false
 	}
-	return GetVendorWithPrefix(mac[:8])
+	return GetVendorWithPrefix(s[:8])
 }
 
-func GetVendorWithMacOrUnknown(mac string) string {
-	m, ok := GetVendorWithPrefix(mac[:8])
+func GetVendorWithMacOrUnknown(s string) string {
+	m, ok := GetVendorWithPrefix(s[:8])
 	if !ok {
 		return UnknownVendor
 	}
@@ -32,8 +34,6 @@ func GetVendor(s string) (string, bool) {
 	if len(s) < 8 {
 		return "", false
 	}
-	s = strings.ToLower(s)
-	s = strings.ReplaceAll(s, ":", "-")
 	if len(s) == 8 {
 		return GetVendorWithPrefix(s)
 	}
