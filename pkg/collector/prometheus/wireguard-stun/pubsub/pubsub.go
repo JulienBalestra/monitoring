@@ -10,8 +10,6 @@ import (
 
 const (
 	CollectorName = "wireguard-stun-pubsub"
-
-	optionURL = "exporter-url"
 )
 
 type PubSub struct {
@@ -30,7 +28,7 @@ func NewPubSub(conf *collector.Config) collector.Collector {
 
 func (c *PubSub) DefaultOptions() map[string]string {
 	return map[string]string{
-		optionURL:                                    "http://127.0.0.1:8989/metrics",
+		exporter.OptionURL:                           "http://127.0.0.1:8989/metrics",
 		"wireguard_stun_pubsub_active_peers":         "wireguard_stun.pubsub.active.peers",
 		"wireguard_stun_pubsub_active_subscriptions": "wireguard_stun.pubsub.active.subscriptions",
 		"wireguard_stun_pubsub_new_subscriptions":    "wireguard_stun.pubsub.new.subscriptions",

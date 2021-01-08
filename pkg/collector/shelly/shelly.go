@@ -125,6 +125,7 @@ func (c *Shelly) Collect(ctx context.Context) error {
 		"ip:"+s.WifiSTA.IP,
 		"mac:"+parseMac(s.Mac),
 		"shelly-model:plug",
+		"collector:"+CollectorName,
 	)
 	now := time.Now()
 	c.measures.GaugeDeviation(&metrics.Sample{
@@ -142,14 +143,14 @@ func (c *Shelly) Collect(ctx context.Context) error {
 		Tags:  append(tags, "ssid:"+s.WifiSTA.SSID),
 	}, time.Minute)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:  "memory.free",
+		Name:  "memory.ram.free",
 		Value: float64(s.RamFree),
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
 	}, time.Minute)
 	c.measures.GaugeDeviation(&metrics.Sample{
-		Name:  "memory.total",
+		Name:  "memory.ram.total",
 		Value: float64(s.RamTotal),
 		Time:  now,
 		Host:  c.conf.Host,
@@ -170,7 +171,7 @@ func (c *Shelly) Collect(ctx context.Context) error {
 		Tags:  tags,
 	}, time.Minute)
 	c.measures.Gauge(&metrics.Sample{
-		Name:  "uptime",
+		Name:  "uptime.seconds",
 		Value: float64(s.Uptime),
 		Time:  now,
 		Host:  c.conf.Host,
@@ -195,13 +196,9 @@ func (c *Shelly) Collect(ctx context.Context) error {
 		})
 	}
 	for i, relay := range s.Relays {
-		boolAsFloat := 0.
-		if relay.IsOn {
-			boolAsFloat = 1.
-		}
 		c.measures.GaugeDeviation(&metrics.Sample{
 			Name:  "power.on",
-			Value: boolAsFloat,
+			Value: metrics.BoolToFloat(relay.IsOn),
 			Time:  now,
 			Host:  c.conf.Host,
 			Tags:  append(tags, "relay:"+strconv.Itoa(i)),

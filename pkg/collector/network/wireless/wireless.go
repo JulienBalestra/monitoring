@@ -116,7 +116,7 @@ func (c *Wireless) Collect(_ context.Context) error {
 			continue
 		}
 		deviceMacR := strings.ReplaceAll(string(deviceMac), ":", "-")
-		tags := append(hostTags, "device:"+device, "mac:"+deviceMacR)
+		tags := append(hostTags, "device:"+device, "mac:"+deviceMacR, "collector:"+CollectorName)
 
 		noiseV, err := strconv.ParseFloat(noise, 10)
 		if err != nil {

@@ -175,7 +175,7 @@ func (c *Log) Collect(ctx context.Context) error {
 			if err != nil {
 				continue
 			}
-			zctx.Info("successfully run collection")
+			zctx.Info("ok")
 
 		case line := <-lineCh:
 			c.processLine(queries, line)

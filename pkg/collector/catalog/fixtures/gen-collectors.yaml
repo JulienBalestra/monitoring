@@ -28,6 +28,8 @@ collectors:
     address: 127.0.0.1:53
 - name: golang
   interval: 2m0s
+- name: google-home
+  interval: 30s
 - name: load
   interval: 30s
 - name: memory

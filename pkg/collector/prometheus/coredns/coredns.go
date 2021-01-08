@@ -10,8 +10,6 @@ import (
 
 const (
 	CollectorName = "coredns"
-
-	optionURL = "exporter-url"
 )
 
 type Coredns struct {
@@ -31,7 +29,7 @@ func NewCoredns(conf *collector.Config) collector.Collector {
 func (c *Coredns) DefaultOptions() map[string]string {
 	return map[string]string{
 		// https://coredns.io/plugins/metrics
-		optionURL:                     "http://127.0.0.1:9153/metrics",
+		exporter.OptionURL:            "http://127.0.0.1:9153/metrics",
 		"coredns_dns_requests_total":  "coredns.dns.requests",
 		"coredns_dns_responses_total": "coredns.dns.responses",
 	}
