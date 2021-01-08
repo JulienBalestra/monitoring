@@ -113,7 +113,7 @@ func (c *GoogleHome) Collect(ctx context.Context) error {
 		tagger.NewTagUnsafe("ip", ipAddress),
 		tagger.NewTagUnsafe("ssid", e.SSID),
 		tagger.NewTagUnsafe("bssid", bssid),
-		tagger.NewTagUnsafe("vendor", macvendor.GetVendorWithMacOrUnknown(e.MacAddress)),
+		tagger.NewTagUnsafe("vendor", macvendor.GetVendorWithMacOrUnknown(macAddress)),
 	)
 	now, tags := time.Now(), c.conf.Tagger.GetUnstable(macAddress)
 	tags = append(tags,
