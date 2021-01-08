@@ -224,3 +224,10 @@ func IsCountZero(err error) bool {
 func IsCountNegative(err error) bool {
 	return err == errCountNegative
 }
+
+func BoolToFloat(b bool) float64 {
+	if b {
+		return 1.
+	}
+	return 0.
+}

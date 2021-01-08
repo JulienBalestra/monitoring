@@ -13,6 +13,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/dnslogs"
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/dnsqueries"
 	"github.com/JulienBalestra/monitoring/pkg/collector/golang"
+	"github.com/JulienBalestra/monitoring/pkg/collector/google_home"
 	"github.com/JulienBalestra/monitoring/pkg/collector/load"
 	"github.com/JulienBalestra/monitoring/pkg/collector/lunar"
 	"github.com/JulienBalestra/monitoring/pkg/collector/memory"
@@ -57,6 +58,7 @@ func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 		golang.CollectorName:      golang.NewGolang,
 		exporter.CollectorName:    exporter.NewPrometheusExporter,
 		coredns.CollectorName:     coredns.NewCoredns,
+		google_home.CollectorName: google_home.NewGoogleHome,
 
 		// WIP collectors:
 		bluetooth.CollectorName: bluetooth.NewBluetooth,

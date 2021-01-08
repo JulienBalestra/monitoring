@@ -55,7 +55,7 @@ func (c *Uptime) Collect(_ context.Context) error {
 		Value: float64(info.Uptime),
 		Time:  time.Now(),
 		Host:  c.conf.Host,
-		Tags:  c.conf.Tagger.GetUnstable(c.conf.Host),
+		Tags:  append(c.conf.Tagger.GetUnstable(c.conf.Host), "collector:"+CollectorName),
 	})
 	return nil
 }

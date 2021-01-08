@@ -20,7 +20,7 @@ import (
 const (
 	CollectorName = "prometheus"
 
-	optionURL = "exporter-url"
+	OptionURL = "exporter-url"
 
 	appProtobuf  = "application/vnd.google.protobuf"
 	protoMF      = "io.prometheus.client.MetricFamily"
@@ -108,7 +108,7 @@ func (c *Exporter) getMetricsFamily(req *http.Request) ([]*dto.MetricFamily, err
 		return families, fmt.Errorf("reading text format failed: %v", err)
 	}
 	for k, v := range c.conf.Options {
-		if k == optionURL {
+		if k == OptionURL {
 			continue
 		}
 		if v == "" {
@@ -138,10 +138,10 @@ func (c *Exporter) getTagsFromLabels(tags []string, labels []*dto.LabelPair) []s
 }
 
 func (c *Exporter) Collect(ctx context.Context) error {
-	u, ok := c.conf.Options[optionURL]
+	u, ok := c.conf.Options[OptionURL]
 	if !ok {
-		zap.L().Error("missing option", zap.String("options", optionURL))
-		return errors.New("missing option " + optionURL)
+		zap.L().Error("missing option", zap.String("options", OptionURL))
+		return errors.New("missing option " + OptionURL)
 	}
 	ctx, cancel := context.WithTimeout(ctx, c.conf.CollectInterval)
 	defer cancel()

@@ -239,7 +239,7 @@ func (c *WL) Collect(ctx context.Context) error {
 			c.conf.Tagger.Update(macAddress, deviceTag, ssidTag, vendorTag)
 
 			tags := append(hostTags, c.conf.Tagger.GetUnstableWithDefault(macAddress, c.defaultLeaseTag)...)
-			tags = append(tags, "mac:"+macAddress)
+			tags = append(tags, "mac:"+macAddress, "collector:", CollectorName)
 			s := &metrics.Sample{
 				Name:  wirelessMetricPrefix + "rssi.dbm",
 				Value: rssi,
@@ -250,6 +250,7 @@ func (c *WL) Collect(ctx context.Context) error {
 			c.measures.GaugeDeviation(s, c.conf.CollectInterval*3)
 		}
 	}
+
 	c.measures.Purge()
 	return nil
 }
