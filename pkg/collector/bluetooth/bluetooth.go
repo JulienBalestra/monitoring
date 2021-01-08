@@ -23,14 +23,14 @@ const (
 	CollectorName = "bluetooth"
 )
 
-type Bluetooth struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 	replacer *strings.Replacer
 }
 
 func NewBluetooth(conf *collector.Config) collector.Collector {
-	return &Bluetooth{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 		replacer: strings.NewReplacer(
@@ -40,25 +40,35 @@ func NewBluetooth(conf *collector.Config) collector.Collector {
 	}
 }
 
-func (c *Bluetooth) Config() *collector.Config {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Bluetooth) DefaultOptions() map[string]string {
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{}
 }
 
-func (c *Bluetooth) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 30
 }
 
-func (c *Bluetooth) IsDaemon() bool { return true }
+func (c *Collector) IsDaemon() bool { return true }
 
-func (c *Bluetooth) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *Bluetooth) Collect(ctx context.Context) error {
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) Collect(ctx context.Context) error {
 	conn, err := dbus.SystemBus()
 	if err != nil {
 		zap.L().Error("failed to create dbus connection", zap.Error(err))
@@ -184,8 +194,11 @@ func (c *Bluetooth) Collect(ctx context.Context) error {
 					Value: float64(device.Properties.RSSI),
 					Time:  time.Now(),
 					Host:  c.conf.Host,
-					Tags:  tags,
-				}, c.conf.CollectInterval*3)
+
+					Tags: append(tags,
+						c.Tags()...,
+					),
+				}, c.conf.CollectInterval*c.conf.CollectInterval)
 
 				err = a.RemoveDevice(device.Path())
 				if err != nil {
@@ -208,9 +221,9 @@ func (c *Bluetooth) Collect(ctx context.Context) error {
 					Value: float64(nb),
 					Time:  time.Now(),
 					Host:  c.conf.Host,
-					Tags: []string{
-						"vendor:" + vendor,
-					},
+					Tags: append(c.Tags(),
+						"vendor:"+vendor,
+					),
 				}, c.conf.CollectInterval*6)
 			}
 			wCtx, cancel := context.WithTimeout(ctx, c.conf.CollectInterval)

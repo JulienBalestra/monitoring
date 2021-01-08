@@ -25,40 +25,50 @@ const (
 	SentLogsErrors      = clientPrefix + "logs.errors"
 )
 
-type Client struct {
+type Collector struct {
 	conf *collector.Config
 
 	measures *metrics.Measures
 }
 
 func NewClient(conf *collector.Config) collector.Collector {
-	return &Client{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 
-func (c *Client) DefaultOptions() map[string]string {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{}
 }
 
-func (c *Client) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Minute * 2
 }
 
-func (c *Client) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *Client) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Client) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *Client) Collect(_ context.Context) error {
+func (c *Collector) Collect(_ context.Context) error {
 	now := time.Now()
-	tags := c.conf.Tagger.GetUnstable(c.conf.Host)
+	tags := c.Tags()
 	c.conf.MetricsClient.Stats.RLock()
 	samples := []*metrics.Sample{
 		{

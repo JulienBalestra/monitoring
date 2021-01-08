@@ -29,7 +29,7 @@ const (
 	wirelessMetricPrefix = "network.wireless."
 )
 
-type WL struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 
@@ -53,19 +53,29 @@ func NewWL(conf *collector.Config) collector.Collector {
 	return newWL(conf)
 }
 
-func (c *WL) DefaultOptions() map[string]string {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		optionWLBinary:     "/usr/sbin/wl",
 		optionWirelessPath: "/proc/net/wireless",
 	}
 }
 
-func (c *WL) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 15
 }
 
-func newWL(conf *collector.Config) *WL {
-	return &WL{
+func newWL(conf *collector.Config) *Collector {
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 
@@ -78,17 +88,17 @@ func newWL(conf *collector.Config) *WL {
 	}
 }
 
-func (c *WL) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *WL) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *WL) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *WL) getSSID(b []byte) (string, error) {
+func (c *Collector) getSSID(b []byte) (string, error) {
 	start := bytes.Index(b, c.commaByte)
 	if start == -1 {
 		return "", errors.New("invalid wl output")
@@ -100,7 +110,7 @@ func (c *WL) getSSID(b []byte) (string, error) {
 	return string(b[start+1 : start+end+1]), nil
 }
 
-func (c *WL) getWLCommands(ctx context.Context) ([]*wlCommand, error) {
+func (c *Collector) getWLCommands(ctx context.Context) ([]*wlCommand, error) {
 	var wlCommands []*wlCommand
 
 	wlBinaryFile, ok := c.conf.Options[optionWLBinary]
@@ -170,7 +180,7 @@ func (c *WL) getWLCommands(ctx context.Context) ([]*wlCommand, error) {
 	return c.wlCommands, nil
 }
 
-func (c *WL) getMacs(b []byte) []string {
+func (c *Collector) getMacs(b []byte) []string {
 	var macs []string
 	for _, line := range bytes.Split(b, c.endlineByte) {
 		index := bytes.Index(line, c.spaceByte)
@@ -182,7 +192,7 @@ func (c *WL) getMacs(b []byte) []string {
 	return macs
 }
 
-func (c *WL) Collect(ctx context.Context) error {
+func (c *Collector) Collect(ctx context.Context) error {
 	wlBinary, ok := c.conf.Options[optionWLBinary]
 	if !ok {
 		zap.L().Error("missing option", zap.String("options", optionWLBinary))
@@ -195,7 +205,7 @@ func (c *WL) Collect(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
+	hostTags := c.Tags()
 	for _, command := range wlCommands {
 		b, err := exec.CommandContext(ctx, wlBinary, "-i", command.device, "assoclist").CombinedOutput()
 		if err != nil {
@@ -239,7 +249,7 @@ func (c *WL) Collect(ctx context.Context) error {
 			c.conf.Tagger.Update(macAddress, deviceTag, ssidTag, vendorTag)
 
 			tags := append(hostTags, c.conf.Tagger.GetUnstableWithDefault(macAddress, c.defaultLeaseTag)...)
-			tags = append(tags, "mac:"+macAddress, "collector:", CollectorName)
+			tags = append(tags, "mac:"+macAddress)
 			s := &metrics.Sample{
 				Name:  wirelessMetricPrefix + "rssi.dbm",
 				Value: rssi,
@@ -247,7 +257,7 @@ func (c *WL) Collect(ctx context.Context) error {
 				Host:  c.conf.Host,
 				Tags:  tags,
 			}
-			c.measures.GaugeDeviation(s, c.conf.CollectInterval*3)
+			c.measures.GaugeDeviation(s, c.conf.CollectInterval*c.conf.CollectInterval)
 		}
 	}
 

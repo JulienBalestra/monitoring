@@ -13,38 +13,48 @@ const (
 	CollectorName = "golang"
 )
 
-type Golang struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 }
 
 func NewGolang(conf *collector.Config) collector.Collector {
-	return &Golang{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 
-func (c *Golang) DefaultOptions() map[string]string {
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{}
 }
 
-func (c *Golang) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Minute * 2
 }
 
-func (c *Golang) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Golang) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *Golang) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *Golang) Collect(_ context.Context) error {
-	now, tags := time.Now(), c.conf.Tagger.GetUnstable(c.conf.Host)
+func (c *Collector) Collect(_ context.Context) error {
+	now, tags := time.Now(), c.Tags()
 
 	memstat := &runtime.MemStats{}
 	runtime.ReadMemStats(memstat)
@@ -55,14 +65,14 @@ func (c *Golang) Collect(_ context.Context) error {
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*3)
+	}, c.conf.CollectInterval*c.conf.CollectInterval)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "golang.heap.alloc",
 		Value: float64(memstat.HeapAlloc),
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*3)
+	}, c.conf.CollectInterval*c.conf.CollectInterval)
 
 	return nil
 }

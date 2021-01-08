@@ -24,35 +24,45 @@ const (
 	optionIgnoreEndpoint = "ignore-endpoint"
 )
 
-type Wireguard struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 }
 
 func NewWireguard(conf *collector.Config) collector.Collector {
-	return &Wireguard{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 
-func (c *Wireguard) DefaultOptions() map[string]string {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		optionIgnoreEndpoint: "127.0.0.1:9",
 	}
 }
 
-func (c *Wireguard) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 10
 }
 
-func (c *Wireguard) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Wireguard) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *Wireguard) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
@@ -72,7 +82,7 @@ func getAllowedIPsTag(n []net.IPNet) string {
 	return strings.Join(allowedIps, ",")
 }
 
-func (c *Wireguard) Collect(_ context.Context) error {
+func (c *Collector) Collect(_ context.Context) error {
 	wgc, err := wgctrl.New()
 	if err != nil {
 		return err

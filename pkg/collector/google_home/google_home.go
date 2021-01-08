@@ -24,7 +24,7 @@ const (
 	OptionIP = "ip"
 )
 
-type GoogleHome struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 
@@ -48,7 +48,7 @@ type EurekaInfo struct {
 }
 
 func NewGoogleHome(conf *collector.Config) collector.Collector {
-	return &GoogleHome{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 		client: &http.Client{
@@ -60,25 +60,35 @@ func NewGoogleHome(conf *collector.Config) collector.Collector {
 	}
 }
 
-func (c *GoogleHome) DefaultOptions() map[string]string {
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{}
 }
 
-func (c *GoogleHome) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 30
 }
 
-func (c *GoogleHome) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *GoogleHome) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *GoogleHome) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *GoogleHome) Collect(ctx context.Context) error {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) Collect(ctx context.Context) error {
 	ipAddress, ok := c.conf.Options[OptionIP]
 	if !ok {
 		zap.L().Error("missing option", zap.String("options", OptionIP))
@@ -115,10 +125,9 @@ func (c *GoogleHome) Collect(ctx context.Context) error {
 		tagger.NewTagUnsafe("bssid", bssid),
 		tagger.NewTagUnsafe("vendor", macvendor.GetVendorWithMacOrUnknown(macAddress)),
 	)
-	now, tags := time.Now(), c.conf.Tagger.GetUnstable(macAddress)
+	now, tags := time.Now(), append(c.conf.Tagger.GetUnstable(macAddress), c.Tags()...)
 	tags = append(tags,
 		"mac:"+macAddress,
-		"collector:"+CollectorName,
 		"build-version:"+e.BuildVersion,
 		"cast-build-revision:"+e.CastBuildRevision,
 		"device-name:"+e.Name,

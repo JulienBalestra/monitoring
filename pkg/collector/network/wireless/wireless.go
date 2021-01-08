@@ -37,40 +37,50 @@ Inter-| sta-|   Quality        |   Discarded packets               | Missed | WE
 
 */
 
-type Wireless struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 }
 
 func NewWireless(conf *collector.Config) collector.Collector {
-	return &Wireless{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 
-func (c *Wireless) DefaultOptions() map[string]string {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		optionSysClassPath: "/sys/class/net/",
 		optionWirelessFile: "/proc/net/wireless",
 	}
 }
 
-func (c *Wireless) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 10
 }
 
-func (c *Wireless) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Wireless) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *Wireless) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *Wireless) Collect(_ context.Context) error {
+func (c *Collector) Collect(_ context.Context) error {
 	wirelessPath, ok := c.conf.Options[optionWirelessFile]
 	if !ok {
 		zap.L().Error("missing option", zap.String("options", optionWirelessFile))
@@ -89,7 +99,7 @@ func (c *Wireless) Collect(_ context.Context) error {
 	}
 	defer file.Close()
 	reader := bufio.NewReader(file)
-	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
+	hostTags := c.Tags()
 	now := time.Now()
 	l := 0
 	for {
@@ -116,7 +126,7 @@ func (c *Wireless) Collect(_ context.Context) error {
 			continue
 		}
 		deviceMacR := strings.ReplaceAll(string(deviceMac), ":", "-")
-		tags := append(hostTags, "device:"+device, "mac:"+deviceMacR, "collector:"+CollectorName)
+		tags := append(hostTags, "device:"+device, "mac:"+deviceMacR)
 
 		noiseV, err := strconv.ParseFloat(noise, 10)
 		if err != nil {

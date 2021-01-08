@@ -13,37 +13,47 @@ const (
 	CollectorName = "uptime"
 )
 
-type Uptime struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 }
 
 func NewUptime(conf *collector.Config) collector.Collector {
-	return &Uptime{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 
-func (c *Uptime) DefaultOptions() map[string]string {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{}
 }
 
-func (c *Uptime) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Minute * 5
 }
 
-func (c *Uptime) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Uptime) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *Uptime) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *Uptime) Collect(_ context.Context) error {
+func (c *Collector) Collect(_ context.Context) error {
 	info := &syscall.Sysinfo_t{}
 	err := syscall.Sysinfo(info)
 	if err != nil {
@@ -55,7 +65,7 @@ func (c *Uptime) Collect(_ context.Context) error {
 		Value: float64(info.Uptime),
 		Time:  time.Now(),
 		Host:  c.conf.Host,
-		Tags:  append(c.conf.Tagger.GetUnstable(c.conf.Host), "collector:"+CollectorName),
+		Tags:  c.Tags(),
 	})
 	return nil
 }

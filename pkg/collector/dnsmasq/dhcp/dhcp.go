@@ -36,7 +36,7 @@ const (
 1586868164 60:01:94:4e:dd:8a 192.168.1.114 ESP_4EDD8A *
 */
 
-type DHCP struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 
@@ -44,7 +44,7 @@ type DHCP struct {
 }
 
 func NewDNSMasqDHCP(conf *collector.Config) collector.Collector {
-	return &DHCP{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 
@@ -52,27 +52,37 @@ func NewDNSMasqDHCP(conf *collector.Config) collector.Collector {
 	}
 }
 
-func (c *DHCP) DefaultOptions() map[string]string {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		optionDNSMasqLeaseFile: "/tmp/dnsmasq.leases",
 	}
 }
 
-func (c *DHCP) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 30
 }
 
-func (c *DHCP) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *DHCP) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *DHCP) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *DHCP) Collect(_ context.Context) error {
+func (c *Collector) Collect(_ context.Context) error {
 	dnsmasqFile, ok := c.conf.Options[optionDNSMasqLeaseFile]
 	if !ok {
 		zap.L().Error("missing option", zap.String("options", optionDNSMasqLeaseFile))
@@ -98,7 +108,7 @@ func (c *DHCP) Collect(_ context.Context) error {
 	}
 	now := time.Now()
 	timestampSeconds := float64(now.Unix())
-	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
+	tags := c.Tags()
 	for _, line := range lines {
 		raw := bytes.Fields(line)
 		if len(raw) != 5 {
@@ -137,7 +147,7 @@ func (c *DHCP) Collect(_ context.Context) error {
 			Value: leaseStarted - timestampSeconds,
 			Time:  now,
 			Host:  c.conf.Host,
-			Tags: append(hostTags,
+			Tags: append(tags,
 				leaseNameTag.String(),
 				macAddressTag.String(),
 				ipAddressTag.String(),
