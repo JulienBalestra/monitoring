@@ -22,7 +22,7 @@ const (
 	maxAgeConntrackEntries = time.Hour
 )
 
-type Conntrack struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 
@@ -35,8 +35,18 @@ func NewConntrack(conf *collector.Config) collector.Collector {
 	return newConntrack(conf)
 }
 
-func newConntrack(conf *collector.Config) *Conntrack {
-	return &Conntrack{
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func newConntrack(conf *collector.Config) *Collector {
+	return &Collector{
 		conf:      conf,
 		measures:  metrics.NewMeasuresWithMaxAge(conf.MetricsClient.ChanSeries, maxAgeConntrackEntries),
 		tagLease:  tagger.NewTagUnsafe(exported.LeaseKey, tagger.MissingTagValue),
@@ -44,23 +54,23 @@ func newConntrack(conf *collector.Config) *Conntrack {
 	}
 }
 
-func (c *Conntrack) DefaultOptions() map[string]string {
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		optionConntrackFile: "/proc/net/ip_conntrack",
 	}
 }
 
-func (c *Conntrack) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 10
 }
 
-func (c *Conntrack) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Conntrack) IsDaemon() bool { return true }
+func (c *Collector) IsDaemon() bool { return true }
 
-func (c *Conntrack) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
@@ -85,8 +95,8 @@ type aggregation struct {
 	state                string
 }
 
-func (c *Conntrack) aggregationToSamples(now time.Time, aggr *aggregation) *metrics.Sample {
-	tags := append(c.conf.Tagger.GetUnstable(c.conf.Host),
+func (c *Collector) aggregationToSamples(now time.Time, aggr *aggregation) *metrics.Sample {
+	tags := append(c.Tags(),
 		c.conf.Tagger.GetUnstableWithDefault(aggr.sourceIP,
 			c.tagLease,
 			c.tagDevice,
@@ -106,7 +116,7 @@ func (c *Conntrack) aggregationToSamples(now time.Time, aggr *aggregation) *metr
 	}
 }
 
-func (c *Conntrack) Collect(ctx context.Context) error {
+func (c *Collector) Collect(ctx context.Context) error {
 	after := time.After(0)
 
 	aggregations := make(map[string]*aggregation)
@@ -120,7 +130,7 @@ func (c *Conntrack) Collect(ctx context.Context) error {
 		case <-ticker.C:
 			now := time.Now()
 			for _, aggr := range aggregations {
-				_ = c.measures.GaugeDeviation(c.aggregationToSamples(now, aggr), c.conf.CollectInterval*3)
+				_ = c.measures.GaugeDeviation(c.aggregationToSamples(now, aggr), c.conf.CollectInterval*c.conf.CollectInterval)
 			}
 			c.measures.Purge()
 			aggregations = make(map[string]*aggregation)

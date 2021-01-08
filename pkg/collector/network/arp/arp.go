@@ -33,14 +33,14 @@ IP address       HW type     Flags       HW address            Mask     Device
 192.168.1.134    0x1         0x2         b0:2a:43:1e:62:99     *        br0
 */
 
-type ARP struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 	leaseTag *tagger.Tag
 }
 
 func NewARP(conf *collector.Config) collector.Collector {
-	return &ARP{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 
@@ -48,27 +48,37 @@ func NewARP(conf *collector.Config) collector.Collector {
 	}
 }
 
-func (c *ARP) DefaultOptions() map[string]string {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		optionARPFile: "/proc/self/net/arp",
 	}
 }
 
-func (c *ARP) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 10
 }
 
-func (c *ARP) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *ARP) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *ARP) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *ARP) Collect(_ context.Context) error {
+func (c *Collector) Collect(_ context.Context) error {
 	arpFile, ok := c.conf.Options[optionARPFile]
 	if !ok {
 		zap.L().Error("missing option", zap.String("options", optionARPFile))
@@ -116,7 +126,7 @@ func (c *ARP) Collect(_ context.Context) error {
 			Time:  now,
 			Host:  c.conf.Host,
 			Tags:  tags,
-		}, c.conf.CollectInterval*3)
+		}, c.conf.CollectInterval*c.conf.CollectInterval)
 	}
 	c.measures.Purge()
 	return nil

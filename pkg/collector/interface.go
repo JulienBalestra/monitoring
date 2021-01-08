@@ -18,6 +18,7 @@ type Config struct {
 	Host            string
 	CollectInterval time.Duration
 	Options         map[string]string
+	Tags            []string
 }
 
 func (c Config) OverrideCollectInterval(d time.Duration) *Config {
@@ -32,6 +33,8 @@ type Collector interface {
 	IsDaemon() bool
 	DefaultOptions() map[string]string
 	DefaultCollectInterval() time.Duration
+	DefaultTags() []string
+	Tags() []string
 }
 
 func RunCollection(ctx context.Context, c Collector) error {
@@ -42,6 +45,9 @@ func RunCollection(ctx context.Context, c Collector) error {
 	}
 	if config.CollectInterval == 0 {
 		config.CollectInterval = c.DefaultCollectInterval()
+	}
+	if config.Tags == nil {
+		config.Tags = c.DefaultTags()
 	}
 
 	zctx := zap.L().With(

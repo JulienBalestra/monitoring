@@ -21,7 +21,7 @@ const (
 	optionDNSMasqAddress = "address"
 )
 
-type Queries struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 
@@ -31,7 +31,7 @@ type Queries struct {
 }
 
 func NewDNSMasqQueries(conf *collector.Config) collector.Collector {
-	return &Queries{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 
@@ -73,29 +73,39 @@ func NewDNSMasqQueries(conf *collector.Config) collector.Collector {
 	}
 }
 
-func (c *Queries) DefaultOptions() map[string]string {
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		optionDNSMasqAddress: "127.0.0.1:53",
 	}
 }
 
-func (c *Queries) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 30
 }
 
-func (c *Queries) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *Queries) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Queries) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *Queries) Collect(ctx context.Context) error {
+func (c *Collector) Collect(ctx context.Context) error {
 	now := time.Now()
-	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
+	tags := c.Tags()
 	for metricName, dnsQuestion := range c.dnsCounterQuestions {
 		v, err := c.queryDnsmasqMetric(ctx, &dnsQuestion)
 		if err != nil {
@@ -110,7 +120,7 @@ func (c *Queries) Collect(ctx context.Context) error {
 			Value: v,
 			Time:  now,
 			Host:  c.conf.Host,
-			Tags:  hostTags,
+			Tags:  tags,
 		})
 	}
 	for metricName, dnsQuestion := range c.dnsGaugeQuestions {
@@ -127,14 +137,14 @@ func (c *Queries) Collect(ctx context.Context) error {
 			Value: v,
 			Time:  now,
 			Host:  c.conf.Host,
-			Tags:  hostTags,
+			Tags:  tags,
 		}, time.Minute*30)
 	}
 	c.measures.Purge()
 	return nil
 }
 
-func (c *Queries) queryDnsmasqMetric(ctx context.Context, question *dns.Question) (float64, error) {
+func (c *Collector) queryDnsmasqMetric(ctx context.Context, question *dns.Question) (float64, error) {
 	address, ok := c.conf.Options[optionDNSMasqAddress]
 	if !ok {
 		zap.L().Error("missing option", zap.String("options", optionDNSMasqAddress))

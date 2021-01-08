@@ -23,7 +23,7 @@ type statisticFile struct {
 	deviceName string
 }
 
-type Statistics struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 
@@ -32,39 +32,49 @@ type Statistics struct {
 }
 
 func NewStatistics(conf *collector.Config) collector.Collector {
-	return &Statistics{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 
-func (c *Statistics) DefaultOptions() map[string]string {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		optionSysClassPath: "/sys/class/net/",
 	}
 }
 
-func (c *Statistics) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 10
 }
 
-func (c *Statistics) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Statistics) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *Statistics) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *Statistics) Collect(_ context.Context) error {
+func (c *Collector) Collect(_ context.Context) error {
 	statistics, err := c.getStatisticsFiles()
 	if err != nil {
 		return err
 	}
 
-	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
+	hostTags := c.Tags()
 	now := time.Now()
 	for metricPath, statistic := range statistics {
 		// TODO use a buffer
@@ -92,7 +102,7 @@ func (c *Statistics) Collect(_ context.Context) error {
 	return nil
 }
 
-func (c *Statistics) getStatisticsFiles() (map[string]*statisticFile, error) {
+func (c *Collector) getStatisticsFiles() (map[string]*statisticFile, error) {
 	now := time.Now()
 	if now.Before(c.statisticsFilesToUpdate) && c.statisticsFiles != nil {
 		return c.statisticsFiles, nil

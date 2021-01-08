@@ -14,6 +14,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/dnsqueries"
 	"github.com/JulienBalestra/monitoring/pkg/collector/golang"
 	"github.com/JulienBalestra/monitoring/pkg/collector/google_home"
+	"github.com/JulienBalestra/monitoring/pkg/collector/http_collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/load"
 	"github.com/JulienBalestra/monitoring/pkg/collector/lunar"
 	"github.com/JulienBalestra/monitoring/pkg/collector/memory"
@@ -38,27 +39,28 @@ import (
 
 func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 	return map[string]func(*collector.Config) collector.Collector{
-		dnsqueries.CollectorName:  dnsqueries.NewDNSMasqQueries,
-		dnslogs.CollectorName:     dnslogs.NewDnsMasqLog,
-		load.CollectorName:        load.NewLoad,
-		memory.CollectorName:      memory.NewMemory,
-		arp.CollectorName:         arp.NewARP,
-		conntrack.CollectorName:   conntrack.NewConntrack,
-		statistics.CollectorName:  statistics.NewStatistics,
-		wireless.CollectorName:    wireless.NewWireless,
-		shelly.CollectorName:      shelly.NewShelly,
-		ddwrt.CollectorName:       ddwrt.NewTemperature,
-		tagger.CollectorName:      tagger.NewTagger,
-		wl.CollectorName:          wl.NewWL,
-		datadog.CollectorName:     datadog.NewClient,
-		dhcp.CollectorName:        dhcp.NewDNSMasqDHCP,
-		raspberrypi.CollectorName: raspberrypi.NewTemperature,
-		wireguard.CollectorName:   wireguard.NewWireguard,
-		uptime.CollectorName:      uptime.NewUptime,
-		golang.CollectorName:      golang.NewGolang,
-		exporter.CollectorName:    exporter.NewPrometheusExporter,
-		coredns.CollectorName:     coredns.NewCoredns,
-		google_home.CollectorName: google_home.NewGoogleHome,
+		dnsqueries.CollectorName:     dnsqueries.NewDNSMasqQueries,
+		dnslogs.CollectorName:        dnslogs.NewDnsMasqLog,
+		load.CollectorName:           load.NewLoad,
+		memory.CollectorName:         memory.NewMemory,
+		arp.CollectorName:            arp.NewARP,
+		conntrack.CollectorName:      conntrack.NewConntrack,
+		statistics.CollectorName:     statistics.NewStatistics,
+		wireless.CollectorName:       wireless.NewWireless,
+		shelly.CollectorName:         shelly.NewShelly,
+		ddwrt.CollectorName:          ddwrt.NewTemperature,
+		tagger.CollectorName:         tagger.NewTagger,
+		wl.CollectorName:             wl.NewWL,
+		datadog.CollectorName:        datadog.NewClient,
+		dhcp.CollectorName:           dhcp.NewDNSMasqDHCP,
+		raspberrypi.CollectorName:    raspberrypi.NewTemperature,
+		wireguard.CollectorName:      wireguard.NewWireguard,
+		uptime.CollectorName:         uptime.NewUptime,
+		golang.CollectorName:         golang.NewGolang,
+		exporter.CollectorName:       exporter.NewPrometheusExporter,
+		coredns.CollectorName:        coredns.NewCoredns,
+		google_home.CollectorName:    google_home.NewGoogleHome,
+		http_collector.CollectorName: http_collector.NewHTTP,
 
 		// WIP collectors:
 		bluetooth.CollectorName: bluetooth.NewBluetooth,
@@ -75,6 +77,7 @@ type Collector struct {
 	Name     string            `yaml:"name"`
 	Interval time.Duration     `yaml:"interval,omitempty"`
 	Options  map[string]string `yaml:"options,omitempty"`
+	Tags     []string          `yaml:"tags,omitempty"`
 }
 
 func ParseConfigFile(f string) (*ConfigFile, error) {
@@ -110,6 +113,7 @@ func GenerateCollectorConfigFile(f string) error {
 			Name:     name,
 			Interval: coll.DefaultCollectInterval(),
 			Options:  coll.DefaultOptions(),
+			Tags:     coll.DefaultTags(),
 		})
 	}
 	sort.Slice(c.Collectors, func(i, j int) bool {

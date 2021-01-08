@@ -12,37 +12,47 @@ const (
 	CollectorName = "tagger"
 )
 
-type Tagger struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 }
 
 func NewTagger(conf *collector.Config) collector.Collector {
-	return &Tagger{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 
-func (c *Tagger) DefaultOptions() map[string]string {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{}
 }
 
-func (c *Tagger) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Minute * 2
 }
 
-func (c *Tagger) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Tagger) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *Tagger) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *Tagger) Collect(_ context.Context) error {
+func (c *Collector) Collect(_ context.Context) error {
 	now := time.Now()
 	tags := c.conf.Tagger.GetUnstable(c.conf.Host)
 
@@ -53,20 +63,20 @@ func (c *Tagger) Collect(_ context.Context) error {
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*3)
+	}, c.conf.CollectInterval*c.conf.CollectInterval)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "tagger.keys",
 		Value: keys,
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*3)
+	}, c.conf.CollectInterval*c.conf.CollectInterval)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "tagger.tags",
 		Value: tagsNumber,
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*3)
+	}, c.conf.CollectInterval*c.conf.CollectInterval)
 	return nil
 }

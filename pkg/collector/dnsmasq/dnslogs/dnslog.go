@@ -26,7 +26,7 @@ const (
 	optionLogFacilityKey = "log-facility-file"
 )
 
-type Log struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 
@@ -44,8 +44,8 @@ type dnsQuery struct {
 	count     float64
 }
 
-func newLog(conf *collector.Config) *Log {
-	return &Log{
+func newLog(conf *collector.Config) *Collector {
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 
@@ -69,7 +69,17 @@ func NewDnsMasqLog(conf *collector.Config) collector.Collector {
 	return newLog(conf)
 }
 
-func (c *Log) DefaultOptions() map[string]string {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		/*
 			dnsmasq configfile:
@@ -80,23 +90,23 @@ func (c *Log) DefaultOptions() map[string]string {
 	}
 }
 
-func (c *Log) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 10
 }
 
-func (c *Log) IsDaemon() bool { return true }
+func (c *Collector) IsDaemon() bool { return true }
 
-func (c *Log) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Log) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *Log) queryToSample(query *dnsQuery) *metrics.Sample {
+func (c *Collector) queryToSample(query *dnsQuery) *metrics.Sample {
 	tags := append(c.conf.Tagger.GetUnstableWithDefault(query.ipAddress, c.leaseTag),
-		c.conf.Tagger.GetUnstable(c.conf.Host)...)
+		c.Tags()...)
 	tags = append(tags, "domain:"+query.domain, "type:"+query.queryType)
 	return &metrics.Sample{
 		Name:  dnsmasqQueryMetric,
@@ -107,7 +117,7 @@ func (c *Log) queryToSample(query *dnsQuery) *metrics.Sample {
 	}
 }
 
-func (c *Log) Collect(ctx context.Context) error {
+func (c *Collector) Collect(ctx context.Context) error {
 	lineCh := make(chan []byte)
 	defer close(lineCh)
 
@@ -183,7 +193,7 @@ func (c *Log) Collect(ctx context.Context) error {
 	}
 }
 
-func (c *Log) tail(ctx context.Context, ch chan []byte, f string, end bool) error {
+func (c *Collector) tail(ctx context.Context, ch chan []byte, f string, end bool) error {
 	file, err := os.Open(f)
 	if err != nil {
 		return err
@@ -252,7 +262,7 @@ func (c *Log) tail(ctx context.Context, ch chan []byte, f string, end bool) erro
 	}
 }
 
-func (c *Log) processLine(counters map[string]*dnsQuery, line []byte) {
+func (c *Collector) processLine(counters map[string]*dnsQuery, line []byte) {
 	// minimal len of a dnsquery
 	if len(line) < 53 {
 		return

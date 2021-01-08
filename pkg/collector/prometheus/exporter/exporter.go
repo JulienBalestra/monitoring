@@ -32,7 +32,7 @@ const (
 		"q=0.3"
 )
 
-type Exporter struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 
@@ -40,7 +40,7 @@ type Exporter struct {
 }
 
 func NewPrometheusExporter(conf *collector.Config) collector.Collector {
-	return &Exporter{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 
@@ -48,25 +48,35 @@ func NewPrometheusExporter(conf *collector.Config) collector.Collector {
 	}
 }
 
-func (c *Exporter) DefaultOptions() map[string]string {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{}
 }
 
-func (c *Exporter) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 30
 }
 
-func (c *Exporter) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Exporter) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *Exporter) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *Exporter) getMetricsFamily(req *http.Request) ([]*dto.MetricFamily, error) {
+func (c *Collector) getMetricsFamily(req *http.Request) ([]*dto.MetricFamily, error) {
 	var families []*dto.MetricFamily
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -124,7 +134,7 @@ func (c *Exporter) getMetricsFamily(req *http.Request) ([]*dto.MetricFamily, err
 	return families, nil
 }
 
-func (c *Exporter) getTagsFromLabels(tags []string, labels []*dto.LabelPair) []string {
+func (c *Collector) getTagsFromLabels(tags []string, labels []*dto.LabelPair) []string {
 	for _, elt := range labels {
 		if *elt.Value == "" {
 			continue
@@ -137,7 +147,7 @@ func (c *Exporter) getTagsFromLabels(tags []string, labels []*dto.LabelPair) []s
 	return tags
 }
 
-func (c *Exporter) Collect(ctx context.Context) error {
+func (c *Collector) Collect(ctx context.Context) error {
 	u, ok := c.conf.Options[OptionURL]
 	if !ok {
 		zap.L().Error("missing option", zap.String("options", OptionURL))
@@ -163,7 +173,7 @@ func (c *Exporter) Collect(ctx context.Context) error {
 				continue
 			}
 			m := *mf.Metric[0]
-			tags := c.conf.Tagger.GetUnstable(c.conf.Host)
+			tags := c.Tags()
 			tags = c.getTagsFromLabels(tags, m.Label)
 			_ = c.measures.CountWithNegativeReset(&metrics.Sample{
 				Name:  c.conf.Options[*mf.Name],
@@ -177,7 +187,7 @@ func (c *Exporter) Collect(ctx context.Context) error {
 				continue
 			}
 			m := *mf.Metric[0]
-			tags := c.conf.Tagger.GetUnstable(c.conf.Host)
+			tags := c.Tags()
 			tags = c.getTagsFromLabels(tags, m.Label)
 			c.measures.GaugeDeviation(&metrics.Sample{
 				Name:  c.conf.Options[*mf.Name],
@@ -185,7 +195,7 @@ func (c *Exporter) Collect(ctx context.Context) error {
 				Time:  now,
 				Host:  c.conf.Host,
 				Tags:  tags,
-			}, c.conf.CollectInterval*3)
+			}, c.conf.CollectInterval*c.conf.CollectInterval)
 		}
 	}
 	return nil

@@ -4,75 +4,125 @@ collectors:
   options:
     lunar-service-uuid: 00002a80-0000-1000-8000-00805f9b34fb
     lunar-uuid: 00001820-0000-1000-8000-00805f9b34fb
+  tags:
+  - collector:acaia-lunar
 - name: bluetooth
   interval: 30s
+  tags:
+  - collector:bluetooth
 - name: coredns
   interval: 30s
   options:
     coredns_dns_requests_total: coredns.dns.requests
     coredns_dns_responses_total: coredns.dns.responses
     exporter-url: http://127.0.0.1:9153/metrics
+  tags:
+  - collector:coredns
 - name: datadog-client
   interval: 2m0s
+  tags:
+  - collector:datadog-client
 - name: dnsmasq-dhcp
   interval: 30s
   options:
     leases-file: /tmp/dnsmasq.leases
+  tags:
+  - collector:dnsmasq-dhcp
 - name: dnsmasq-log
   interval: 10s
   options:
     log-facility-file: /tmp/dnsmasq.log
+  tags:
+  - collector:dnsmasq-log
 - name: dnsmasq-queries
   interval: 30s
   options:
     address: 127.0.0.1:53
+  tags:
+  - collector:dnsmasq-queries
 - name: golang
   interval: 2m0s
+  tags:
+  - collector:golang
 - name: google-home
   interval: 30s
+  tags:
+  - collector:google-home
+- name: http
+  interval: 30s
+  options:
+    method: GET
+  tags:
+  - collector:http
 - name: load
   interval: 30s
+  tags:
+  - collector:load
 - name: memory
   interval: 1m0s
+  tags:
+  - collector:memory
 - name: network-arp
   interval: 10s
   options:
     arp-file: /proc/self/net/arp
+  tags:
+  - collector:network-arp
 - name: network-conntrack
   interval: 10s
   options:
     conntrack-file: /proc/net/ip_conntrack
+  tags:
+  - collector:network-conntrack
 - name: network-statistics
   interval: 10s
   options:
     sys-class-net-path: /sys/class/net/
+  tags:
+  - collector:network-statistics
 - name: network-wireless
   interval: 10s
   options:
     proc-net-wireless-file: /proc/net/wireless
     sys-class-net-path: /sys/class/net/
+  tags:
+  - collector:network-wireless
 - name: prometheus
   interval: 30s
+  tags:
+  - collector:prometheus
 - name: shelly
   interval: 5s
   options:
     endpoint: http://192.168.1.2
+  tags:
+  - collector:shelly
 - name: tagger
   interval: 2m0s
+  tags:
+  - collector:tagger
 - name: temperature-dd-wrt
   interval: 2m0s
   options:
     temperature-file: /proc/dmu/temperature
+  tags:
+  - collector:temperature-dd-wrt
 - name: temperature-raspberry-pi
   interval: 2m0s
   options:
     temperature-file: /sys/class/thermal/thermal_zone0/temp
+  tags:
+  - collector:temperature-raspberry-pi
 - name: uptime
   interval: 5m0s
+  tags:
+  - collector:uptime
 - name: wireguard
   interval: 10s
   options:
     ignore-endpoint: 127.0.0.1:9
+  tags:
+  - collector:wireguard
 - name: wireguard-stun-pubsub
   interval: 30s
   options:
@@ -81,8 +131,12 @@ collectors:
     wireguard_stun_pubsub_active_subscriptions: wireguard_stun.pubsub.active.subscriptions
     wireguard_stun_pubsub_new_subscriptions: wireguard_stun.pubsub.new.subscriptions
     wireguard_stun_pubsub_sent_events: wireguard_stun.pubsub.sent.events
+  tags:
+  - collector:wireguard-stun-pubsub
 - name: wl
   interval: 15s
   options:
     proc-net-wireless-path: /proc/net/wireless
     wl-exe: /usr/sbin/wl
+  tags:
+  - collector:wl

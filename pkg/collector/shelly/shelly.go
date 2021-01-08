@@ -23,7 +23,7 @@ const (
 	optionEndpoint = "endpoint"
 )
 
-type Shelly struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 	client   *http.Client
@@ -52,7 +52,7 @@ type Status struct {
 }
 
 func NewShelly(conf *collector.Config) collector.Collector {
-	return &Shelly{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 		client: &http.Client{
@@ -61,23 +61,33 @@ func NewShelly(conf *collector.Config) collector.Collector {
 	}
 }
 
-func (c *Shelly) DefaultOptions() map[string]string {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		optionEndpoint: "http://192.168.1.2",
 	}
 }
 
-func (c *Shelly) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 5
 }
 
-func (c *Shelly) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Shelly) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *Shelly) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
@@ -87,7 +97,7 @@ func parseMac(m string) string {
 	return m
 }
 
-func (c *Shelly) Collect(ctx context.Context) error {
+func (c *Collector) Collect(ctx context.Context) error {
 	shellyEndpoint, ok := c.conf.Options[optionEndpoint]
 	if !ok {
 		zap.L().Error("missing option", zap.String("options", optionEndpoint))

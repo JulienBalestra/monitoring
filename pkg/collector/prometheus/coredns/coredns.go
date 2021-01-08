@@ -12,21 +12,32 @@ const (
 	CollectorName = "coredns"
 )
 
-type Coredns struct {
+type Collector struct {
 	conf *collector.Config
 
 	exporter collector.Collector
 }
 
 func NewCoredns(conf *collector.Config) collector.Collector {
-	return &Coredns{
+	c := exporter.NewPrometheusExporter(conf)
+	return &Collector{
 		conf: conf,
 
-		exporter: exporter.NewPrometheusExporter(conf),
+		exporter: c,
 	}
 }
 
-func (c *Coredns) DefaultOptions() map[string]string {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		// https://coredns.io/plugins/metrics
 		exporter.OptionURL:            "http://127.0.0.1:9153/metrics",
@@ -35,20 +46,20 @@ func (c *Coredns) DefaultOptions() map[string]string {
 	}
 }
 
-func (c *Coredns) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 30
 }
 
-func (c *Coredns) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Coredns) IsDaemon() bool { return false }
+func (c *Collector) IsDaemon() bool { return false }
 
-func (c *Coredns) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *Coredns) Collect(ctx context.Context) error {
+func (c *Collector) Collect(ctx context.Context) error {
 	return c.exporter.Collect(ctx)
 }

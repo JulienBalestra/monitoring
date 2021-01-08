@@ -21,7 +21,7 @@ const (
 	optionLunarUUID        = "lunar-uuid"
 )
 
-type Lunar struct {
+type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 
@@ -30,34 +30,44 @@ type Lunar struct {
 
 // NewAcaia TODO: this is a work in progress
 func NewAcaia(conf *collector.Config) collector.Collector {
-	return &Lunar{
+	return &Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 	}
 }
 
-func (c *Lunar) DefaultOptions() map[string]string {
+func (c *Collector) DefaultTags() []string {
+	return []string{
+		"collector:" + CollectorName,
+	}
+}
+
+func (c *Collector) Tags() []string {
+	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
+}
+
+func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		optionLunarUUID:        "00001820-0000-1000-8000-00805f9b34fb",
 		optionLunarServiceUUID: "00002a80-0000-1000-8000-00805f9b34fb",
 	}
 }
 
-func (c *Lunar) DefaultCollectInterval() time.Duration {
+func (c *Collector) DefaultCollectInterval() time.Duration {
 	return time.Second * 10
 }
 
-func (c *Lunar) Config() *collector.Config {
+func (c *Collector) Config() *collector.Config {
 	return c.conf
 }
 
-func (c *Lunar) IsDaemon() bool { return true }
+func (c *Collector) IsDaemon() bool { return true }
 
-func (c *Lunar) Name() string {
+func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *Lunar) lunar(d *device.Device1) error {
+func (c *Collector) lunar(d *device.Device1) error {
 	lunarServiceUUID, ok := c.conf.Options[optionLunarServiceUUID]
 	if !ok {
 		zap.L().Error("missing option", zap.String("options", optionLunarServiceUUID))
@@ -106,7 +116,7 @@ func (c *Lunar) lunar(d *device.Device1) error {
 	return nil
 }
 
-func (c *Lunar) Collect(ctx context.Context) error {
+func (c *Collector) Collect(ctx context.Context) error {
 	lunarUUID, ok := c.conf.Options[optionLunarUUID]
 	if !ok {
 		zap.L().Error("missing option", zap.String("options", optionLunarUUID))
