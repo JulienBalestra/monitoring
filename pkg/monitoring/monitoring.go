@@ -3,6 +3,7 @@ package monitoring
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"sync"
 	"time"
@@ -100,6 +101,7 @@ func (m *Monitoring) Start(ctx context.Context) error {
 	errorsChan := make(chan error, len(m.catalogConfig.Collectors))
 	defer close(errorsChan)
 
+	rand.Seed(time.Now().UnixNano())
 	for name, newFn := range catalog.CollectorCatalog() {
 		select {
 		case <-runCtx.Done():
@@ -124,6 +126,7 @@ func (m *Monitoring) Start(ctx context.Context) error {
 				c := newFn(config)
 				waitGroup.Add(1)
 				go func(coll collector.Collector) {
+					time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond)
 					errorsChan <- collector.RunCollection(runCtx, coll)
 					waitGroup.Done()
 				}(c)

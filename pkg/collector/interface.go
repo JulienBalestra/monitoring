@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/JulienBalestra/dry/pkg/ticknow"
 	"github.com/JulienBalestra/monitoring/pkg/datadog"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
@@ -67,8 +68,7 @@ func RunCollection(ctx context.Context, c Collector) error {
 		return nil
 	}
 
-	ticker := time.NewTicker(config.CollectInterval)
-	defer ticker.Stop()
+	ticker := ticknow.NewTickNow(ctx, config.CollectInterval)
 	extCtx.Info("collecting metrics periodically")
 	collectorTag := "collector:" + c.Name()
 	measures := metrics.NewMeasures(config.MetricsClient.ChanSeries)
