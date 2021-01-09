@@ -40,6 +40,13 @@ collectors:
     address: 127.0.0.1:53
   tags:
   - collector:dnsmasq-queries
+- name: freebox
+  interval: 30s
+  options:
+    method: GET
+    url: http://mafreebox.freebox.fr/api_version
+  tags:
+  - collector:freebox
 - name: golang
   interval: 2m0s
   tags:
@@ -55,7 +62,7 @@ collectors:
   tags:
   - collector:http
 - name: load
-  interval: 30s
+  interval: 15s
   tags:
   - collector:load
 - name: memory
@@ -119,8 +126,6 @@ collectors:
   - collector:uptime
 - name: wireguard
   interval: 10s
-  options:
-    ignore-endpoint: 127.0.0.1:9
   tags:
   - collector:wireguard
 - name: wireguard-stun-pubsub

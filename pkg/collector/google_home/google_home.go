@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
@@ -117,8 +116,8 @@ func (c *Collector) Collect(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	macAddress := strings.ReplaceAll(strings.ToLower(e.MacAddress), ":", "-")
-	bssid := strings.ReplaceAll(strings.ToLower(e.BSSID), ":", "-")
+	macAddress := macvendor.NormaliseMacAddress(e.MacAddress)
+	bssid := macvendor.NormaliseMacAddress(e.BSSID)
 	c.conf.Tagger.Update(macAddress,
 		tagger.NewTagUnsafe("ip", ipAddress),
 		tagger.NewTagUnsafe("ssid", e.SSID),

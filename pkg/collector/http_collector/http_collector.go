@@ -106,13 +106,15 @@ func (c *Collector) Collect(ctx context.Context) error {
 	tags = append(tags,
 		"code:"+strconv.Itoa(resp.StatusCode),
 		"url:"+s,
-		"host:"+u.Host,
+		"host-target:"+u.Host,
 		"collector:"+CollectorName,
 		"method:"+m,
 	)
-	if net.ParseIP(u.Host) != nil {
-		tags = append(tags, "ip:"+u.Host)
+	ipAddress := u.Host
+	if net.ParseIP(ipAddress) == nil {
+		ipAddress = "none"
 	}
+	tags = append(tags, "ip:"+ipAddress)
 	port := u.Port()
 	if strings.HasPrefix(s, "https://") {
 		tags = append(tags, "scheme:"+"https")

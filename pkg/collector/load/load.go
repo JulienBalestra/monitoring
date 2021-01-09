@@ -41,7 +41,7 @@ func (c *Collector) DefaultOptions() map[string]string {
 }
 
 func (c *Collector) DefaultCollectInterval() time.Duration {
-	return time.Second * 30
+	return time.Second * 15
 }
 
 func (c *Collector) Config() *collector.Config {

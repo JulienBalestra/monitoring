@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/macvendor"
@@ -215,7 +214,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 			continue
 		}
 		for _, mac := range c.getMacs(b) {
-			macAddress := strings.ToLower(strings.ReplaceAll(mac, ":", "-"))
+			macAddress := macvendor.NormaliseMacAddress(mac)
 			vendor := macvendor.GetVendorWithMacOrUnknown(macAddress)
 			b, err := exec.CommandContext(ctx, wlBinary, "-i", command.device, "rssi", mac).CombinedOutput()
 			if err != nil {

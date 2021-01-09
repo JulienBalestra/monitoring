@@ -31,9 +31,9 @@ type Collector struct {
 
 type Status struct {
 	WifiSTA struct {
-		SSID string `json:"ssid"`
-		IP   string `json:"ip"`
-		RSSI int64  `json:"rssi"`
+		SSID string  `json:"ssid"`
+		IP   string  `json:"ip"`
+		RSSI float64 `json:"rssi"`
 	} `json:"wifi_sta"`
 	Meters []struct {
 		Power float64 `json:"power"`
@@ -44,11 +44,11 @@ type Status struct {
 		IsOn bool `json:"ison"`
 	} `json:"relays"`
 	Temperature float64 `json:"temperature"`
-	RamTotal    int64   `json:"ram_total"`
-	RamFree     int64   `json:"ram_free"`
-	FSSize      int64   `json:"fs_size"`
-	FSFree      int64   `json:"fs_free"`
-	Uptime      int64   `json:"uptime"`
+	RamTotal    float64 `json:"ram_total"`
+	RamFree     float64 `json:"ram_free"`
+	FSSize      float64 `json:"fs_size"`
+	FSFree      float64 `json:"fs_free"`
+	Uptime      float64 `json:"uptime"`
 }
 
 func NewShelly(conf *collector.Config) collector.Collector {
@@ -103,8 +103,9 @@ func (c *Collector) Collect(ctx context.Context) error {
 		zap.L().Error("missing option", zap.String("options", optionEndpoint))
 		return errors.New("missing option " + optionEndpoint)
 	}
-
+	ctx, cancel := context.WithTimeout(ctx, c.conf.CollectInterval)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, shellyEndpoint+"/status", nil)
+	cancel()
 	if err != nil {
 		return err
 	}
@@ -147,42 +148,42 @@ func (c *Collector) Collect(ctx context.Context) error {
 	}, time.Minute)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "network.wireless.rssi.dbm",
-		Value: float64(s.WifiSTA.RSSI),
+		Value: s.WifiSTA.RSSI,
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  append(tags, "ssid:"+s.WifiSTA.SSID),
 	}, time.Minute)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "memory.ram.free",
-		Value: float64(s.RamFree),
+		Value: s.RamFree,
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
 	}, time.Minute)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "memory.ram.total",
-		Value: float64(s.RamTotal),
+		Value: s.RamTotal,
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
 	}, time.Minute)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "filesystem.free",
-		Value: float64(s.FSFree),
+		Value: s.FSFree,
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
 	}, time.Minute)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "filesystem.size",
-		Value: float64(s.FSSize),
+		Value: s.FSSize,
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
 	}, time.Minute)
 	c.measures.Gauge(&metrics.Sample{
 		Name:  "uptime.seconds",
-		Value: float64(s.Uptime),
+		Value: s.Uptime,
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
