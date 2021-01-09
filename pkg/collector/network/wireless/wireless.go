@@ -9,8 +9,9 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/JulienBalestra/monitoring/pkg/macvendor"
 
 	"go.uber.org/zap"
 
@@ -125,7 +126,7 @@ func (c *Collector) Collect(_ context.Context) error {
 			zap.L().Error("failed to parse device", zap.Error(err))
 			continue
 		}
-		deviceMacR := strings.ReplaceAll(string(deviceMac), ":", "-")
+		deviceMacR := macvendor.NormaliseMacAddressBytes(deviceMac)
 		tags := append(hostTags, "device:"+device, "mac:"+deviceMacR)
 
 		noiseV, err := strconv.ParseFloat(noise, 10)

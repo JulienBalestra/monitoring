@@ -12,6 +12,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/dhcp"
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/dnslogs"
 	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/dnsqueries"
+	"github.com/JulienBalestra/monitoring/pkg/collector/freebox"
 	"github.com/JulienBalestra/monitoring/pkg/collector/golang"
 	"github.com/JulienBalestra/monitoring/pkg/collector/google_home"
 	"github.com/JulienBalestra/monitoring/pkg/collector/http_collector"
@@ -61,6 +62,7 @@ func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 		coredns.CollectorName:        coredns.NewCoredns,
 		google_home.CollectorName:    google_home.NewGoogleHome,
 		http_collector.CollectorName: http_collector.NewHTTP,
+		freebox.CollectorName:        freebox.NewFreebox,
 
 		// WIP collectors:
 		bluetooth.CollectorName: bluetooth.NewBluetooth,

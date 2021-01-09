@@ -95,7 +95,7 @@ func (c *Collector) Collect(_ context.Context) error {
 		return nil
 	}
 	now := time.Now()
-	hostTags := c.conf.Tagger.GetUnstable(c.conf.Host)
+	hostTags := c.Tags()
 	for _, line := range lines[1:] {
 		raw := strings.Fields(line)
 		if len(raw) != 6 {
@@ -111,7 +111,7 @@ func (c *Collector) Collect(_ context.Context) error {
 			)
 			continue
 		}
-		macAddress = strings.ReplaceAll(macAddress, ":", "-")
+		macAddress = macvendor.NormaliseMacAddress(macAddress)
 		macAddressTag, ipAddressTag, deviceTag := tagger.NewTagUnsafe("mac", macAddress), tagger.NewTagUnsafe("ip", ipAddress), tagger.NewTagUnsafe("device", device)
 		vendorTag := tagger.NewTagUnsafe("vendor", macvendor.GetVendorWithMacOrUnknown(macAddress))
 		c.conf.Tagger.Update(ipAddress, macAddressTag, deviceTag, vendorTag)
@@ -119,14 +119,14 @@ func (c *Collector) Collect(_ context.Context) error {
 
 		// we rely on dnsmasq tags collection to make this available
 		tags := append(hostTags, c.conf.Tagger.GetUnstableWithDefault(macAddress, c.leaseTag)...)
-		tags = append(tags, deviceTag.String(), macAddressTag.String())
+		tags = append(tags, macAddressTag.String())
 		c.measures.GaugeDeviation(&metrics.Sample{
 			Name:  "network.arp",
 			Value: 1,
 			Time:  now,
 			Host:  c.conf.Host,
 			Tags:  tags,
-		}, c.conf.CollectInterval*c.conf.CollectInterval)
+		}, c.conf.CollectInterval*3)
 	}
 	c.measures.Purge()
 	return nil
