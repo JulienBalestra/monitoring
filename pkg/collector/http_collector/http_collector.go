@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -22,7 +21,7 @@ const (
 	CollectorName = "http"
 
 	OptionURL    = "url"
-	optionMethod = "method"
+	OptionMethod = "method"
 )
 
 type Collector struct {
@@ -55,7 +54,7 @@ func (c *Collector) Tags() []string {
 
 func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
-		optionMethod: http.MethodGet,
+		OptionMethod: http.MethodGet,
 	}
 }
 
@@ -79,12 +78,12 @@ func (c *Collector) Collect(ctx context.Context) error {
 		zap.L().Error("missing option", zap.String("options", OptionURL))
 		return errors.New("missing option " + OptionURL)
 	}
-	m, ok := c.conf.Options[optionMethod]
+	m, ok := c.conf.Options[OptionMethod]
 	if !ok {
 		m = http.MethodGet
-		zap.L().Debug("missing option",
-			zap.String("options", optionMethod),
-			zap.String(optionMethod, http.MethodGet),
+		zap.L().Debug("defaulting option",
+			zap.String("option", OptionMethod),
+			zap.String(OptionMethod, http.MethodGet),
 		)
 	}
 	ctx, cancel := context.WithTimeout(ctx, c.conf.CollectInterval)
@@ -93,7 +92,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, m, u.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, m, s, nil)
 	if err != nil {
 		return err
 	}
@@ -102,48 +101,46 @@ func (c *Collector) Collect(ctx context.Context) error {
 		return err
 	}
 	_ = resp.Body.Close()
-	tags := append(c.conf.Tagger.GetUnstable(u.Host), c.Tags()...)
-	tags = append(tags,
-		"code:"+strconv.Itoa(resp.StatusCode),
-		"url:"+s,
-		"host-target:"+u.Host,
-		"collector:"+CollectorName,
-		"method:"+m,
-	)
+	tags := c.Tags()
 	ipAddress := u.Host
 	if net.ParseIP(ipAddress) == nil {
 		ipAddress = "none"
 	}
-	tags = append(tags, "ip:"+ipAddress)
 	port := u.Port()
-	if strings.HasPrefix(s, "https://") {
-		tags = append(tags, "scheme:"+"https")
+	scheme := ""
+	if strings.HasPrefix(s, "https") {
+		scheme = "https"
 		if port == "" {
 			port = "443"
 		}
 	} else {
-		tags = append(tags, "scheme:"+"http")
+		scheme = "http"
 		if port == "" {
 			port = "80"
 		}
 	}
-	tags = append(tags, "port:"+port)
 	path := u.Path
 	if path == "" {
 		path = "/"
 	}
-	tags = append(tags, "path:"+path)
 	_ = c.measures.Incr(
 		&metrics.Sample{
 			Name:  "http.query",
 			Value: 1,
 			Time:  time.Now(),
 			Host:  c.conf.Host,
-			Tags:  tags,
+			Tags: append(tags,
+				"code:"+strconv.Itoa(resp.StatusCode),
+				"url:"+s,
+				"host-target:"+u.Host,
+				"collector:"+CollectorName,
+				"method:"+m,
+				"path:"+path,
+				"port:"+port,
+				"ip:"+ipAddress,
+				"scheme:"+scheme,
+			),
 		},
 	)
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("request for URL %s returned HTTP status %s", req.URL.String(), resp.Status)
-	}
 	return nil
 }

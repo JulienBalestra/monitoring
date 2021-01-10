@@ -11,9 +11,6 @@ import (
 
 const (
 	CollectorName = "freebox"
-
-	OptionURL    = "url"
-	optionMethod = "method"
 )
 
 type Collector struct {
@@ -41,13 +38,13 @@ func (c *Collector) Tags() []string {
 
 func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
-		optionMethod: http.MethodGet,
-		OptionURL:    "http://mafreebox.freebox.fr/api_version",
+		http_collector.OptionMethod: http.MethodGet,
+		http_collector.OptionURL:    "http://mafreebox.freebox.fr/api_version",
 	}
 }
 
 func (c *Collector) DefaultCollectInterval() time.Duration {
-	return time.Second * 30
+	return time.Second * 10
 }
 
 func (c *Collector) Config() *collector.Config {

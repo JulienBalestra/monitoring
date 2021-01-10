@@ -41,7 +41,7 @@ collectors:
   tags:
   - collector:dnsmasq-queries
 - name: freebox
-  interval: 30s
+  interval: 10s
   options:
     method: GET
     url: http://mafreebox.freebox.fr/api_version
