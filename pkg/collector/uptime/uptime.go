@@ -61,7 +61,7 @@ func (c *Collector) Collect(_ context.Context) error {
 	}
 
 	c.measures.Gauge(&metrics.Sample{
-		Name:  "uptime.seconds",
+		Name:  "up.time",
 		Value: float64(info.Uptime),
 		Time:  time.Now(),
 		Host:  c.conf.Host,
