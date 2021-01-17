@@ -1,4 +1,4 @@
-package pubsub
+package etcd
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	CollectorName = "wireguard-stun-pubsub"
+	CollectorName = "wireguard-stun-registry-etcd"
 )
 
 type Collector struct {
@@ -18,7 +18,7 @@ type Collector struct {
 	exporter collector.Collector
 }
 
-func NewPubSub(conf *collector.Config) collector.Collector {
+func NewWireguardStunRegistryEtcd(conf *collector.Config) collector.Collector {
 	return &Collector{
 		conf: conf,
 
@@ -38,11 +38,10 @@ func (c *Collector) Tags() []string {
 
 func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
-		exporter.OptionURL:                           "http://127.0.0.1:8989/metrics",
-		"wireguard_stun_pubsub_active_peers":         "wireguard_stun.pubsub.active.peers",
-		"wireguard_stun_pubsub_active_subscriptions": "wireguard_stun.pubsub.active.subscriptions",
-		"wireguard_stun_pubsub_new_subscriptions":    "wireguard_stun.pubsub.new.subscriptions",
-		"wireguard_stun_pubsub_sent_events":          "wireguard_stun.pubsub.sent.events",
+		exporter.OptionURL:                             "http://127.0.0.1:8989/metrics",
+		"wireguard_stun_registry_etcd_peers":           "wireguard_stun.registry.etcd.peers",
+		"wireguard_stun_registry_etcd_txn":             "wireguard_stun.registry.etcd.txn",
+		"wireguard_stun_registry_etcd_update_triggers": "wireguard_stun.registry.etcd.update.triggers",
 	}
 }
 

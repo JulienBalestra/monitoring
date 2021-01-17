@@ -25,7 +25,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/network/wireless"
 	"github.com/JulienBalestra/monitoring/pkg/collector/prometheus/coredns"
 	"github.com/JulienBalestra/monitoring/pkg/collector/prometheus/exporter"
-	"github.com/JulienBalestra/monitoring/pkg/collector/prometheus/wireguard-stun/pubsub"
+	"github.com/JulienBalestra/monitoring/pkg/collector/prometheus/wireguard-stun/registry/etcd"
 	"github.com/JulienBalestra/monitoring/pkg/collector/shelly"
 	"github.com/JulienBalestra/monitoring/pkg/collector/tagger"
 	"github.com/JulienBalestra/monitoring/pkg/collector/temperature/ddwrt"
@@ -67,7 +67,7 @@ func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 		// WIP collectors:
 		bluetooth.CollectorName: bluetooth.NewBluetooth,
 		lunar.CollectorName:     lunar.NewAcaia,
-		pubsub.CollectorName:    pubsub.NewPubSub,
+		etcd.CollectorName:      etcd.NewWireguardStunRegistryEtcd,
 	}
 }
 

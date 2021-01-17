@@ -128,16 +128,15 @@ collectors:
   interval: 10s
   tags:
   - collector:wireguard
-- name: wireguard-stun-pubsub
+- name: wireguard-stun-registry-etcd
   interval: 30s
   options:
     exporter-url: http://127.0.0.1:8989/metrics
-    wireguard_stun_pubsub_active_peers: wireguard_stun.pubsub.active.peers
-    wireguard_stun_pubsub_active_subscriptions: wireguard_stun.pubsub.active.subscriptions
-    wireguard_stun_pubsub_new_subscriptions: wireguard_stun.pubsub.new.subscriptions
-    wireguard_stun_pubsub_sent_events: wireguard_stun.pubsub.sent.events
+    wireguard_stun_registry_etcd_peers: wireguard_stun.registry.etcd.peers
+    wireguard_stun_registry_etcd_txn: wireguard_stun.registry.etcd.txn
+    wireguard_stun_registry_etcd_update_triggers: wireguard_stun.registry.etcd.update.triggers
   tags:
-  - collector:wireguard-stun-pubsub
+  - collector:wireguard-stun-registry-etcd
 - name: wl
   interval: 15s
   options:
