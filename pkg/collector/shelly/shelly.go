@@ -182,7 +182,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 		Tags:  tags,
 	}, time.Minute)
 	c.measures.Gauge(&metrics.Sample{
-		Name:  "uptime.seconds",
+		Name:  "up.time",
 		Value: s.Uptime,
 		Time:  now,
 		Host:  c.conf.Host,

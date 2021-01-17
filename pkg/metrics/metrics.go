@@ -13,7 +13,7 @@ import (
 const (
 	TypeCount        = "count"
 	TypeGauge        = "gauge"
-	TypeDefaultGauge = ""
+	TypeDefaultGauge = TypeGauge
 
 	DefaultMeasureMaxAgeSample = time.Hour * 12
 )
