@@ -92,27 +92,32 @@ func (c *Collector) Collect(_ context.Context) error {
 	}
 
 	now := time.Now()
+	hostTags := c.Tags()
 	for _, device := range devices {
+		deviceTag := tagger.NewTagUnsafe("device", device.Name)
 		for _, peer := range device.Peers {
-			if peer.Endpoint != nil {
+			if peer.Endpoint == nil {
 				continue
 			}
 			peer := stun.NewPeer(&peer)
-			endpointTag := tagger.NewTagUnsafe("endpoint", none)
-			ipTag := tagger.NewTagUnsafe("ip", none)
-			portTag := tagger.NewTagUnsafe("port", none)
-			if peer.Endpoint != nil {
-				endpointTag = tagger.NewTagUnsafe("endpoint", peer.Endpoint.String())
-				ipTag = tagger.NewTagUnsafe("ip", peer.Endpoint.IP.String())
-				portTag = tagger.NewTagUnsafe("port", strconv.Itoa(peer.Endpoint.Port))
-			}
 			c.conf.Tagger.Update(peer.PublicKey.String(),
-				tagger.NewTagUnsafe("device", device.Name),
 				tagger.NewTagUnsafe("pub-key-sha1", peer.PublicKeyHash),
+				tagger.NewTagUnsafe("pub-key-sha1-7", peer.PublicKeyHash[:7]),
 				tagger.NewTagUnsafe("allowed-ips", getAllowedIPsTag(peer.AllowedIPs)),
-				endpointTag, ipTag, portTag,
+				tagger.NewTagUnsafe("endpoint", peer.Endpoint.String()),
+				tagger.NewTagUnsafe("ip", peer.Endpoint.IP.String()),
+				tagger.NewTagUnsafe("port", strconv.Itoa(peer.Endpoint.Port)),
+				deviceTag,
 			)
-			tags := c.conf.Tagger.GetUnstable(peer.PublicKey.String())
+			c.conf.Tagger.Update(peer.PublicKeyHash,
+				tagger.NewTagUnsafe("pub-key-sha1-7", peer.PublicKeyHash[:7]),
+				tagger.NewTagUnsafe("allowed-ips", getAllowedIPsTag(peer.AllowedIPs)),
+				tagger.NewTagUnsafe("endpoint", peer.Endpoint.String()),
+				tagger.NewTagUnsafe("ip", peer.Endpoint.IP.String()),
+				tagger.NewTagUnsafe("port", strconv.Itoa(peer.Endpoint.Port)),
+				deviceTag,
+			)
+			tags := append(hostTags, c.conf.Tagger.GetUnstable(peer.PublicKey.String())...)
 			_ = c.measures.CountWithNegativeReset(&metrics.Sample{
 				Name:  wireguardMetricPrefix + "transfer.received",
 				Value: float64(peer.ReceiveBytes),
