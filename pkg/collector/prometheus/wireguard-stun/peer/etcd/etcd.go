@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	CollectorName = "wireguard-stun-registry-etcd"
+	CollectorName = "wireguard-stun-peer-etcd"
 )
 
 type Collector struct {
@@ -18,7 +18,7 @@ type Collector struct {
 	exporter collector.Collector
 }
 
-func NewWireguardStunRegistryEtcd(conf *collector.Config) collector.Collector {
+func NewWireguardStunPeerEtcd(conf *collector.Config) collector.Collector {
 	return &Collector{
 		conf: conf,
 
@@ -38,11 +38,10 @@ func (c *Collector) Tags() []string {
 
 func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
-		exporter.OptionURL:                             "http://127.0.0.1:8989/metrics",
-		"wireguard_stun_peers":                         "wireguard_stun.peers",
-		"wireguard_stun_registry_etcd_txn":             "wireguard_stun.registry.etcd.txn",
-		"wireguard_stun_registry_etcd_update_triggers": "wireguard_stun.registry.etcd.updates",
-		"wireguard_stun_etcd_conn_state":               "wireguard_stun.etcd.conn.state",
+		exporter.OptionURL:                 "http://127.0.0.1:8989/metrics",
+		"wireguard_stun_peers":             "wireguard_stun.peers",
+		"wireguard_stun_peer_etcd_updates": "wireguard_stun.peer.etcd.updates",
+		"wireguard_stun_etcd_conn_state":   "wireguard_stun.etcd.conn.state",
 	}
 }
 

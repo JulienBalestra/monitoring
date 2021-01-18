@@ -128,13 +128,23 @@ collectors:
   interval: 10s
   tags:
   - collector:wireguard
+- name: wireguard-stun-peer-etcd
+  interval: 30s
+  options:
+    exporter-url: http://127.0.0.1:8989/metrics
+    wireguard_stun_etcd_conn_state: wireguard_stun.etcd.conn.state
+    wireguard_stun_peer_etcd_updates: wireguard_stun.peer.etcd.updates
+    wireguard_stun_peers: wireguard_stun.peers
+  tags:
+  - collector:wireguard-stun-peer-etcd
 - name: wireguard-stun-registry-etcd
   interval: 30s
   options:
     exporter-url: http://127.0.0.1:8989/metrics
-    wireguard_stun_registry_etcd_peers: wireguard_stun.registry.etcd.peers
+    wireguard_stun_etcd_conn_state: wireguard_stun.etcd.conn.state
+    wireguard_stun_peers: wireguard_stun.peers
     wireguard_stun_registry_etcd_txn: wireguard_stun.registry.etcd.txn
-    wireguard_stun_registry_etcd_update_triggers: wireguard_stun.registry.etcd.update.triggers
+    wireguard_stun_registry_etcd_update_triggers: wireguard_stun.registry.etcd.updates
   tags:
   - collector:wireguard-stun-registry-etcd
 - name: wl

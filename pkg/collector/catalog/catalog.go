@@ -25,7 +25,8 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/network/wireless"
 	"github.com/JulienBalestra/monitoring/pkg/collector/prometheus/coredns"
 	"github.com/JulienBalestra/monitoring/pkg/collector/prometheus/exporter"
-	"github.com/JulienBalestra/monitoring/pkg/collector/prometheus/wireguard-stun/registry/etcd"
+	etcdPeer "github.com/JulienBalestra/monitoring/pkg/collector/prometheus/wireguard-stun/peer/etcd"
+	etcdRegistry "github.com/JulienBalestra/monitoring/pkg/collector/prometheus/wireguard-stun/registry/etcd"
 	"github.com/JulienBalestra/monitoring/pkg/collector/shelly"
 	"github.com/JulienBalestra/monitoring/pkg/collector/tagger"
 	"github.com/JulienBalestra/monitoring/pkg/collector/temperature/ddwrt"
@@ -65,9 +66,10 @@ func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 		freebox.CollectorName:        freebox.NewFreebox,
 
 		// WIP collectors:
-		bluetooth.CollectorName: bluetooth.NewBluetooth,
-		lunar.CollectorName:     lunar.NewAcaia,
-		etcd.CollectorName:      etcd.NewWireguardStunRegistryEtcd,
+		bluetooth.CollectorName:    bluetooth.NewBluetooth,
+		lunar.CollectorName:        lunar.NewAcaia,
+		etcdRegistry.CollectorName: etcdRegistry.NewWireguardStunRegistryEtcd,
+		etcdPeer.CollectorName:     etcdPeer.NewWireguardStunPeerEtcd,
 	}
 }
 
