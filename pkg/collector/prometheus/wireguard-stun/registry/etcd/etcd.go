@@ -39,7 +39,7 @@ func (c *Collector) Tags() []string {
 func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		exporter.OptionURL:                             "http://127.0.0.1:8989/metrics",
-		"wireguard_stun_registry_etcd_peers":           "wireguard_stun.registry.etcd.peers",
+		"wireguard_stun_peers":                         "wireguard_stun.peers",
 		"wireguard_stun_registry_etcd_txn":             "wireguard_stun.registry.etcd.txn",
 		"wireguard_stun_registry_etcd_update_triggers": "wireguard_stun.registry.etcd.update.triggers",
 	}
