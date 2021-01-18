@@ -132,7 +132,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 		"device-name:"+e.Name,
 	)
 	c.measures.Gauge(&metrics.Sample{
-		Name:  "uptime.seconds",
+		Name:  "up.time",
 		Value: e.Uptime,
 		Time:  now,
 		Host:  c.conf.Host,
