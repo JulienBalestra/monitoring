@@ -40,6 +40,16 @@ collectors:
     address: 127.0.0.1:53
   tags:
   - collector:dnsmasq-queries
+- name: etcd
+  interval: 30s
+  options:
+    etcd_debugging_mvcc_keys_total: etcd.keys
+    etcd_mvcc_db_total_size_in_bytes: etcd.db.global.size
+    etcd_mvcc_db_total_size_in_use_in_bytes: etcd.db.use.size
+    exporter-url: http://127.0.0.1:2379/metrics
+    grpc_server_handled_total: etcd.grpc.calls
+  tags:
+  - collector:etcd
 - name: freebox
   interval: 10s
   options:

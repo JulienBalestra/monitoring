@@ -190,6 +190,58 @@ func (c *Collector) Collect(ctx context.Context) error {
 					Tags:  c.getTagsFromLabels(tags, m.Label),
 				}, c.conf.CollectInterval*c.conf.CollectInterval)
 			}
+		case dto.MetricType_SUMMARY:
+			for _, m := range mf.Metric {
+				count := float64(*m.Summary.SampleCount)
+				labelsAsTags := c.getTagsFromLabels(tags, m.Label)
+				_ = c.measures.CountWithNegativeReset(&metrics.Sample{
+					Name:  *mf.Name + ".count",
+					Value: count,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  labelsAsTags,
+				})
+				c.measures.GaugeDeviation(&metrics.Sample{
+					Name:  *mf.Name + ".sum",
+					Value: *m.Summary.SampleSum,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  labelsAsTags,
+				}, c.conf.CollectInterval*c.conf.CollectInterval)
+				c.measures.GaugeDeviation(&metrics.Sample{
+					Name:  *mf.Name + ".avg",
+					Value: *m.Summary.SampleSum / count,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  labelsAsTags,
+				}, c.conf.CollectInterval*c.conf.CollectInterval)
+			}
+		case dto.MetricType_HISTOGRAM:
+			for _, m := range mf.Metric {
+				count := float64(*m.Histogram.SampleCount)
+				labelsAsTags := c.getTagsFromLabels(tags, m.Label)
+				_ = c.measures.CountWithNegativeReset(&metrics.Sample{
+					Name:  *mf.Name + ".count",
+					Value: count,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  labelsAsTags,
+				})
+				c.measures.GaugeDeviation(&metrics.Sample{
+					Name:  *mf.Name + ".sum",
+					Value: *m.Histogram.SampleSum,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  labelsAsTags,
+				}, c.conf.CollectInterval*c.conf.CollectInterval)
+				c.measures.GaugeDeviation(&metrics.Sample{
+					Name:  *mf.Name + ".avg",
+					Value: *m.Histogram.SampleSum / count,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  labelsAsTags,
+				}, c.conf.CollectInterval*c.conf.CollectInterval)
+			}
 		}
 	}
 	return nil
