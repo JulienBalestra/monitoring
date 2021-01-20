@@ -108,6 +108,7 @@ func (c *Collector) getMetricsFamily(req *http.Request) ([]*dto.MetricFamily, er
 				zap.L().Warn("unset metric rename", zap.String("metric", *mf.Name))
 				continue
 			}
+			mf.Name = &newName
 			families = append(families, mf)
 		}
 		return families, nil
@@ -129,6 +130,7 @@ func (c *Collector) getMetricsFamily(req *http.Request) ([]*dto.MetricFamily, er
 		if !ok {
 			continue
 		}
+		mf.Name = &v
 		families = append(families, mf)
 	}
 	return families, nil
@@ -165,37 +167,29 @@ func (c *Collector) Collect(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// TODO dry this
+	tags := c.Tags()
 	for _, mf := range families {
 		switch *mf.Type {
 		case dto.MetricType_COUNTER:
-			if len(mf.Metric) != 1 {
-				continue
+			for _, m := range mf.Metric {
+				_ = c.measures.CountWithNegativeReset(&metrics.Sample{
+					Name:  *mf.Name,
+					Value: *m.Counter.Value,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  c.getTagsFromLabels(tags, m.Label),
+				})
 			}
-			m := *mf.Metric[0]
-			tags := c.Tags()
-			tags = c.getTagsFromLabels(tags, m.Label)
-			_ = c.measures.CountWithNegativeReset(&metrics.Sample{
-				Name:  c.conf.Options[*mf.Name],
-				Value: *m.Counter.Value,
-				Time:  now,
-				Host:  c.conf.Host,
-				Tags:  tags,
-			})
 		case dto.MetricType_GAUGE:
-			if len(mf.Metric) != 1 {
-				continue
+			for _, m := range mf.Metric {
+				c.measures.GaugeDeviation(&metrics.Sample{
+					Name:  *mf.Name,
+					Value: *m.Gauge.Value,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  c.getTagsFromLabels(tags, m.Label),
+				}, c.conf.CollectInterval*c.conf.CollectInterval)
 			}
-			m := *mf.Metric[0]
-			tags := c.Tags()
-			tags = c.getTagsFromLabels(tags, m.Label)
-			c.measures.GaugeDeviation(&metrics.Sample{
-				Name:  c.conf.Options[*mf.Name],
-				Value: *m.Gauge.Value,
-				Time:  now,
-				Host:  c.conf.Host,
-				Tags:  tags,
-			}, c.conf.CollectInterval*c.conf.CollectInterval)
 		}
 	}
 	return nil
