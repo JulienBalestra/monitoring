@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
-	"github.com/JulienBalestra/monitoring/pkg/collector/http_collector"
+	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/http_collector"
 )
 
 const (
@@ -20,10 +20,12 @@ type Collector struct {
 }
 
 func NewFreebox(conf *collector.Config) collector.Collector {
-	return collector.WithDefaults(&Collector{
-		conf:          conf,
-		httpCollector: http_collector.NewHTTP(conf),
-	})
+	c := &Collector{
+		conf: conf,
+	}
+	_ = collector.WithDefaults(c)
+	c.httpCollector = http_collector.NewHTTP(conf)
+	return c
 }
 
 func (c *Collector) SubmittedSeries() float64 {

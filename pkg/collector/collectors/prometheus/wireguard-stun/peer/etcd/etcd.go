@@ -1,15 +1,15 @@
-package coredns
+package etcd
 
 import (
 	"context"
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
-	"github.com/JulienBalestra/monitoring/pkg/collector/prometheus/exporter"
+	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/prometheus/exporter"
 )
 
 const (
-	CollectorName = "coredns"
+	CollectorName = "wireguard-stun-peer-etcd"
 )
 
 type Collector struct {
@@ -18,7 +18,7 @@ type Collector struct {
 	exporter collector.Collector
 }
 
-func NewCoredns(conf *collector.Config) collector.Collector {
+func NewWireguardStunPeerEtcd(conf *collector.Config) collector.Collector {
 	c := &Collector{
 		conf: conf,
 	}
@@ -43,10 +43,10 @@ func (c *Collector) Tags() []string {
 
 func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
-		// https://coredns.io/plugins/metrics
-		exporter.OptionURL:            "http://127.0.0.1:9153/metrics",
-		"coredns_dns_requests_total":  "coredns.dns.requests",
-		"coredns_dns_responses_total": "coredns.dns.responses",
+		exporter.OptionURL:                 "http://127.0.0.1:8989/metrics",
+		"wireguard_stun_peers":             "wireguard_stun.peers",
+		"wireguard_stun_peer_etcd_updates": "wireguard_stun.peer.etcd.updates",
+		"wireguard_stun_etcd_conn_state":   "wireguard_stun.etcd.conn.state",
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
-	"github.com/JulienBalestra/monitoring/pkg/collector/dnsmasq/exported"
+	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/dnsmasq/exported"
 	"github.com/JulienBalestra/monitoring/pkg/macvendor"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
