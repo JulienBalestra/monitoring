@@ -6,6 +6,10 @@ import (
 	"sort"
 	"time"
 
+	"github.com/JulienBalestra/monitoring/pkg/collector/prometheus/etcd"
+	etcdPeer "github.com/JulienBalestra/monitoring/pkg/collector/prometheus/wireguard-stun/peer/etcd"
+	etcdRegistry "github.com/JulienBalestra/monitoring/pkg/collector/prometheus/wireguard-stun/registry/etcd"
+
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/bluetooth"
 	"github.com/JulienBalestra/monitoring/pkg/collector/datadog"
@@ -25,8 +29,6 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/network/wireless"
 	"github.com/JulienBalestra/monitoring/pkg/collector/prometheus/coredns"
 	"github.com/JulienBalestra/monitoring/pkg/collector/prometheus/exporter"
-	etcdPeer "github.com/JulienBalestra/monitoring/pkg/collector/prometheus/wireguard-stun/peer/etcd"
-	etcdRegistry "github.com/JulienBalestra/monitoring/pkg/collector/prometheus/wireguard-stun/registry/etcd"
 	"github.com/JulienBalestra/monitoring/pkg/collector/shelly"
 	"github.com/JulienBalestra/monitoring/pkg/collector/tagger"
 	"github.com/JulienBalestra/monitoring/pkg/collector/temperature/ddwrt"
@@ -64,12 +66,13 @@ func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 		google_home.CollectorName:    google_home.NewGoogleHome,
 		http_collector.CollectorName: http_collector.NewHTTP,
 		freebox.CollectorName:        freebox.NewFreebox,
+		etcdRegistry.CollectorName:   etcdRegistry.NewWireguardStunRegistryEtcd,
+		etcdPeer.CollectorName:       etcdPeer.NewWireguardStunPeerEtcd,
+		etcd.CollectorName:           etcd.NewEtcd,
 
 		// WIP collectors:
-		bluetooth.CollectorName:    bluetooth.NewBluetooth,
-		lunar.CollectorName:        lunar.NewAcaia,
-		etcdRegistry.CollectorName: etcdRegistry.NewWireguardStunRegistryEtcd,
-		etcdPeer.CollectorName:     etcdPeer.NewWireguardStunPeerEtcd,
+		bluetooth.CollectorName: bluetooth.NewBluetooth,
+		lunar.CollectorName:     lunar.NewAcaia,
 	}
 }
 

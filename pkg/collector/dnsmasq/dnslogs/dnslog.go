@@ -66,7 +66,11 @@ func newLog(conf *collector.Config) *Collector {
 }
 
 func NewDnsMasqLog(conf *collector.Config) collector.Collector {
-	return newLog(conf)
+	return collector.WithDefaults(newLog(conf))
+}
+
+func (c *Collector) SubmittedSeries() float64 {
+	return c.measures.GetTotalSubmittedSeries()
 }
 
 func (c *Collector) DefaultTags() []string {
@@ -175,6 +179,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 			var err error
 			for _, query := range queries {
 				err = c.measures.Incr(c.queryToSample(query))
+				// TODO self telemetry
 				if err == nil {
 					continue
 				}

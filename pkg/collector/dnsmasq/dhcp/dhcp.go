@@ -44,12 +44,16 @@ type Collector struct {
 }
 
 func NewDNSMasqDHCP(conf *collector.Config) collector.Collector {
-	return &Collector{
+	return collector.WithDefaults(&Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 
 		splitSep: []byte{'\n'},
-	}
+	})
+}
+
+func (c *Collector) SubmittedSeries() float64 {
+	return c.measures.GetTotalSubmittedSeries()
 }
 
 func (c *Collector) DefaultTags() []string {

@@ -20,10 +20,14 @@ type Collector struct {
 }
 
 func NewFreebox(conf *collector.Config) collector.Collector {
-	return &Collector{
+	return collector.WithDefaults(&Collector{
 		conf:          conf,
 		httpCollector: http_collector.NewHTTP(conf),
-	}
+	})
+}
+
+func (c *Collector) SubmittedSeries() float64 {
+	return c.httpCollector.SubmittedSeries()
 }
 
 func (c *Collector) DefaultTags() []string {

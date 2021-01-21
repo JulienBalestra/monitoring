@@ -36,16 +36,44 @@ type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 
-	client *http.Client
+	client        *http.Client
+	metricsMap    map[string][]func(*dto.MetricFamily)
+	wantedMetrics int
+}
+
+func buildRenameFunction(n string) func(family *dto.MetricFamily) {
+	return func(family *dto.MetricFamily) {
+		family.Name = &n
+	}
 }
 
 func NewPrometheusExporter(conf *collector.Config) collector.Collector {
-	return &Collector{
-		conf:     conf,
-		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
-
-		client: &http.Client{Timeout: conf.CollectInterval},
+	m := make(map[string][]func(*dto.MetricFamily))
+	for k, v := range conf.Options {
+		if k == OptionURL {
+			continue
+		}
+		if v == "" {
+			m[k] = make([]func(family *dto.MetricFamily), 0)
+			continue
+		}
+		m[k] = []func(family *dto.MetricFamily){buildRenameFunction(v)}
 	}
+	return &Collector{
+		conf:          conf,
+		measures:      metrics.NewMeasures(conf.MetricsClient.ChanSeries),
+		metricsMap:    m,
+		wantedMetrics: len(m),
+		client:        &http.Client{Timeout: conf.CollectInterval},
+	}
+}
+
+func (c *Collector) SubmittedSeries() float64 {
+	return c.measures.GetTotalSubmittedSeries()
+}
+
+func (c *Collector) AddMappingFunction(metricSourceName string, f func(*dto.MetricFamily)) {
+	c.metricsMap[metricSourceName] = append(c.metricsMap[metricSourceName], f)
 }
 
 func (c *Collector) DefaultTags() []string {
@@ -76,20 +104,20 @@ func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *Collector) getMetricsFamily(req *http.Request) ([]*dto.MetricFamily, error) {
-	var families []*dto.MetricFamily
+func (c *Collector) getMetricsFamily(req *http.Request) (map[string]*dto.MetricFamily, error) {
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return families, fmt.Errorf("request for URL failed: %v", err)
+		return nil, fmt.Errorf("request for URL failed: %v", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return families, fmt.Errorf("request for URL %s returned HTTP status %s", req.URL.String(), resp.Status)
+		return nil, fmt.Errorf("request for URL %s returned HTTP status %s", req.URL.String(), resp.Status)
 	}
 	mediaType, params, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 	if err != nil {
-		return families, err
+		return nil, err
 	}
+	families := make(map[string]*dto.MetricFamily, c.wantedMetrics)
 	if mediaType == appProtobuf && params["encoding"] == "delimited" && params["proto"] == protoMF {
 		for {
 			mf := &dto.MetricFamily{}
@@ -100,36 +128,41 @@ func (c *Collector) getMetricsFamily(req *http.Request) ([]*dto.MetricFamily, er
 				}
 				return families, fmt.Errorf("reading metric family protocol buffer failed: %v", err)
 			}
-			newName, ok := c.conf.Options[*mf.Name]
+			functions, ok := c.metricsMap[*mf.Name]
 			if !ok {
 				continue
 			}
-			if newName == "" {
-				zap.L().Warn("unset metric rename", zap.String("metric", *mf.Name))
-				continue
+			families[*mf.Name] = mf
+			for _, f := range functions {
+				f(mf)
 			}
-			families = append(families, mf)
+			if len(families) == c.wantedMetrics {
+				return families, nil
+			}
+		}
+		for k := range c.metricsMap {
+			_, ok := families[k]
+			if !ok {
+				zap.L().Debug("missing metric", zap.String("name", k))
+			}
 		}
 		return families, nil
 	}
 	parser := expfmt.TextParser{}
 	metricFamilies, err := parser.TextToMetricFamilies(resp.Body)
 	if err != nil {
-		return families, fmt.Errorf("reading text format failed: %v", err)
+		return nil, fmt.Errorf("reading text format failed: %v", err)
 	}
-	for k, v := range c.conf.Options {
-		if k == OptionURL {
-			continue
-		}
-		if v == "" {
-			zap.L().Warn("unset metric rename", zap.String("metric", k))
-			continue
-		}
-		mf, ok := metricFamilies[k]
+	for name, functions := range c.metricsMap {
+		mf, ok := metricFamilies[name]
 		if !ok {
+			zap.L().Debug("missing metric", zap.String("name", name))
 			continue
 		}
-		families = append(families, mf)
+		families[*mf.Name] = mf
+		for _, f := range functions {
+			f(mf)
+		}
 	}
 	return families, nil
 }
@@ -165,37 +198,109 @@ func (c *Collector) Collect(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// TODO dry this
+	tags := c.Tags()
 	for _, mf := range families {
 		switch *mf.Type {
 		case dto.MetricType_COUNTER:
-			if len(mf.Metric) != 1 {
-				continue
+			for _, m := range mf.Metric {
+				_ = c.measures.CountWithNegativeReset(&metrics.Sample{
+					Name:  *mf.Name,
+					Value: *m.Counter.Value,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  c.getTagsFromLabels(tags, m.Label),
+				})
 			}
-			m := *mf.Metric[0]
-			tags := c.Tags()
-			tags = c.getTagsFromLabels(tags, m.Label)
-			_ = c.measures.CountWithNegativeReset(&metrics.Sample{
-				Name:  c.conf.Options[*mf.Name],
-				Value: *m.Counter.Value,
-				Time:  now,
-				Host:  c.conf.Host,
-				Tags:  tags,
-			})
 		case dto.MetricType_GAUGE:
-			if len(mf.Metric) != 1 {
-				continue
+			for _, m := range mf.Metric {
+				c.measures.GaugeDeviation(&metrics.Sample{
+					Name:  *mf.Name,
+					Value: *m.Gauge.Value,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  c.getTagsFromLabels(tags, m.Label),
+				}, c.conf.CollectInterval*c.conf.CollectInterval)
 			}
-			m := *mf.Metric[0]
-			tags := c.Tags()
-			tags = c.getTagsFromLabels(tags, m.Label)
-			c.measures.GaugeDeviation(&metrics.Sample{
-				Name:  c.conf.Options[*mf.Name],
-				Value: *m.Gauge.Value,
-				Time:  now,
-				Host:  c.conf.Host,
-				Tags:  tags,
-			}, c.conf.CollectInterval*c.conf.CollectInterval)
+
+		case dto.MetricType_SUMMARY:
+			for _, m := range mf.Metric {
+				count, sum := float64(*m.Summary.SampleCount), *m.Summary.SampleSum
+				labelsAsTags := c.getTagsFromLabels(tags, m.Label)
+				_ = c.measures.CountWithNegativeReset(&metrics.Sample{
+					Name:  *mf.Name + ".count",
+					Value: count,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  labelsAsTags,
+				})
+				c.measures.GaugeDeviation(&metrics.Sample{
+					Name:  *mf.Name + ".sum",
+					Value: sum,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  labelsAsTags,
+				}, c.conf.CollectInterval*c.conf.CollectInterval)
+				for _, q := range m.Summary.Quantile {
+					c.measures.GaugeDeviation(&metrics.Sample{
+						Name:  *mf.Name,
+						Value: *q.Value,
+						Time:  now,
+						Host:  c.conf.Host,
+						Tags:  append(labelsAsTags, fmt.Sprintf("quantile:%g", *q.Quantile)),
+					}, c.conf.CollectInterval*c.conf.CollectInterval)
+				}
+				if count == 0 || sum == 0 {
+					continue
+				}
+				// avoid NaN value
+				c.measures.GaugeDeviation(&metrics.Sample{
+					Name:  *mf.Name + ".avg",
+					Value: sum / count,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  labelsAsTags,
+				}, c.conf.CollectInterval*c.conf.CollectInterval)
+			}
+
+		case dto.MetricType_HISTOGRAM:
+			for _, m := range mf.Metric {
+				count, sum := float64(*m.Histogram.SampleCount), *m.Histogram.SampleSum
+				labelsAsTags := c.getTagsFromLabels(tags, m.Label)
+				_ = c.measures.CountWithNegativeReset(&metrics.Sample{
+					Name:  *mf.Name + ".count",
+					Value: count,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  labelsAsTags,
+				})
+				c.measures.GaugeDeviation(&metrics.Sample{
+					Name:  *mf.Name + ".sum",
+					Value: sum,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  labelsAsTags,
+				}, c.conf.CollectInterval*c.conf.CollectInterval)
+				for _, b := range m.Histogram.Bucket {
+					c.measures.GaugeDeviation(&metrics.Sample{
+						Name:  *mf.Name,
+						Value: float64(*b.CumulativeCount),
+						Time:  now,
+						Host:  c.conf.Host,
+						Tags:  append(labelsAsTags, fmt.Sprintf("le:%g", *b.UpperBound)),
+					}, c.conf.CollectInterval*c.conf.CollectInterval)
+				}
+				if count == 0 || sum == 0 {
+					continue
+				}
+				// avoid NaN value
+				c.measures.GaugeDeviation(&metrics.Sample{
+					Name:  *mf.Name + ".avg",
+					Value: sum / count,
+					Time:  now,
+					Host:  c.conf.Host,
+					Tags:  labelsAsTags,
+				}, c.conf.CollectInterval*c.conf.CollectInterval)
+			}
 		}
 	}
 	return nil

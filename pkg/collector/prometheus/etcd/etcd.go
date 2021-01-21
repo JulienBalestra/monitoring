@@ -6,24 +6,36 @@ import (
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/prometheus/exporter"
+	dto "github.com/prometheus/client_model/go"
 )
 
 const (
-	CollectorName = "wireguard-stun-registry-etcd"
+	CollectorName = "etcd"
+
+	metricDiskWallWrites = "etcd_disk_wal_write_bytes_total"
 )
 
 type Collector struct {
 	conf *collector.Config
 
-	exporter collector.Collector
+	exporter *exporter.Collector
 }
 
-func NewWireguardStunRegistryEtcd(conf *collector.Config) collector.Collector {
+func NewEtcd(conf *collector.Config) collector.Collector {
 	c := &Collector{
 		conf: conf,
 	}
 	_ = collector.WithDefaults(c)
-	c.exporter = exporter.NewPrometheusExporter(conf)
+	c.exporter = exporter.NewPrometheusExporter(conf).(*exporter.Collector)
+	c.exporter.AddMappingFunction(metricDiskWallWrites, func(family *dto.MetricFamily) {
+		*family.Type = dto.MetricType_COUNTER
+		for _, m := range family.Metric {
+			m.Counter = &dto.Counter{
+				Value: m.Gauge.Value,
+			}
+			m.Gauge = nil
+		}
+	})
 	return c
 }
 
@@ -43,11 +55,12 @@ func (c *Collector) Tags() []string {
 
 func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
-		exporter.OptionURL:                             "http://127.0.0.1:8989/metrics",
-		"wireguard_stun_peers":                         "wireguard_stun.peers",
-		"wireguard_stun_registry_etcd_txn":             "wireguard_stun.registry.etcd.txn",
-		"wireguard_stun_registry_etcd_update_triggers": "wireguard_stun.registry.etcd.updates",
-		"wireguard_stun_etcd_conn_state":               "wireguard_stun.etcd.conn.state",
+		exporter.OptionURL:                        "http://127.0.0.1:2379/metrics",
+		"etcd_debugging_mvcc_keys_total":          "etcd.keys",
+		"etcd_mvcc_db_total_size_in_bytes":        "etcd.db.total.size",
+		"etcd_mvcc_db_total_size_in_use_in_bytes": "etcd.db.use.size",
+		metricDiskWallWrites:                      "etcd.wall.writes",
+		"grpc_server_handled_total":               "etcd.grpc.calls",
 	}
 }
 

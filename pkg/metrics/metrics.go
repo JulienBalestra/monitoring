@@ -45,8 +45,9 @@ type Measures struct {
 	deviation map[uint64]*Sample
 	ch        chan Series
 
-	purge  time.Time
-	maxAge time.Duration
+	purge           time.Time
+	maxAge          time.Duration
+	submittedSeries float64
 }
 
 func (s *Sample) Count(newMetric *Sample) (*Series, error) {
@@ -104,6 +105,10 @@ func NewMeasuresWithMaxAge(ch chan Series, maxAge time.Duration) *Measures {
 	}
 }
 
+func (m *Measures) GetTotalSubmittedSeries() float64 {
+	return m.submittedSeries
+}
+
 func (m *Measures) Purge() (float64, float64) {
 	counts := 0.
 	deviations := 0.
@@ -133,6 +138,7 @@ func (m *Measures) Delete(sample *Sample) {
 }
 
 func (m *Measures) Gauge(newSample *Sample) {
+	m.submittedSeries++
 	m.ch <- Series{
 		Metric: newSample.Name,
 		Points: [][]float64{
@@ -177,6 +183,7 @@ func (m *Measures) Incr(newSample *Sample) error {
 		return nil
 	}
 	m.counter[h] = newSample
+	m.submittedSeries++
 	m.ch <- *s
 	return nil
 }
@@ -200,6 +207,7 @@ func (m *Measures) count(newSample *Sample, resetNegative bool) error {
 	if err == nil {
 		m.counter[h] = newSample
 		m.ch <- *s
+		m.submittedSeries++
 		return nil
 	}
 	if IsCountZero(err) {

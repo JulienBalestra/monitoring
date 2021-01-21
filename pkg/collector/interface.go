@@ -2,13 +2,18 @@ package collector
 
 import (
 	"context"
-	"strconv"
 	"time"
+
+	"github.com/JulienBalestra/dry/pkg/ticknow"
 
 	"github.com/JulienBalestra/monitoring/pkg/datadog"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
 	"go.uber.org/zap"
+)
+
+const (
+	collectorMetricPrefix = "collector."
 )
 
 type Config struct {
@@ -21,11 +26,6 @@ type Config struct {
 	Tags            []string
 }
 
-func (c Config) OverrideCollectInterval(d time.Duration) *Config {
-	c.CollectInterval = d
-	return &c
-}
-
 type Collector interface {
 	Config() *Config
 	Collect(context.Context) error
@@ -35,10 +35,10 @@ type Collector interface {
 	DefaultCollectInterval() time.Duration
 	DefaultTags() []string
 	Tags() []string
+	SubmittedSeries() float64
 }
 
-func RunCollection(ctx context.Context, c Collector) error {
-	// manage defaults
+func WithDefaults(c Collector) Collector {
 	config := c.Config()
 	if config.Options == nil {
 		config.Options = c.DefaultOptions()
@@ -49,6 +49,11 @@ func RunCollection(ctx context.Context, c Collector) error {
 	if config.Tags == nil {
 		config.Tags = c.DefaultTags()
 	}
+	return c
+}
+
+func RunCollection(ctx context.Context, c Collector) error {
+	config := c.Config()
 
 	zctx := zap.L().With(
 		zap.String("co", c.Name()),
@@ -67,35 +72,57 @@ func RunCollection(ctx context.Context, c Collector) error {
 		return nil
 	}
 
-	ticker := time.NewTicker(config.CollectInterval)
-	defer ticker.Stop()
+	runCollection := time.NewTicker(config.CollectInterval)
 	extCtx.Info("collecting metrics periodically")
 	collectorTag := "collector:" + c.Name()
 	measures := metrics.NewMeasures(config.MetricsClient.ChanSeries)
+
+	collectorMetrics := ticknow.NewTickNow(ctx, time.Minute*2)
+	var series, runSuccess, runErr float64
 	for {
 		select {
 		case <-ctx.Done():
+			runCollection.Stop()
 			extCtx.Info("end of collection")
 			return ctx.Err()
 
-		case <-ticker.C:
+		case <-collectorMetrics.C:
 			now := time.Now()
-			err := c.Collect(ctx)
-			_ = measures.Incr(&metrics.Sample{
-				Name:  "collector.collections",
-				Value: 1,
+			_ = measures.Count(&metrics.Sample{
+				Name:  collectorMetricPrefix + "series",
+				Value: series,
 				Time:  now,
 				Host:  config.Host,
-				Tags: append(config.Tagger.GetUnstable(config.Host),
-					collectorTag,
-					"success:"+strconv.FormatBool(err == nil),
-				),
+				Tags:  append(config.Tagger.GetUnstable(config.Host), collectorTag),
 			})
+			_ = measures.Count(&metrics.Sample{
+				Name:  collectorMetricPrefix + "collections",
+				Value: runSuccess,
+				Time:  now,
+				Host:  config.Host,
+				Tags:  append(config.Tagger.GetUnstable(config.Host), collectorTag, "success:true"),
+			})
+			_ = measures.Count(&metrics.Sample{
+				Name:  collectorMetricPrefix + "collections",
+				Value: runErr,
+				Time:  now,
+				Host:  config.Host,
+				Tags:  append(config.Tagger.GetUnstable(config.Host), collectorTag, "success:false"),
+			})
+
+		case <-runCollection.C:
+			beforeCollection := c.SubmittedSeries()
+			// TODO observe performance
+			err := c.Collect(ctx)
+			series = c.SubmittedSeries()
+			collectionSeries := series - beforeCollection
 			if err != nil {
-				extCtx.Error("failed collection", zap.Error(err))
+				runErr++
+				extCtx.Error("failed collection", zap.Error(err), zap.Float64("series", collectionSeries))
 				continue
 			}
-			zctx.Info("ok")
+			runSuccess++
+			zctx.Info("ok", zap.Uint64("s", uint64(collectionSeries)))
 		}
 	}
 }

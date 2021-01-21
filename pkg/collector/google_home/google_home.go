@@ -47,7 +47,7 @@ type EurekaInfo struct {
 }
 
 func NewGoogleHome(conf *collector.Config) collector.Collector {
-	return &Collector{
+	return collector.WithDefaults(&Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 		client: &http.Client{
@@ -56,7 +56,11 @@ func NewGoogleHome(conf *collector.Config) collector.Collector {
 			},
 		},
 		url: fmt.Sprintf("https://%s:8443/setup/eureka_info", conf.Options[OptionIP]),
-	}
+	})
+}
+
+func (c *Collector) SubmittedSeries() float64 {
+	return c.measures.GetTotalSubmittedSeries()
 }
 
 func (c *Collector) DefaultOptions() map[string]string {

@@ -19,11 +19,16 @@ type Collector struct {
 }
 
 func NewWireguardStunPeerEtcd(conf *collector.Config) collector.Collector {
-	return &Collector{
+	c := &Collector{
 		conf: conf,
-
-		exporter: exporter.NewPrometheusExporter(conf),
 	}
+	_ = collector.WithDefaults(c)
+	c.exporter = exporter.NewPrometheusExporter(conf)
+	return c
+}
+
+func (c *Collector) SubmittedSeries() float64 {
+	return c.exporter.SubmittedSeries()
 }
 
 func (c *Collector) DefaultTags() []string {

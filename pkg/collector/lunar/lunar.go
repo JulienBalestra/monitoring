@@ -30,10 +30,14 @@ type Collector struct {
 
 // NewAcaia TODO: this is a work in progress
 func NewAcaia(conf *collector.Config) collector.Collector {
-	return &Collector{
+	return collector.WithDefaults(&Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
-	}
+	})
+}
+
+func (c *Collector) SubmittedSeries() float64 {
+	return c.measures.GetTotalSubmittedSeries()
 }
 
 func (c *Collector) DefaultTags() []string {

@@ -31,7 +31,7 @@ type Collector struct {
 }
 
 func NewDNSMasqQueries(conf *collector.Config) collector.Collector {
-	return &Collector{
+	return collector.WithDefaults(&Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 
@@ -70,7 +70,11 @@ func NewDNSMasqQueries(conf *collector.Config) collector.Collector {
 				Qclass: dns.ClassCHAOS,
 			},
 		},
-	}
+	})
+}
+
+func (c *Collector) SubmittedSeries() float64 {
+	return c.measures.GetTotalSubmittedSeries()
 }
 
 func (c *Collector) DefaultOptions() map[string]string {
