@@ -65,16 +65,16 @@ func NewRootCommand(ctx context.Context) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		ctx, cancel := context.WithCancel(ctx)
+		runCtx, cancel := context.WithCancel(ctx)
 		wg := sync.WaitGroup{}
 		defer wg.Wait()
 		wg.Add(1)
 		go func() {
-			signals.NotifySignals(ctx, m.Tagger.Print)
+			signals.NotifySignals(runCtx, m.Tagger.Print)
 			cancel()
 			wg.Done()
 		}()
-		return m.Start(ctx)
+		return m.Start(runCtx)
 	}
 	return root
 }

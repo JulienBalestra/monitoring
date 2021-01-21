@@ -99,10 +99,7 @@ func (m *Monitoring) Start(ctx context.Context) error {
 	}()
 
 	errorsChan := make(chan error, len(m.catalogConfig.Collectors))
-	defer close(errorsChan)
-
 	collectorWaitGroup := &sync.WaitGroup{}
-	collectorWaitGroup.Add(1)
 	for name, newFn := range catalog.CollectorCatalog() {
 		select {
 		case <-runCtx.Done():
@@ -145,9 +142,10 @@ func (m *Monitoring) Start(ctx context.Context) error {
 	m.datadogClient.MetricClientUp(m.conf.Hostname, tags...)
 	// TODO: make it works
 	//_ = m.datadogClient.UpdateHostTags(runCtx, m.conf.HostTags)
+	var err error
 	select {
 	case <-runCtx.Done():
-	case err := <-errorsChan:
+	case err = <-errorsChan:
 		zap.L().With(zap.Int("pid", os.Getpid())).Error("failed to run collection", zap.Error(err))
 	}
 	runCancel()
@@ -156,7 +154,10 @@ func (m *Monitoring) Start(ctx context.Context) error {
 	_ = m.datadogClient.MetricClientShutdown(ctxShutdown, m.conf.Hostname, tags...)
 	shutdownCancel()
 	collectorWaitGroup.Wait()
+	close(errorsChan)
 	datadogClientCancel()
+
 	datadogClientWaitGroup.Wait()
-	return nil
+	zap.L().Info("end of monitoring")
+	return err
 }

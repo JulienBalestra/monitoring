@@ -77,7 +77,7 @@ func RunCollection(ctx context.Context, c Collector) error {
 	collectorTag := "collector:" + c.Name()
 	measures := metrics.NewMeasures(config.MetricsClient.ChanSeries)
 
-	collectorMetrics := ticknow.NewTickNow(ctx, time.Minute*2)
+	collectorMetrics := ticknow.NewTickNowWithContext(ctx, time.Minute*5)
 	var series, runSuccess, runErr float64
 	for {
 		select {
