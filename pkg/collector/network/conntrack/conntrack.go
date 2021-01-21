@@ -32,7 +32,11 @@ type Collector struct {
 }
 
 func NewConntrack(conf *collector.Config) collector.Collector {
-	return newConntrack(conf)
+	return collector.WithDefaults(newConntrack(conf))
+}
+
+func (c *Collector) SubmittedSeries() float64 {
+	return c.measures.GetTotalSubmittedSeries()
 }
 
 func (c *Collector) DefaultTags() []string {

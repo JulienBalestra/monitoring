@@ -88,22 +88,26 @@ func NewMonitoring(conf *Config) (*Monitoring, error) {
 func (m *Monitoring) Start(ctx context.Context) error {
 	zap.L().With(zap.Int("pid", os.Getpid())).Info("starting monitoring")
 	runCtx, runCancel := context.WithCancel(ctx)
-	waitGroup := &sync.WaitGroup{}
 
-	waitGroup.Add(1)
+	datadogClientContext, datadogClientCancel := context.WithCancel(context.TODO())
+	datadogClientWaitGroup := &sync.WaitGroup{}
+	datadogClientWaitGroup.Add(1)
 	go func() {
-		m.datadogClient.Run(runCtx)
-		waitGroup.Done()
+		m.datadogClient.Run(datadogClientContext)
+		close(m.datadogClient.ChanSeries)
+		datadogClientWaitGroup.Done()
 	}()
-	defer close(m.datadogClient.ChanSeries)
 
 	errorsChan := make(chan error, len(m.catalogConfig.Collectors))
 	defer close(errorsChan)
 
+	collectorWaitGroup := &sync.WaitGroup{}
+	collectorWaitGroup.Add(1)
 	for name, newFn := range catalog.CollectorCatalog() {
 		select {
 		case <-runCtx.Done():
 			break
+
 		default:
 			nb := 0
 			zctx := zap.L().With(
@@ -122,14 +126,14 @@ func (m *Monitoring) Start(ctx context.Context) error {
 					Options:         collectorToStart.Options,
 				}
 				c := newFn(config)
-				waitGroup.Add(1)
+				collectorWaitGroup.Add(1)
 				go func(coll collector.Collector) {
 					errorsChan <- collector.RunCollection(runCtx, coll)
-					waitGroup.Done()
+					collectorWaitGroup.Done()
 				}(c)
 			}
 			if nb == 0 {
-				zctx.Info("ignoring collector")
+				zctx.Debug("ignoring collector")
 				continue
 			}
 			zctx.Info("collector started", zap.Int("instances", nb))
@@ -139,17 +143,20 @@ func (m *Monitoring) Start(ctx context.Context) error {
 		"commit:"+version.Commit[:8],
 	)
 	m.datadogClient.MetricClientUp(m.conf.Hostname, tags...)
-	_ = m.datadogClient.UpdateHostTags(runCtx, m.conf.HostTags)
+	// TODO: make it works
+	//_ = m.datadogClient.UpdateHostTags(runCtx, m.conf.HostTags)
 	select {
 	case <-runCtx.Done():
 	case err := <-errorsChan:
 		zap.L().With(zap.Int("pid", os.Getpid())).Error("failed to run collection", zap.Error(err))
-		runCancel()
 	}
-
-	ctxShutdown, runCancel := context.WithTimeout(context.Background(), time.Second*5)
-	_ = m.datadogClient.MetricClientShutdown(ctxShutdown, m.conf.Hostname, tags...)
 	runCancel()
-	waitGroup.Wait()
+
+	ctxShutdown, shutdownCancel := context.WithTimeout(context.Background(), time.Second*5)
+	_ = m.datadogClient.MetricClientShutdown(ctxShutdown, m.conf.Hostname, tags...)
+	shutdownCancel()
+	collectorWaitGroup.Wait()
+	datadogClientCancel()
+	datadogClientWaitGroup.Wait()
 	return nil
 }

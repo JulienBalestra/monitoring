@@ -268,9 +268,10 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 		return nil
 	}
 
-	// TODO find a good logger/workflow to debug this
-	zap.L().Debug("sending series", zap.Any("series", series))
-	//return nil
+	debug := zap.L().Check(zap.DebugLevel, "sending series")
+	if debug != nil {
+		debug.Write(zap.Any("series", series))
+	}
 
 	var zb bytes.Buffer
 	w, err := zlib.NewWriterLevel(&zb, zlib.BestCompression)
@@ -332,9 +333,10 @@ func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {
 		return nil
 	}
 
-	// TODO find a good logger/workflow to debug this
-	//zap.L().Debug("sending logs", zap.String("logs", buffer.String()))
-	//return nil
+	debug := zap.L().Check(zap.DebugLevel, "sending logs")
+	if debug != nil {
+		debug.Write(zap.String("logs", buffer.String()))
+	}
 
 	var zb bytes.Buffer
 	w, err := zlib.NewWriterLevel(&zb, zlib.BestCompression)
@@ -398,10 +400,11 @@ func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {
 func (c *Client) MetricClientUp(host string, tags ...string) {
 	c.ChanSeries <- metrics.Series{
 		Metric: "client.up",
+		Type:   metrics.TypeGauge,
 		Points: [][]float64{
 			{
 				float64(time.Now().Unix()),
-				1.0,
+				1,
 			},
 		},
 		Host: host,
@@ -413,10 +416,11 @@ func (c *Client) MetricClientShutdown(ctx context.Context, host string, tags ...
 	return c.SendSeries(ctx, []metrics.Series{
 		{
 			Metric: "client.shutdown",
+			Type:   metrics.TypeGauge,
 			Points: [][]float64{
 				{
 					float64(time.Now().Unix()),
-					1.0,
+					1,
 				},
 			},
 			Host: host,

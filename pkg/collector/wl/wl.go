@@ -49,7 +49,11 @@ type wlCommand struct {
 }
 
 func NewWL(conf *collector.Config) collector.Collector {
-	return newWL(conf)
+	return collector.WithDefaults(newWL(conf))
+}
+
+func (c *Collector) SubmittedSeries() float64 {
+	return c.measures.GetTotalSubmittedSeries()
 }
 
 func (c *Collector) DefaultTags() []string {

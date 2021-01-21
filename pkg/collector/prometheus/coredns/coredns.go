@@ -19,12 +19,16 @@ type Collector struct {
 }
 
 func NewCoredns(conf *collector.Config) collector.Collector {
-	c := exporter.NewPrometheusExporter(conf)
-	return &Collector{
+	c := &Collector{
 		conf: conf,
-
-		exporter: c,
 	}
+	_ = collector.WithDefaults(c)
+	c.exporter = exporter.NewPrometheusExporter(conf)
+	return c
+}
+
+func (c *Collector) SubmittedSeries() float64 {
+	return c.exporter.SubmittedSeries()
 }
 
 func (c *Collector) DefaultTags() []string {

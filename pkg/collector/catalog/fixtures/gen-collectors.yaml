@@ -44,7 +44,8 @@ collectors:
   interval: 30s
   options:
     etcd_debugging_mvcc_keys_total: etcd.keys
-    etcd_mvcc_db_total_size_in_bytes: etcd.db.global.size
+    etcd_disk_wal_write_bytes_total: etcd.wall.writes
+    etcd_mvcc_db_total_size_in_bytes: etcd.db.total.size
     etcd_mvcc_db_total_size_in_use_in_bytes: etcd.db.use.size
     exporter-url: http://127.0.0.1:2379/metrics
     grpc_server_handled_total: etcd.grpc.calls
