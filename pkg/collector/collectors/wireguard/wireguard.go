@@ -103,40 +103,40 @@ func (c *Collector) Collect(_ context.Context) error {
 			if peer.Endpoint == nil {
 				continue
 			}
-			peer := stun.NewPeer(&peer)
-			c.conf.Tagger.Update(peer.PublicKey.String(),
-				tagger.NewTagUnsafe("pub-key-sha1", peer.PublicKeyHash),
-				tagger.NewTagUnsafe("pub-key-sha1-7", peer.PublicKeyHash[:7]),
-				tagger.NewTagUnsafe("allowed-ips", getAllowedIPsTag(peer.AllowedIPs)),
-				tagger.NewTagUnsafe("endpoint", peer.Endpoint.String()),
-				tagger.NewTagUnsafe("ip", peer.Endpoint.IP.String()),
-				tagger.NewTagUnsafe("port", strconv.Itoa(peer.Endpoint.Port)),
+			peerSHA := stun.NewPeer(&peer)
+			c.conf.Tagger.Update(peerSHA.PublicKey.String(),
+				tagger.NewTagUnsafe("pub-key-sha1", peerSHA.PublicKeySha1),
+				tagger.NewTagUnsafe("pub-key-sha1-7", peerSHA.PublicKeyShortSha1),
+				tagger.NewTagUnsafe("allowed-ips", getAllowedIPsTag(peerSHA.AllowedIPs)),
+				tagger.NewTagUnsafe("endpoint", peerSHA.Endpoint.String()),
+				tagger.NewTagUnsafe("ip", peerSHA.Endpoint.IP.String()),
+				tagger.NewTagUnsafe("port", strconv.Itoa(peerSHA.Endpoint.Port)),
 				deviceTag,
 			)
-			c.conf.Tagger.Update(peer.PublicKeyHash,
-				tagger.NewTagUnsafe("pub-key-sha1-7", peer.PublicKeyHash[:7]),
-				tagger.NewTagUnsafe("allowed-ips", getAllowedIPsTag(peer.AllowedIPs)),
-				tagger.NewTagUnsafe("endpoint", peer.Endpoint.String()),
-				tagger.NewTagUnsafe("ip", peer.Endpoint.IP.String()),
-				tagger.NewTagUnsafe("port", strconv.Itoa(peer.Endpoint.Port)),
+			c.conf.Tagger.Update(peerSHA.PublicKeySha1,
+				tagger.NewTagUnsafe("pub-key-sha1-7", peerSHA.PublicKeyShortSha1),
+				tagger.NewTagUnsafe("allowed-ips", getAllowedIPsTag(peerSHA.AllowedIPs)),
+				tagger.NewTagUnsafe("endpoint", peerSHA.Endpoint.String()),
+				tagger.NewTagUnsafe("ip", peerSHA.Endpoint.IP.String()),
+				tagger.NewTagUnsafe("port", strconv.Itoa(peerSHA.Endpoint.Port)),
 				deviceTag,
 			)
-			tags := append(hostTags, c.conf.Tagger.GetUnstable(peer.PublicKey.String())...)
+			tags := append(hostTags, c.conf.Tagger.GetUnstable(peerSHA.PublicKey.String())...)
 			_ = c.measures.CountWithNegativeReset(&metrics.Sample{
 				Name:  wireguardMetricPrefix + "transfer.received",
-				Value: float64(peer.ReceiveBytes),
+				Value: float64(peerSHA.ReceiveBytes),
 				Time:  now,
 				Host:  c.conf.Host,
 				Tags:  tags,
 			})
 			_ = c.measures.CountWithNegativeReset(&metrics.Sample{
 				Name:  wireguardMetricPrefix + "transfer.sent",
-				Value: float64(peer.TransmitBytes),
+				Value: float64(peerSHA.TransmitBytes),
 				Time:  now,
 				Host:  c.conf.Host,
 				Tags:  tags,
 			})
-			age := now.Sub(peer.LastHandshakeTime)
+			age := now.Sub(peerSHA.LastHandshakeTime)
 			if age > time.Minute*5 {
 				continue
 			}
