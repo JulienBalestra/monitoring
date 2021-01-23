@@ -48,6 +48,9 @@ func (c *Collector) DefaultOptions() map[string]string {
 		"wireguard_stun_registry_etcd_txn":             "wireguard_stun.registry.etcd.txn",
 		"wireguard_stun_registry_etcd_update_triggers": "wireguard_stun.registry.etcd.updates",
 		"wireguard_stun_etcd_conn_state":               "wireguard_stun.etcd.conn.state",
+
+		exporter.SourceGoMemstatsHeapMetrics: exporter.DestinationGoMemstatsHeapMetrics,
+		exporter.SourceGoRoutinesMetrics:     exporter.DestinationGoroutinesMetrics,
 	}
 }
 

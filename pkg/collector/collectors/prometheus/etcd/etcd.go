@@ -61,6 +61,9 @@ func (c *Collector) DefaultOptions() map[string]string {
 		"etcd_mvcc_db_total_size_in_use_in_bytes": "etcd.db.use.size",
 		metricDiskWallWrites:                      "etcd.wall.writes",
 		"grpc_server_handled_total":               "etcd.grpc.calls",
+
+		exporter.SourceGoMemstatsHeapMetrics: exporter.DestinationGoMemstatsHeapMetrics,
+		exporter.SourceGoRoutinesMetrics:     exporter.DestinationGoroutinesMetrics,
 	}
 }
 

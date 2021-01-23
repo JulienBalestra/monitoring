@@ -30,6 +30,12 @@ const (
 		"q=0.7,text/plain;" +
 		"version=0.0.4;" +
 		"q=0.3"
+
+	SourceGoRoutinesMetrics      = "go_goroutines"
+	DestinationGoroutinesMetrics = "golang.runtime.goroutines"
+
+	SourceGoMemstatsHeapMetrics      = "go_memstats_heap_alloc_bytes"
+	DestinationGoMemstatsHeapMetrics = "golang.heap.alloc"
 )
 
 type Collector struct {
@@ -87,7 +93,10 @@ func (c *Collector) Tags() []string {
 }
 
 func (c *Collector) DefaultOptions() map[string]string {
-	return map[string]string{}
+	return map[string]string{
+		SourceGoMemstatsHeapMetrics: DestinationGoMemstatsHeapMetrics,
+		SourceGoRoutinesMetrics:     DestinationGoroutinesMetrics,
+	}
 }
 
 func (c *Collector) DefaultCollectInterval() time.Duration {

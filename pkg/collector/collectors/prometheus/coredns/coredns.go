@@ -47,6 +47,9 @@ func (c *Collector) DefaultOptions() map[string]string {
 		exporter.OptionURL:            "http://127.0.0.1:9153/metrics",
 		"coredns_dns_requests_total":  "coredns.dns.requests",
 		"coredns_dns_responses_total": "coredns.dns.responses",
+
+		exporter.SourceGoMemstatsHeapMetrics: exporter.DestinationGoMemstatsHeapMetrics,
+		exporter.SourceGoRoutinesMetrics:     exporter.DestinationGoroutinesMetrics,
 	}
 }
 
