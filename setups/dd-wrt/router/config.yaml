@@ -21,8 +21,3 @@ collectors:
     options:
       ip: 192.168.3.97
 
-  - name: http
-    interval: 30s
-    options:
-      method: GET
-      url: http://192.168.3.108:9080
