@@ -47,6 +47,7 @@ collectors:
   options:
     etcd_debugging_mvcc_keys_total: etcd.keys
     etcd_debugging_mvcc_put_total: etcd.puts
+    etcd_debugging_mvcc_total_put_size_in_bytes: etcd.put.size
     etcd_debugging_mvcc_watch_stream_total: etcd.watch.streams
     etcd_debugging_mvcc_watcher_total: etcd.watch.watchers
     etcd_disk_wal_write_bytes_total: etcd.wall.writes
