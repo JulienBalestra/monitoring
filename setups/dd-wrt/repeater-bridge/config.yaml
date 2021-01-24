@@ -1,0 +1,13 @@
+collectors:
+  - name: datadog-client
+  - name: golang
+  - name: load
+  - name: memory
+  - name: network-arp
+  - name: network-conntrack
+  - name: network-statistics
+  - name: network-wireless
+  - name: tagger
+  - name: temperature-dd-wrt
+  - name: uptime
+  - name: wl
