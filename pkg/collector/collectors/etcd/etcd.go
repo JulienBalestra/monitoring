@@ -13,6 +13,7 @@ const (
 	CollectorName = "etcd"
 
 	metricDiskWallWrites = "etcd_disk_wal_write_bytes_total"
+	metricPutBytes       = "etcd_debugging_mvcc_total_put_size_in_bytes"
 )
 
 type Collector struct {
@@ -28,6 +29,15 @@ func NewEtcd(conf *collector.Config) collector.Collector {
 	_ = collector.WithDefaults(c)
 	c.exporter = exporter.NewPrometheusExporter(conf).(*exporter.Collector)
 	c.exporter.AddMappingFunction(metricDiskWallWrites, func(family *dto.MetricFamily) {
+		*family.Type = dto.MetricType_COUNTER
+		for _, m := range family.Metric {
+			m.Counter = &dto.Counter{
+				Value: m.Gauge.Value,
+			}
+			m.Gauge = nil
+		}
+	})
+	c.exporter.AddMappingFunction(metricPutBytes, func(family *dto.MetricFamily) {
 		*family.Type = dto.MetricType_COUNTER
 		for _, m := range family.Metric {
 			m.Counter = &dto.Counter{
@@ -55,12 +65,18 @@ func (c *Collector) Tags() []string {
 
 func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
-		exporter.OptionURL:                        "http://127.0.0.1:2379/metrics",
-		"etcd_debugging_mvcc_keys_total":          "etcd.keys",
+		exporter.OptionURL: "http://127.0.0.1:2379/metrics",
+
 		"etcd_mvcc_db_total_size_in_bytes":        "etcd.db.total.size",
 		"etcd_mvcc_db_total_size_in_use_in_bytes": "etcd.db.use.size",
 		metricDiskWallWrites:                      "etcd.wall.writes",
-		"grpc_server_handled_total":               "etcd.grpc.calls",
+
+		"grpc_server_handled_total": "etcd.grpc.calls",
+
+		"etcd_debugging_mvcc_keys_total":         "etcd.keys",
+		"etcd_debugging_mvcc_watch_stream_total": "etcd.watch.streams",
+		"etcd_debugging_mvcc_watcher_total":      "etcd.watch.watchers",
+		"etcd_debugging_mvcc_put_total":          "etcd.puts",
 
 		exporter.SourceGoMemstatsHeapMetrics: exporter.DestinationGoMemstatsHeapMetrics,
 		exporter.SourceGoRoutinesMetrics:     exporter.DestinationGoroutinesMetrics,

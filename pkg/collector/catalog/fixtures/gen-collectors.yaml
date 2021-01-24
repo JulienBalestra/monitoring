@@ -16,6 +16,8 @@ collectors:
     coredns_dns_requests_total: coredns.dns.requests
     coredns_dns_responses_total: coredns.dns.responses
     exporter-url: http://127.0.0.1:9153/metrics
+    go_goroutines: golang.runtime.goroutines
+    go_memstats_heap_alloc_bytes: golang.heap.alloc
   tags:
   - collector:coredns
 - name: datadog-client
@@ -44,10 +46,15 @@ collectors:
   interval: 30s
   options:
     etcd_debugging_mvcc_keys_total: etcd.keys
+    etcd_debugging_mvcc_put_total: etcd.puts
+    etcd_debugging_mvcc_watch_stream_total: etcd.watch.streams
+    etcd_debugging_mvcc_watcher_total: etcd.watch.watchers
     etcd_disk_wal_write_bytes_total: etcd.wall.writes
     etcd_mvcc_db_total_size_in_bytes: etcd.db.total.size
     etcd_mvcc_db_total_size_in_use_in_bytes: etcd.db.use.size
     exporter-url: http://127.0.0.1:2379/metrics
+    go_goroutines: golang.runtime.goroutines
+    go_memstats_heap_alloc_bytes: golang.heap.alloc
     grpc_server_handled_total: etcd.grpc.calls
   tags:
   - collector:etcd
@@ -107,6 +114,9 @@ collectors:
   - collector:network-wireless
 - name: prometheus
   interval: 30s
+  options:
+    go_goroutines: golang.runtime.goroutines
+    go_memstats_heap_alloc_bytes: golang.heap.alloc
   tags:
   - collector:prometheus
 - name: shelly
@@ -143,6 +153,8 @@ collectors:
   interval: 30s
   options:
     exporter-url: http://127.0.0.1:8989/metrics
+    go_goroutines: golang.runtime.goroutines
+    go_memstats_heap_alloc_bytes: golang.heap.alloc
     wireguard_stun_etcd_conn_state: wireguard_stun.etcd.conn.state
     wireguard_stun_peer_etcd_updates: wireguard_stun.peer.etcd.updates
     wireguard_stun_peers: wireguard_stun.peers
@@ -152,6 +164,8 @@ collectors:
   interval: 30s
   options:
     exporter-url: http://127.0.0.1:8989/metrics
+    go_goroutines: golang.runtime.goroutines
+    go_memstats_heap_alloc_bytes: golang.heap.alloc
     wireguard_stun_etcd_conn_state: wireguard_stun.etcd.conn.state
     wireguard_stun_peers: wireguard_stun.peers
     wireguard_stun_registry_etcd_txn: wireguard_stun.registry.etcd.txn
