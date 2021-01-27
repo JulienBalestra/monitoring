@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"os"
+	"time"
+
 	"github.com/JulienBalestra/dry/pkg/fnv"
 	"go.uber.org/zap"
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
-	"net"
-	"os"
-	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
@@ -19,7 +20,7 @@ import (
 const (
 	CollectorName = "ping"
 
-	OptionIP     = "ip"
+	OptionTarget = "target"
 	OptionListen = "listen"
 
 	listenOnAllAddresses = "0.0.0.0"
@@ -29,7 +30,8 @@ type Collector struct {
 	conf     *collector.Config
 	measures *metrics.Measures
 
-	pid uint64
+	pid   uint64
+	reply []byte
 }
 
 func NewPing(conf *collector.Config) collector.Collector {
@@ -37,6 +39,7 @@ func NewPing(conf *collector.Config) collector.Collector {
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
 		pid:      uint64(os.Getpid()),
+		reply:    make([]byte, 1500),
 	})
 }
 
@@ -57,7 +60,7 @@ func (c *Collector) Tags() []string {
 func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		OptionListen: listenOnAllAddresses,
-		OptionIP:     "1.1.1.1",
+		OptionTarget: "1.1.1.1",
 	}
 }
 
@@ -75,14 +78,14 @@ func (c *Collector) Name() string {
 	return CollectorName
 }
 
-func (c *Collector) do(destination *net.IPAddr, listen string) (time.Duration, error) {
+func (c *Collector) ping(ctx context.Context, destination *net.IPAddr, listen string) (time.Duration, error) {
 	l, err := icmp.ListenPacket("ip4:icmp", listen)
 	if err != nil {
 		return 0, err
 	}
 	defer l.Close()
 
-	err = l.SetDeadline(time.Now().Add(time.Second * 5))
+	err = l.SetDeadline(time.Now().Add(c.conf.CollectInterval))
 	if err != nil {
 		return 0, err
 	}
@@ -103,37 +106,57 @@ func (c *Collector) do(destination *net.IPAddr, listen string) (time.Duration, e
 		return 0, err
 	}
 
-	reply := make([]byte, 1500)
-	start := time.Now()
-	_, err = l.WriteTo(b, destination)
-	if err != nil {
-		return 0, err
-	}
+	resultCh := make(chan time.Duration)
+	defer close(resultCh)
+	errCh := make(chan error)
+	defer close(errCh)
+	go func() {
+		start := time.Now()
+		_, err = l.WriteTo(b, destination)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		n, _, err := l.ReadFrom(c.reply)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		duration := time.Since(start)
+		rm, err := icmp.ParseMessage(1, c.reply[:n])
+		if err != nil {
+			errCh <- err
+			return
+		}
+		if rm.Type != ipv4.ICMPTypeEchoReply {
+			errCh <- fmt.Errorf("wrong ping response: %v", rm.Type)
+			return
+		}
+		resultCh <- duration
+	}()
 
-	n, _, err := l.ReadFrom(reply)
-	if err != nil {
-		return 0, err
-	}
-	duration := time.Since(start)
+	for {
+		select {
+		case <-ctx.Done():
+			_ = l.SetDeadline(time.Now().Add(0))
 
-	rm, err := icmp.ParseMessage(1, reply[:n])
-	if err != nil {
-		return 0, err
+		case err := <-errCh:
+			return 0, err
+
+		case r := <-resultCh:
+			return r, nil
+		}
 	}
-	if rm.Type != ipv4.ICMPTypeEchoReply {
-		return 0, fmt.Errorf("wrong ping response: %v", rm.Type)
-	}
-	return duration, nil
 }
 
 func (c *Collector) Collect(ctx context.Context) error {
-	destination, ok := c.conf.Options[OptionIP]
+	target, ok := c.conf.Options[OptionTarget]
 	if !ok {
-		zap.L().Error("missing option", zap.String("options", OptionIP))
-		return errors.New("missing option " + OptionIP)
+		zap.L().Error("missing option", zap.String("options", OptionTarget))
+		return errors.New("missing option " + OptionTarget)
 	}
 
-	dst, err := net.ResolveIPAddr("ip4", destination)
+	dst, err := net.ResolveIPAddr("ip4", target)
 	if err != nil {
 		return err
 	}
@@ -147,22 +170,23 @@ func (c *Collector) Collect(ctx context.Context) error {
 		)
 	}
 
-	d, err := c.do(dst, la)
+	d, err := c.ping(ctx, dst, la)
 	if err != nil {
-		zap.L().Debug("failed to ping",
+		zap.L().Error("failed to ping",
 			zap.Error(err),
 			zap.String(OptionListen, la),
-			zap.String(OptionIP, destination),
+			zap.String(OptionTarget, target),
+			zap.String("ip", dst.IP.String()),
 		)
-		return nil // this could be noisy
+		return err // this could be noisy
 	}
-	tags := append(c.Tags(), "ip:"+destination)
+	tags := append(c.Tags(), "ip:"+dst.IP.String(), "target:"+target)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "latency.icmp",
 		Value: d.Seconds(),
 		Time:  time.Now(),
 		Host:  c.conf.Host,
-		Tags:  append(tags, c.conf.Tagger.GetUnstable(destination)...),
+		Tags:  append(tags, c.conf.Tagger.GetUnstable(target)...),
 	}, c.conf.CollectInterval*3)
 	return nil
 }
