@@ -116,7 +116,6 @@ collectors:
 - name: ping
   interval: 1m0s
   options:
-    listen: 0.0.0.0
     target: 1.1.1.1
   tags:
   - collector:ping
