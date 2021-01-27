@@ -180,7 +180,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 		)
 		return err // this could be noisy
 	}
-	tags := append(c.Tags(), "ip:"+dst.IP.String(), "target:"+target)
+	tags := append(c.Tags(), "ip:"+dst.IP.String(), "target:"+target, "listen:"+la)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "latency.icmp",
 		Value: d.Seconds(),

@@ -40,15 +40,40 @@ type Collector interface {
 
 func WithDefaults(c Collector) Collector {
 	config := c.Config()
-	if config.Options == nil {
-		config.Options = c.DefaultOptions()
-	}
+
 	if config.CollectInterval == 0 {
 		config.CollectInterval = c.DefaultCollectInterval()
 	}
+
+	if config.Options == nil {
+		config.Options = c.DefaultOptions()
+	} else {
+		d := c.DefaultOptions()
+		for k, v := range d {
+			_, ok := config.Options[k]
+			if ok {
+				continue
+			}
+			config.Options[k] = v
+		}
+	}
+
 	if config.Tags == nil {
 		config.Tags = c.DefaultTags()
+	} else {
+		m := make(map[string]struct{}, len(config.Tags))
+		for _, t := range config.Tags {
+			m[t] = struct{}{}
+		}
+		for _, d := range c.DefaultTags() {
+			_, ok := m[d]
+			if ok {
+				continue
+			}
+			config.Tags = append(config.Tags, d)
+		}
 	}
+
 	return c
 }
 
