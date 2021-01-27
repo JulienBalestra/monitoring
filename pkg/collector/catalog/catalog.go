@@ -17,7 +17,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/freebox"
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/golang"
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/google_home"
-	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/http_collector"
+	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/http"
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/load"
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/lunar"
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/memory"
