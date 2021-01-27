@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/JulienBalestra/dry/pkg/fnv"
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/bluetooth/exported"
-	"github.com/JulienBalestra/monitoring/pkg/fnv"
 	"github.com/JulienBalestra/monitoring/pkg/macvendor"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"

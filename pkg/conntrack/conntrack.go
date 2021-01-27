@@ -11,7 +11,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/JulienBalestra/monitoring/pkg/fnv"
+	"github.com/JulienBalestra/dry/pkg/fnv"
 )
 
 const (
