@@ -6,6 +6,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/ping"
+
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/bluetooth"
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/coredns"
@@ -17,7 +19,7 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/freebox"
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/golang"
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/google_home"
-	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/http_collector"
+	http_collector "github.com/JulienBalestra/monitoring/pkg/collector/collectors/http"
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/load"
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/lunar"
 	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/memory"
@@ -68,6 +70,7 @@ func CollectorCatalog() map[string]func(*collector.Config) collector.Collector {
 		etcdRegistry.CollectorName:   etcdRegistry.NewWireguardStunRegistryEtcd,
 		etcdPeer.CollectorName:       etcdPeer.NewWireguardStunPeerEtcd,
 		etcd.CollectorName:           etcd.NewEtcd,
+		ping.CollectorName:           ping.NewPing,
 
 		// WIP collectors:
 		bluetooth.CollectorName: bluetooth.NewBluetooth,

@@ -17,6 +17,8 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/JulienBalestra/dry v0.4.0/go.mod h1:RyzmHjFrfGKjyvMieCjufKzcvC9B+ovSzdSveoeUWSg=
 github.com/JulienBalestra/dry v0.5.0 h1:HDEmzJw4V84iHjZckXx4Y3J+v0F6cwJDfbMxrOR0pAY=
 github.com/JulienBalestra/dry v0.5.0/go.mod h1:RyzmHjFrfGKjyvMieCjufKzcvC9B+ovSzdSveoeUWSg=
+github.com/JulienBalestra/dry v0.6.0 h1:t3liw8reXcVhpazu+609QVwEnUc4OlDG5m+Gv7VPg8c=
+github.com/JulienBalestra/dry v0.6.0/go.mod h1:RyzmHjFrfGKjyvMieCjufKzcvC9B+ovSzdSveoeUWSg=
 github.com/JulienBalestra/wireguard-stun v0.3.0 h1:l4Q5sUoAPoz74oKCUgAllWsTfx1SvHusMcFOTqkVyyo=
 github.com/JulienBalestra/wireguard-stun v0.3.0/go.mod h1:yyHXiG/MpxsjbfsUb9w9y3VAuKa0W1PK+PFsjsSdQ0w=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=

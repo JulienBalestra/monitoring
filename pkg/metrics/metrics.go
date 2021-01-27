@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/JulienBalestra/monitoring/pkg/fnv"
+	"github.com/JulienBalestra/dry/pkg/fnv"
 )
 
 const (

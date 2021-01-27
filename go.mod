@@ -3,7 +3,7 @@ module github.com/JulienBalestra/monitoring
 go 1.15
 
 require (
-	github.com/JulienBalestra/dry v0.5.0
+	github.com/JulienBalestra/dry v0.6.0
 	github.com/JulienBalestra/wireguard-stun v0.3.0
 	github.com/godbus/dbus/v5 v5.0.3
 	github.com/magiconair/properties v1.8.4
@@ -17,6 +17,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.16.0
+	golang.org/x/net v0.0.0-20200822124328-c89045814202
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200609130330-bd2cb7843e1b
 	gopkg.in/yaml.v2 v2.4.0
 )

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
-	"github.com/JulienBalestra/monitoring/pkg/collector/collectors/http_collector"
+	http_collector "github.com/JulienBalestra/monitoring/pkg/collector/collectors/http"
 )
 
 const (
