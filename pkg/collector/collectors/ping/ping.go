@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"os/exec"
 	"strconv"
@@ -83,7 +84,14 @@ func (c *Collector) Collect(ctx context.Context) error {
 		return err
 	}
 
-	b, err := exec.CommandContext(ctx, "ping", "-c", "1", dst.IP.String()).CombinedOutput()
+	ctx, cancel := context.WithTimeout(ctx, c.conf.CollectInterval)
+	defer cancel()
+	sec := fmt.Sprintf("%.f", c.conf.CollectInterval.Seconds())
+	b, err := exec.CommandContext(ctx, "ping",
+		"-w", sec,
+		"-W", sec,
+		"-c", "1",
+		dst.IP.String()).CombinedOutput()
 	if err != nil {
 		return err
 	}
