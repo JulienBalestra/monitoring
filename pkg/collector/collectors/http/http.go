@@ -100,7 +100,9 @@ func (c *Collector) Collect(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	now := time.Now()
 	resp, err := c.client.Do(req)
+	latency := time.Since(now)
 	if err != nil {
 		return err
 	}
@@ -127,11 +129,11 @@ func (c *Collector) Collect(ctx context.Context) error {
 	if path == "" {
 		path = "/"
 	}
-	_ = c.measures.Incr(
+	_ = c.measures.GaugeDeviation(
 		&metrics.Sample{
-			Name:  "http.query",
-			Value: 1,
-			Time:  time.Now(),
+			Name:  "latency.http",
+			Value: float64(latency.Milliseconds()),
+			Time:  now,
 			Host:  c.conf.Host,
 			Tags: append(tags,
 				"code:"+strconv.Itoa(resp.StatusCode),
@@ -144,7 +146,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 				"ip:"+ipAddress,
 				"scheme:"+scheme,
 			),
-		},
+		}, c.conf.CollectInterval,
 	)
 	return nil
 }
