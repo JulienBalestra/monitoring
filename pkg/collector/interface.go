@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/JulienBalestra/dry/pkg/ticknow"
-
 	"github.com/JulienBalestra/monitoring/pkg/datadog"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
@@ -98,41 +96,43 @@ func RunCollection(ctx context.Context, c Collector) error {
 	}
 
 	runCollection := time.NewTicker(config.CollectInterval)
+	defer runCollection.Stop()
 	extCtx.Info("collecting metrics periodically")
 	collectorTag := "collector:" + c.Name()
 	measures := metrics.NewMeasures(config.MetricsClient.ChanSeries)
 
-	collectorMetrics := ticknow.NewTickNowWithContext(ctx, time.Minute*5)
+	collectorMetrics := time.NewTicker(time.Minute * 5)
+	defer collectorMetrics.Stop()
 	var series, runSuccess, runErr float64
 	for {
 		select {
 		case <-ctx.Done():
-			runCollection.Stop()
 			extCtx.Info("end of collection")
 			return ctx.Err()
 
 		case <-collectorMetrics.C:
 			now := time.Now()
+			tags := append(config.Tagger.GetUnstable(config.Host), collectorTag)
 			_ = measures.Count(&metrics.Sample{
 				Name:  collectorMetricPrefix + "series",
 				Value: series,
 				Time:  now,
 				Host:  config.Host,
-				Tags:  append(config.Tagger.GetUnstable(config.Host), collectorTag),
+				Tags:  tags,
 			})
 			_ = measures.Count(&metrics.Sample{
 				Name:  collectorMetricPrefix + "collections",
 				Value: runSuccess,
 				Time:  now,
 				Host:  config.Host,
-				Tags:  append(config.Tagger.GetUnstable(config.Host), collectorTag, "success:true"),
+				Tags:  append(tags, "success:true"),
 			})
 			_ = measures.Count(&metrics.Sample{
 				Name:  collectorMetricPrefix + "collections",
 				Value: runErr,
 				Time:  now,
 				Host:  config.Host,
-				Tags:  append(config.Tagger.GetUnstable(config.Host), collectorTag, "success:false"),
+				Tags:  append(tags, "success:false"),
 			})
 
 		case <-runCollection.C:

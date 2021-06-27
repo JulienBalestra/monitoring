@@ -30,7 +30,7 @@ import:
 	goimports -w pkg/ main/ cmd/
 
 ineffassign:
-	ineffassign ./
+	ineffassign pkg/* main/* cmd/*
 
 test:
 	@go test -v -race ./...
