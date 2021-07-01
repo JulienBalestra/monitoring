@@ -2,6 +2,7 @@ package forward
 
 import (
 	"bytes"
+	"compress/zlib"
 	"context"
 	"net/url"
 	"sync"
@@ -38,7 +39,7 @@ func (f *Forwarder) Write(p []byte) (n int, err error) {
 		return nn, err
 	}
 	if since > time.Minute || bufferLen > bufferSyncTrigger {
-		return nn, f.Sync()
+		//	return nn, f.Sync()
 	}
 	return nn, nil
 }
@@ -46,15 +47,30 @@ func (f *Forwarder) Write(p []byte) (n int, err error) {
 func (f *Forwarder) Sync() error {
 	ctx, cancel := context.WithTimeout(f.ctx, time.Second*45)
 	defer cancel()
+	var zb bytes.Buffer
+	w, err := zlib.NewWriterLevel(&zb, zlib.BestCompression)
+	if err != nil {
+		return err
+	}
+
 	f.mu.Lock()
-	defer f.mu.Unlock()
-	err := f.c.SendLogs(ctx, f.buffer)
+	_, err = w.Write(f.buffer.Bytes())
+	if err != nil {
+		return err
+	}
+	f.mu.Unlock()
+
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+	err = f.c.SendLogs(ctx, &zb)
 	if err != nil {
 		return err
 	}
 	f.buffer.Reset()
 	f.lastSync = time.Now()
-	return err
+	return nil
 }
 
 func (f *Forwarder) Close() error {

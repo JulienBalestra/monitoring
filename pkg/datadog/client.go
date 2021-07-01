@@ -178,25 +178,28 @@ func (c *Client) Run(ctx context.Context) {
 	seriesTicker := time.NewTicker(c.conf.SendInterval)
 	defer seriesTicker.Stop()
 
-	hostTicker := time.NewTicker(time.Hour)
-	defer hostTicker.Stop()
+	// TODO fix this
+	//hostTicker := time.NewTicker(time.Hour)
+	//defer hostTicker.Stop()
 
 	zap.L().Info("sending metrics periodically", zap.Duration("sendInterval", c.conf.SendInterval))
 
 	for {
 		select {
-		case <-hostTicker.C:
-			zctx := zap.L().With(
-				zap.Strings("hostTags", c.conf.HostTags),
-			)
-			ctxTimeout, cancel := context.WithTimeout(ctx, timeout)
-			err := c.UpdateHostTags(ctxTimeout, c.conf.HostTags)
-			cancel()
-			if err != nil {
-				zctx.Error("failed to update host tags", zap.Error(err))
-				continue
-			}
-			zctx.Info("successfully updated host tags")
+		/*
+			case <-hostTicker.C:
+				zctx := zap.L().With(
+					zap.Strings("hostTags", c.conf.HostTags),
+				)
+				ctxTimeout, cancel := context.WithTimeout(ctx, timeout)
+				err := c.UpdateHostTags(ctxTimeout, c.conf.HostTags)
+				cancel()
+				if err != nil {
+					zctx.Error("failed to update host tags", zap.Error(err))
+					continue
+				}
+				zctx.Info("successfully updated host tags")
+		*/
 
 		case <-ctx.Done():
 			storeLen := store.Len()
@@ -241,6 +244,9 @@ func (c *Client) Run(ctx context.Context) {
 				store.Reset()
 				continue
 			}
+			c.Stats.Lock()
+			c.Stats.SentSeriesErrors++
+			c.Stats.Unlock()
 			gcThreshold := metrics.DatadogMetricsMaxAge()
 			gc := store.GarbageCollect(gcThreshold)
 			zctx.Error("failed to send series",
@@ -308,13 +314,17 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 		// From https://golang.org/pkg/net/http/#Response:
 		// The default HTTP client's Transport may not reuse HTTP/1.x "keep-alive"
 		// TCP connections if the Body is not read to completion and closed.
-		_, _ = io.Copy(ioutil.Discard, resp.Body)
+		if debug == nil {
+			_, _ = io.Copy(ioutil.Discard, resp.Body)
+			return resp.Body.Close()
+		}
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		debug.Write(zap.ByteString("body", bodyBytes))
 		return resp.Body.Close()
 	}
-	c.Stats.Lock()
-	c.Stats.SentSeriesErrors++
-	c.Stats.Unlock()
-
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
@@ -328,6 +338,7 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 }
 
 func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {
+	// TODO move this logic elsewhere
 	bufferLen := buffer.Len()
 	if bufferLen == 0 {
 		return nil
@@ -335,24 +346,11 @@ func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {
 
 	debug := zap.L().Check(zap.DebugLevel, "sending logs")
 	if debug != nil {
-		debug.Write(zap.String("logs", buffer.String()))
+		debug.Write(zap.Int("logs", bufferLen))
 	}
 
-	var zb bytes.Buffer
-	w, err := zlib.NewWriterLevel(&zb, zlib.BestCompression)
-	if err != nil {
-		return err
-	}
-	_, err = w.Write(buffer.Bytes())
-	if err != nil {
-		return err
-	}
-	err = w.Close()
-	if err != nil {
-		return err
-	}
-	logsBytes := float64(zb.Len())
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.logsURL, &zb)
+	logsBytes := float64(bufferLen)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.logsURL, buffer)
 	if err != nil {
 		return err
 	}
@@ -384,9 +382,6 @@ func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		c.Stats.Lock()
-		c.Stats.SentLogsErrors++
-		c.Stats.Unlock()
 		return err
 	}
 	_ = resp.Body.Close()

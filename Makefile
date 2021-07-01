@@ -29,9 +29,6 @@ lint:
 import:
 	goimports -w pkg/ main/ cmd/
 
-ineffassign:
-	ineffassign ./
-
 test:
 	@go test -v -race ./...
 
