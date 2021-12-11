@@ -19,7 +19,7 @@ const (
 	CollectorName = "ping"
 
 	OptionTarget  = "target"
-	OptionTimeout = "timeout"
+	OptionTimeout = "timeout-sec"
 )
 
 type Collector struct {
@@ -56,7 +56,7 @@ func (c *Collector) Tags() []string {
 func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
 		OptionTarget:  "1.1.1.1",
-		OptionTimeout: "2s",
+		OptionTimeout: "2",
 	}
 }
 
@@ -89,7 +89,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 		)
 		return errors.New("missing option " + OptionTimeout)
 	}
-	timeoutDuration, err := time.ParseDuration(timeout)
+	timeoutDuration, err := time.ParseDuration(timeout + "s")
 	if err != nil {
 		zap.L().Error("invalid option",
 			zap.String("options", OptionTimeout),
@@ -98,8 +98,12 @@ func (c *Collector) Collect(ctx context.Context) error {
 		)
 		return err
 	}
-	if timeoutDuration >= c.conf.CollectInterval {
-		err := fmt.Errorf("must be lower than the collection interval: %s < %s", c.conf.CollectInterval.String(), timeoutDuration.String())
+	const minTimeout = 1.
+	if timeoutDuration >= c.conf.CollectInterval && timeoutDuration.Seconds() < minTimeout {
+		err := fmt.Errorf(
+			"must be lower than the collection interval: %s < %s and greater or equal to %v",
+			c.conf.CollectInterval.String(), timeoutDuration.String(), minTimeout,
+		)
 		zap.L().Error("invalid option",
 			zap.String("options", OptionTimeout),
 			zap.String(OptionTimeout, timeout),
@@ -120,9 +124,14 @@ func (c *Collector) Collect(ctx context.Context) error {
 		"-w", timeout,
 		"-W", timeout,
 		"-c", "1",
-		dst.IP.String()).CombinedOutput()
+		dst.IP.String(),
+	).CombinedOutput()
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			`"ping -w %s -W %s -c 1 %s": %v`,
+			timeout, timeout, dst.IP.String(),
+			err,
+		)
 	}
 	i := bytes.Index(b, c.timeStart)
 	if i == -1 {
