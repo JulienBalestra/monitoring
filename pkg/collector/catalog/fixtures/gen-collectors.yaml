@@ -117,7 +117,7 @@ collectors:
   interval: 1m0s
   options:
     target: 1.1.1.1
-    timeout-seconds: "2"
+    timeout: 2s
   tags:
   - collector:ping
 - name: prometheus
