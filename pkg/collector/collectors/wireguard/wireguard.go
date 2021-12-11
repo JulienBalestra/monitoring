@@ -137,9 +137,6 @@ func (c *Collector) Collect(_ context.Context) error {
 				Tags:  tags,
 			})
 			age := now.Sub(peerSHA.LastHandshakeTime)
-			if age > time.Minute*5 {
-				continue
-			}
 			c.measures.Gauge(&metrics.Sample{
 				Name:  wireguardMetricPrefix + "handshake.age",
 				Value: age.Seconds(),
