@@ -75,7 +75,7 @@ func NewMonitoring(conf *Config) (*Monitoring, error) {
 	if err != nil {
 		return nil, err
 	}
-	logger = logger.With(zap.String("h", conf.Hostname))
+	logger = logger.With(zap.String("host", conf.Hostname))
 	zap.ReplaceGlobals(logger)
 	zap.RedirectStdLog(logger)
 	return &Monitoring{

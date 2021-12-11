@@ -6,7 +6,7 @@ templates:
       # TS=$(date +%s)
       # docker build ${GOPATH}/src/github.com/JulienBalestra/monitoring/.circleci/ -t julienbalestra/monitoring:${TS}
       # docker push julienbalestra/monitoring:${TS}
-    - image: julienbalestra/monitoring:1624813082
+    - image: julienbalestra/monitoring:1639226218
 
 jobs:
   fmt:

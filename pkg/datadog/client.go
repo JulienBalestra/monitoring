@@ -125,7 +125,6 @@ func (c *Client) UpdateHostTags(ctx context.Context, tags []string) error {
 
 	// TODO find a good logger/workflow to debug this
 	zap.L().Debug("sending host tags", zap.Strings("tags", tags))
-	//return nil
 
 	var buff bytes.Buffer
 	err := json.NewEncoder(&buff).Encode(&HostTags{
@@ -274,11 +273,6 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 		return nil
 	}
 
-	debug := zap.L().Check(zap.DebugLevel, "sending series")
-	if debug != nil {
-		debug.Write(zap.Any("series", series))
-	}
-
 	var zb bytes.Buffer
 	w, err := zlib.NewWriterLevel(&zb, zlib.BestCompression)
 	if err != nil {
@@ -314,15 +308,7 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 		// From https://golang.org/pkg/net/http/#Response:
 		// The default HTTP client's Transport may not reuse HTTP/1.x "keep-alive"
 		// TCP connections if the Body is not read to completion and closed.
-		if debug == nil {
-			_, _ = io.Copy(ioutil.Discard, resp.Body)
-			return resp.Body.Close()
-		}
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-		debug.Write(zap.ByteString("body", bodyBytes))
+		_, _ = io.Copy(ioutil.Discard, resp.Body)
 		return resp.Body.Close()
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
@@ -332,21 +318,15 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 	_ = resp.Body.Close()
 	apiKey, err := hideKey(c.conf.DatadogAPIKey)
 	if err != nil {
-		return fmt.Errorf("failed to update host tags status code: %d: %v %s", resp.StatusCode, err, string(bodyBytes))
+		return fmt.Errorf("failed to send series status code: %d: %v %s", resp.StatusCode, err, string(bodyBytes))
 	}
-	return fmt.Errorf("failed to update host tags status code: %d API=%q %s", resp.StatusCode, apiKey, string(bodyBytes))
+	return fmt.Errorf("failed to usend series status code: %d API=%q %s", resp.StatusCode, apiKey, string(bodyBytes))
 }
 
 func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {
-	// TODO move this logic elsewhere
 	bufferLen := buffer.Len()
 	if bufferLen == 0 {
 		return nil
-	}
-
-	debug := zap.L().Check(zap.DebugLevel, "sending logs")
-	if debug != nil {
-		debug.Write(zap.Int("logs", bufferLen))
 	}
 
 	logsBytes := float64(bufferLen)
