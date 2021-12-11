@@ -68,19 +68,47 @@ func (c *Collector) Name() string {
 }
 
 func getAllowedIPsTag(n []net.IPNet) string {
-	if len(n) == 0 {
+	l := len(n)
+	if l == 0 {
 		return none
 	}
-	if len(n) == 1 {
+	if l == 1 {
 		return n[0].String()
 	}
-	var allowedIps []string
+
+	allowedIps := make([]string, l)
 	for _, i := range n {
 		s := i.String()
 		allowedIps = append(allowedIps, s)
 	}
 	sort.Strings(allowedIps)
 	return strings.Join(allowedIps, ",")
+}
+
+func (c *Collector) setStatus(now time.Time, tags []string, isActive bool) {
+	active, inactive := 0., 1.
+	if isActive {
+		// swap
+		active, inactive = 1., 0.
+	}
+	c.measures.GaugeDeviation(&metrics.Sample{
+		Name:  wireguardMetricPrefix + "active",
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  tags,
+		Value: active,
+	},
+		c.conf.CollectInterval,
+	)
+	c.measures.GaugeDeviation(&metrics.Sample{
+		Name:  wireguardMetricPrefix + "inactive",
+		Time:  now,
+		Host:  c.conf.Host,
+		Tags:  tags,
+		Value: inactive,
+	},
+		c.conf.CollectInterval,
+	)
 }
 
 func (c *Collector) Collect(_ context.Context) error {
@@ -100,28 +128,68 @@ func (c *Collector) Collect(_ context.Context) error {
 	for _, device := range devices {
 		deviceTag := tagger.NewTagUnsafe("device", device.Name)
 		for _, peer := range device.Peers {
+			peerSHA := stun.NewPeer(&peer)
+
+			age := now.Sub(peerSHA.LastHandshakeTime)
+			active := peer.Endpoint != nil && age < time.Second*210
+			activeTag := tagger.NewTagUnsafe("wg-active", strconv.FormatBool(active))
+
+			pubKeySha1Tag := tagger.NewTagUnsafe("pub-key-sha1", peerSHA.PublicKeySha1)
+			pubKeySha1TruncTag := tagger.NewTagUnsafe("pub-key-sha1-7", peerSHA.PublicKeyShortSha1)
+			allowedIpsTag := tagger.NewTagUnsafe("allowed-ips", getAllowedIPsTag(peerSHA.AllowedIPs))
+
 			if peer.Endpoint == nil {
+				endpointTag := tagger.NewTagUnsafe("endpoint", none)
+				ipTag := tagger.NewTagUnsafe("ip", none)
+				portTag := tagger.NewTagUnsafe("port", none)
+				c.conf.Tagger.Update(peerSHA.PublicKey.String(),
+					pubKeySha1Tag,
+					pubKeySha1TruncTag,
+					allowedIpsTag,
+					activeTag,
+					deviceTag,
+					endpointTag,
+					ipTag,
+					portTag,
+				)
+				c.conf.Tagger.Update(peerSHA.PublicKeySha1,
+					pubKeySha1TruncTag,
+					allowedIpsTag,
+					activeTag,
+					deviceTag,
+					endpointTag,
+					ipTag,
+					portTag,
+				)
+				tags := append(hostTags, c.conf.Tagger.GetUnstable(peerSHA.PublicKey.String())...)
+				c.setStatus(now, tags, false)
 				continue
 			}
-			peerSHA := stun.NewPeer(&peer)
+
+			endpointTag := tagger.NewTagUnsafe("endpoint", peerSHA.Endpoint.String())
+			ipTag := tagger.NewTagUnsafe("ip", peerSHA.Endpoint.IP.String())
+			portTag := tagger.NewTagUnsafe("port", strconv.Itoa(peerSHA.Endpoint.Port))
 			c.conf.Tagger.Update(peerSHA.PublicKey.String(),
-				tagger.NewTagUnsafe("pub-key-sha1", peerSHA.PublicKeySha1),
-				tagger.NewTagUnsafe("pub-key-sha1-7", peerSHA.PublicKeyShortSha1),
-				tagger.NewTagUnsafe("allowed-ips", getAllowedIPsTag(peerSHA.AllowedIPs)),
-				tagger.NewTagUnsafe("endpoint", peerSHA.Endpoint.String()),
-				tagger.NewTagUnsafe("ip", peerSHA.Endpoint.IP.String()),
-				tagger.NewTagUnsafe("port", strconv.Itoa(peerSHA.Endpoint.Port)),
+				pubKeySha1Tag,
+				pubKeySha1TruncTag,
+				allowedIpsTag,
+				activeTag,
 				deviceTag,
+				endpointTag,
+				ipTag,
+				portTag,
 			)
 			c.conf.Tagger.Update(peerSHA.PublicKeySha1,
-				tagger.NewTagUnsafe("pub-key-sha1-7", peerSHA.PublicKeyShortSha1),
-				tagger.NewTagUnsafe("allowed-ips", getAllowedIPsTag(peerSHA.AllowedIPs)),
-				tagger.NewTagUnsafe("endpoint", peerSHA.Endpoint.String()),
-				tagger.NewTagUnsafe("ip", peerSHA.Endpoint.IP.String()),
-				tagger.NewTagUnsafe("port", strconv.Itoa(peerSHA.Endpoint.Port)),
+				pubKeySha1TruncTag,
+				allowedIpsTag,
+				activeTag,
 				deviceTag,
+				endpointTag,
+				ipTag,
+				portTag,
 			)
 			tags := append(hostTags, c.conf.Tagger.GetUnstable(peerSHA.PublicKey.String())...)
+			c.setStatus(now, tags, active)
 			_ = c.measures.CountWithNegativeReset(&metrics.Sample{
 				Name:  wireguardMetricPrefix + "transfer.received",
 				Value: float64(peerSHA.ReceiveBytes),
@@ -136,7 +204,6 @@ func (c *Collector) Collect(_ context.Context) error {
 				Host:  c.conf.Host,
 				Tags:  tags,
 			})
-			age := now.Sub(peerSHA.LastHandshakeTime)
 			c.measures.Gauge(&metrics.Sample{
 				Name:  wireguardMetricPrefix + "handshake.age",
 				Value: age.Seconds(),
