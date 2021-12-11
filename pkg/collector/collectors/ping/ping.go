@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"os/exec"
 	"strconv"
@@ -18,7 +19,7 @@ const (
 	CollectorName = "ping"
 
 	OptionTarget  = "target"
-	OptionTimeout = "timeout-seconds"
+	OptionTimeout = "timeout-sec"
 )
 
 type Collector struct {
@@ -76,17 +77,39 @@ func (c *Collector) Name() string {
 func (c *Collector) Collect(ctx context.Context) error {
 	target, ok := c.conf.Options[OptionTarget]
 	if !ok {
-		zap.L().Error("missing option", zap.String("options", OptionTarget))
+		zap.L().Error("missing option",
+			zap.String("options", OptionTarget),
+		)
 		return errors.New("missing option " + OptionTarget)
 	}
 	timeout, ok := c.conf.Options[OptionTimeout]
 	if !ok {
-		zap.L().Error("missing option", zap.String("options", OptionTimeout))
+		zap.L().Error("missing option",
+			zap.String("options", OptionTimeout),
+		)
 		return errors.New("missing option " + OptionTimeout)
 	}
-	timeoutDuration, err := time.ParseDuration(timeout)
+	timeoutDuration, err := time.ParseDuration(timeout + "s")
 	if err != nil {
-		zap.L().Error("invalid option", zap.String("options", OptionTimeout), zap.Error(err))
+		zap.L().Error("invalid option",
+			zap.String("options", OptionTimeout),
+			zap.String(OptionTimeout, timeout),
+			zap.Error(err),
+		)
+		return err
+	}
+	const minTimeout = 1.
+	if timeoutDuration >= c.conf.CollectInterval && timeoutDuration.Seconds() < minTimeout {
+		err := fmt.Errorf(
+			"must be lower than the collection interval: %s < %s and greater or equal to %v",
+			c.conf.CollectInterval.String(), timeoutDuration.String(), minTimeout,
+		)
+		zap.L().Error("invalid option",
+			zap.String("options", OptionTimeout),
+			zap.String(OptionTimeout, timeout),
+			zap.String("collectInterval", c.conf.CollectInterval.String()),
+			zap.Error(err),
+		)
 		return err
 	}
 
@@ -101,9 +124,14 @@ func (c *Collector) Collect(ctx context.Context) error {
 		"-w", timeout,
 		"-W", timeout,
 		"-c", "1",
-		dst.IP.String()).CombinedOutput()
+		dst.IP.String(),
+	).CombinedOutput()
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			`"ping -w %s -W %s -c 1 %s": %v`,
+			timeout, timeout, dst.IP.String(),
+			err,
+		)
 	}
 	i := bytes.Index(b, c.timeStart)
 	if i == -1 {
