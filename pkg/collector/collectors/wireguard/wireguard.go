@@ -76,7 +76,7 @@ func getAllowedIPsTag(n []net.IPNet) string {
 		return n[0].String()
 	}
 
-	allowedIps := make([]string, l)
+	allowedIps := make([]string, 0, l)
 	for _, i := range n {
 		s := i.String()
 		allowedIps = append(allowedIps, s)
