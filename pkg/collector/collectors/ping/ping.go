@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"os/exec"
 	"strconv"
@@ -18,7 +17,8 @@ import (
 const (
 	CollectorName = "ping"
 
-	OptionTarget = "target"
+	OptionTarget  = "target"
+	OptionTimeout = "timeout-seconds"
 )
 
 type Collector struct {
@@ -54,7 +54,8 @@ func (c *Collector) Tags() []string {
 
 func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{
-		OptionTarget: "1.1.1.1",
+		OptionTarget:  "1.1.1.1",
+		OptionTimeout: "2",
 	}
 }
 
@@ -78,18 +79,27 @@ func (c *Collector) Collect(ctx context.Context) error {
 		zap.L().Error("missing option", zap.String("options", OptionTarget))
 		return errors.New("missing option " + OptionTarget)
 	}
+	timeout, ok := c.conf.Options[OptionTimeout]
+	if !ok {
+		zap.L().Error("missing option", zap.String("options", OptionTimeout))
+		return errors.New("missing option " + OptionTimeout)
+	}
+	timeoutDuration, err := time.ParseDuration(timeout)
+	if err != nil {
+		zap.L().Error("invalid option", zap.String("options", OptionTimeout), zap.Error(err))
+		return err
+	}
 
 	dst, err := net.ResolveIPAddr("ip4", target)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, c.conf.CollectInterval)
+	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
-	sec := fmt.Sprintf("%.f", c.conf.CollectInterval.Seconds())
 	b, err := exec.CommandContext(ctx, "ping",
-		"-w", sec,
-		"-W", sec,
+		"-w", timeout,
+		"-W", timeout,
 		"-c", "1",
 		dst.IP.String()).CombinedOutput()
 	if err != nil {
