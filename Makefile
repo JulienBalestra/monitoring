@@ -7,10 +7,10 @@ VERSION_FLAGS=-ldflags '-s -w \
     -X github.com/JulienBalestra/dry/pkg/version.Commit=$(COMMIT)'
 
 arm:
-	GOARCH=$@ GOARM=$(GOARM) go build -i -o bin/$(TARGET)-$@ $(VERSION_FLAGS) main/main.go
+	GOARCH=$@ GOARM=$(GOARM) go build -o bin/$(TARGET)-$@ $(VERSION_FLAGS) main/main.go
 
 arm64:
-	GOARCH=$@ go build -i -o bin/$(TARGET)-$@ $(VERSION_FLAGS) main/main.go
+	GOARCH=$@ go build -o bin/$(TARGET)-$@ $(VERSION_FLAGS) main/main.go
 
 amd64:
 	go build -o bin/$(TARGET)-$@ $(VERSION_FLAGS) main/main.go

@@ -2,6 +2,8 @@ package wireguard
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"net"
 	"sort"
 	"strconv"
@@ -11,8 +13,8 @@ import (
 	"github.com/JulienBalestra/monitoring/pkg/collector"
 	"github.com/JulienBalestra/monitoring/pkg/metrics"
 	"github.com/JulienBalestra/monitoring/pkg/tagger"
-	stun "github.com/JulienBalestra/wireguard-stun/pkg/wireguard"
 	"golang.zx2c4.com/wireguard/wgctrl"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 const (
@@ -22,6 +24,24 @@ const (
 
 	none = "none"
 )
+
+type peerWithSHA struct {
+	wgtypes.Peer
+
+	PublicKeyShortSha1 string
+	PublicKeySha1      string
+}
+
+func withSHA(peer *wgtypes.Peer) *peerWithSHA {
+	h := sha1.New()
+	_, _ = h.Write(peer.PublicKey[:])
+	hash := hex.EncodeToString(h.Sum(nil))
+	return &peerWithSHA{
+		Peer:               *peer,
+		PublicKeyShortSha1: hash[:7],
+		PublicKeySha1:      hash,
+	}
+}
 
 type Collector struct {
 	conf     *collector.Config
@@ -128,7 +148,7 @@ func (c *Collector) Collect(_ context.Context) error {
 	for _, device := range devices {
 		deviceTag := tagger.NewTagUnsafe("device", device.Name)
 		for _, peer := range device.Peers {
-			peerSHA := stun.NewPeer(&peer)
+			peerSHA := withSHA(&peer)
 
 			age := now.Sub(peerSHA.LastHandshakeTime)
 			active := peer.Endpoint != nil && age < time.Second*210

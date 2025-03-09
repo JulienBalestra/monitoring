@@ -48,12 +48,3 @@ func NormaliseMacAddress(s string) string {
 func NormaliseMacAddressBytes(b []byte) string {
 	return NormaliseMacAddress(string(b))
 }
-
-/*
-
-func parseMac(m string) string {
-	m = strings.ToLower(m)
-	m = m[0:2] + "-" + m[2:4] + "-" + m[4:6] + "-" + m[6:8] + "-" + m[8:10] + "-" + m[10:12]
-	return m
-}
-*/

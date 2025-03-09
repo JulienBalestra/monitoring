@@ -33,10 +33,10 @@ func generateCode() error {
 	replace := strings.NewReplacer(
 		"--", "-",
 	)
-	macPrefixToVendor := make(map[string]string, 28069)
-	vendorMac := make(map[string]map[string]struct{}, 17925)
+	macPrefixToVendor := make(map[string]string)
+	vendorMac := make(map[string]map[string]struct{})
 	c := &http.Client{
-		Timeout: time.Minute * 5,
+		Timeout: time.Second * 10,
 	}
 	resp, err := c.Get("http://standards-oui.ieee.org/oui.txt")
 	if err != nil {
