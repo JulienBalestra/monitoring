@@ -6,19 +6,22 @@ VERSION_FLAGS=-ldflags '-s -w \
     -X github.com/JulienBalestra/dry/pkg/version.Version=$(VERSION) \
     -X github.com/JulienBalestra/dry/pkg/version.Commit=$(COMMIT)'
 
+build:
+	go build -o bin/$(TARGET) $(VERSION_FLAGS) main/main.go
+
 arm:
-	GOARCH=$@ GOARM=$(GOARM) go build -o bin/$(TARGET)-$@ $(VERSION_FLAGS) main/main.go
+	GOOS=linux GOARCH=$@ GOARM=$(GOARM) go build -o bin/$(TARGET)-linux-$@ $(VERSION_FLAGS) main/main.go
 
 arm64:
-	GOARCH=$@ go build -o bin/$(TARGET)-$@ $(VERSION_FLAGS) main/main.go
+	GOOS=linux GOARCH=$@ go build -o bin/$(TARGET)-linux-$@ $(VERSION_FLAGS) main/main.go
 
 amd64:
-	go build -o bin/$(TARGET)-$@ $(VERSION_FLAGS) main/main.go
+	GOOS=linux GOARCH=$@ go build -o bin/$(TARGET)-linux-$@ $(VERSION_FLAGS) main/main.go
 
 clean: fmt lint import ineffassign test vet
 	$(RM) -v bin/*
 
-re: clean amd64 arm arm64
+re: clean build arm arm64 amd64
 
 fmt:
 	@go fmt ./...
