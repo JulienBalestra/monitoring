@@ -1,10 +1,10 @@
-//go:build linux
+//go:build !linux
 
-package uptime
+package memory
 
 import (
 	"context"
-	"syscall"
+	"fmt"
 	"time"
 
 	"github.com/JulienBalestra/monitoring/pkg/collector"
@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	CollectorName = "uptime"
+	CollectorName = "memory"
 )
 
 type Collector struct {
@@ -20,7 +20,7 @@ type Collector struct {
 	measures *metrics.Measures
 }
 
-func NewUptime(conf *collector.Config) collector.Collector {
+func NewMemory(conf *collector.Config) collector.Collector {
 	return collector.WithDefaults(&Collector{
 		conf:     conf,
 		measures: metrics.NewMeasures(conf.MetricsClient.ChanSeries),
@@ -41,16 +41,16 @@ func (c *Collector) Tags() []string {
 	return append(c.conf.Tagger.GetUnstable(c.conf.Host), c.conf.Tags...)
 }
 
+func (c *Collector) Config() *collector.Config {
+	return c.conf
+}
+
 func (c *Collector) DefaultOptions() map[string]string {
 	return map[string]string{}
 }
 
 func (c *Collector) DefaultCollectInterval() time.Duration {
-	return time.Minute * 5
-}
-
-func (c *Collector) Config() *collector.Config {
-	return c.conf
+	return time.Second * 60
 }
 
 func (c *Collector) IsDaemon() bool { return false }
@@ -60,18 +60,5 @@ func (c *Collector) Name() string {
 }
 
 func (c *Collector) Collect(_ context.Context) error {
-	info := &syscall.Sysinfo_t{}
-	err := syscall.Sysinfo(info)
-	if err != nil {
-		return err
-	}
-
-	c.measures.Gauge(&metrics.Sample{
-		Name:  "up.time",
-		Value: float64(info.Uptime),
-		Time:  time.Now(),
-		Host:  c.conf.Host,
-		Tags:  c.Tags(),
-	})
-	return nil
+	return fmt.Errorf("memory collector is not supported on this platform")
 }
