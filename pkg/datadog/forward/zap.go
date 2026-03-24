@@ -71,8 +71,10 @@ func (f *Forwarder) Sync() error {
 	if err != nil {
 		return err
 	}
+	f.mu.Lock()
 	f.buffer.Reset()
 	f.lastSync = time.Now()
+	f.mu.Unlock()
 	return nil
 }
 

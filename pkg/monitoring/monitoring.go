@@ -102,11 +102,10 @@ func (m *Monitoring) Start(ctx context.Context) error {
 	errorsChan := make(chan error, len(m.catalogConfig.Collectors))
 	collectorWaitGroup := &sync.WaitGroup{}
 	for name, newFn := range catalog.CollectorCatalog() {
-		select {
-		case <-runCtx.Done():
+		if runCtx.Err() != nil {
 			break
-
-		default:
+		}
+		{
 			nb := 0
 			zctx := zap.L().With(
 				zap.String("collector", name),
@@ -138,7 +137,7 @@ func (m *Monitoring) Start(ctx context.Context) error {
 		}
 	}
 	tags := append(m.Tagger.GetUnstable(m.conf.Hostname),
-		"commit:"+version.Commit[:8],
+		"commit:"+version.Commit[:min(8, len(version.Commit))],
 	)
 	m.datadogClient.MetricClientUp(m.conf.Hostname, tags...)
 	// TODO: make it works

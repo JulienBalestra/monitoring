@@ -99,7 +99,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 		return err
 	}
 	const minTimeout = 1.
-	if timeoutDuration >= c.conf.CollectInterval && timeoutDuration.Seconds() < minTimeout {
+	if timeoutDuration >= c.conf.CollectInterval || timeoutDuration.Seconds() < minTimeout {
 		err := fmt.Errorf(
 			"must be lower than the collection interval: %s < %s and greater or equal to %v",
 			c.conf.CollectInterval.String(), timeoutDuration.String(), minTimeout,
