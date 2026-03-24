@@ -81,20 +81,20 @@ func (c *Collector) Collect(_ context.Context) error {
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "load.5",
 		Value: formatLoad(float64(info.Loads[1])),
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "load.15",
 		Value: formatLoad(float64(info.Loads[2])),
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 	return nil
 }

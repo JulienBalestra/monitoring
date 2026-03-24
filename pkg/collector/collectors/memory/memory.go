@@ -81,21 +81,21 @@ func (c *Collector) Collect(_ context.Context) error {
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "memory.ram.shared",
 		Value: float64(info.Sharedram),
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "memory.ram.buffer",
 		Value: float64(info.Bufferram),
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "memory.swap.total",
 		Value: float64(info.Totalswap),
@@ -109,6 +109,6 @@ func (c *Collector) Collect(_ context.Context) error {
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 	return nil
 }

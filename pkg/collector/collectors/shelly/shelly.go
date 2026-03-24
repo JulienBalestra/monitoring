@@ -108,8 +108,8 @@ func (c *Collector) Collect(ctx context.Context) error {
 		return errors.New("missing option " + optionEndpoint)
 	}
 	ctx, cancel := context.WithTimeout(ctx, c.conf.CollectInterval)
+	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, shellyEndpoint+"/status", nil)
-	cancel()
 	if err != nil {
 		return err
 	}

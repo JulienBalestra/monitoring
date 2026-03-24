@@ -291,13 +291,10 @@ func (c *Collector) processLine(counters map[string]*dnsQuery, line []byte) {
 		return
 	}
 	endQueryType := bytes.Index(line, c.secondSep)
-	if beginQueryType == -1 {
+	if endQueryType == -1 {
 		return
 	}
 	queryType := string(line[beginQueryType:endQueryType])
-	if len(line) < beginQueryType {
-		return
-	}
 	endQueryType += 2
 	// api.datadoghq.com from 192.168.1.1
 	//                  ^

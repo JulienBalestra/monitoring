@@ -149,14 +149,14 @@ func (c *Collector) Collect(ctx context.Context) error {
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "network.wireless.noise",
 		Value: e.Noise,
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "google.home.has_update",
@@ -164,20 +164,20 @@ func (c *Collector) Collect(ctx context.Context) error {
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "google.home.connected",
 		Value: metrics.BoolToFloat(e.Connected),
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "google.home.setup_state",
 		Value: e.SetupState,
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 	return nil
 }

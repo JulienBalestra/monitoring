@@ -202,7 +202,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 					Tags: append(tags,
 						c.Tags()...,
 					),
-				}, c.conf.CollectInterval*c.conf.CollectInterval)
+				}, c.conf.CollectInterval*2)
 
 				err = a.RemoveDevice(device.Path())
 				if err != nil {

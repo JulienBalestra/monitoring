@@ -134,7 +134,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 		case <-ticker.C:
 			now := time.Now()
 			for _, aggr := range aggregations {
-				_ = c.measures.GaugeDeviation(c.aggregationToSamples(now, aggr), c.conf.CollectInterval*c.conf.CollectInterval)
+				_ = c.measures.GaugeDeviation(c.aggregationToSamples(now, aggr), c.conf.CollectInterval*2)
 			}
 			c.measures.Purge()
 			aggregations = make(map[string]*aggregation)

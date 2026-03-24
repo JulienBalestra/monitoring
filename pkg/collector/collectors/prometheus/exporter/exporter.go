@@ -228,7 +228,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 					Time:  now,
 					Host:  c.conf.Host,
 					Tags:  c.getTagsFromLabels(tags, m.Label),
-				}, c.conf.CollectInterval*c.conf.CollectInterval)
+				}, c.conf.CollectInterval*2)
 			}
 
 		case dto.MetricType_SUMMARY:
@@ -248,7 +248,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 					Time:  now,
 					Host:  c.conf.Host,
 					Tags:  labelsAsTags,
-				}, c.conf.CollectInterval*c.conf.CollectInterval)
+				}, c.conf.CollectInterval*2)
 				for _, q := range m.Summary.Quantile {
 					c.measures.GaugeDeviation(&metrics.Sample{
 						Name:  *mf.Name,
@@ -256,7 +256,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 						Time:  now,
 						Host:  c.conf.Host,
 						Tags:  append(labelsAsTags, fmt.Sprintf("quantile:%g", *q.Quantile)),
-					}, c.conf.CollectInterval*c.conf.CollectInterval)
+					}, c.conf.CollectInterval*2)
 				}
 				if count == 0 || sum == 0 {
 					continue
@@ -268,7 +268,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 					Time:  now,
 					Host:  c.conf.Host,
 					Tags:  labelsAsTags,
-				}, c.conf.CollectInterval*c.conf.CollectInterval)
+				}, c.conf.CollectInterval*2)
 			}
 
 		case dto.MetricType_HISTOGRAM:
@@ -288,7 +288,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 					Time:  now,
 					Host:  c.conf.Host,
 					Tags:  labelsAsTags,
-				}, c.conf.CollectInterval*c.conf.CollectInterval)
+				}, c.conf.CollectInterval*2)
 				for _, b := range m.Histogram.Bucket {
 					c.measures.GaugeDeviation(&metrics.Sample{
 						Name:  *mf.Name,
@@ -296,7 +296,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 						Time:  now,
 						Host:  c.conf.Host,
 						Tags:  append(labelsAsTags, fmt.Sprintf("le:%g", *b.UpperBound)),
-					}, c.conf.CollectInterval*c.conf.CollectInterval)
+					}, c.conf.CollectInterval*2)
 				}
 				if count == 0 || sum == 0 {
 					continue
@@ -308,7 +308,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 					Time:  now,
 					Host:  c.conf.Host,
 					Tags:  labelsAsTags,
-				}, c.conf.CollectInterval*c.conf.CollectInterval)
+				}, c.conf.CollectInterval*2)
 			}
 		}
 	}

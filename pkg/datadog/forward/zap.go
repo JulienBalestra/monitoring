@@ -54,11 +54,14 @@ func (f *Forwarder) Sync() error {
 	}
 
 	f.mu.Lock()
-	_, err = w.Write(f.buffer.Bytes())
+	data := make([]byte, f.buffer.Len())
+	copy(data, f.buffer.Bytes())
+	f.mu.Unlock()
+
+	_, err = w.Write(data)
 	if err != nil {
 		return err
 	}
-	f.mu.Unlock()
 
 	err = w.Close()
 	if err != nil {

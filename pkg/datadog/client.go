@@ -320,7 +320,7 @@ func (c *Client) SendSeries(ctx context.Context, series []metrics.Series) error 
 	if err != nil {
 		return fmt.Errorf("failed to send series status code: %d: %v %s", resp.StatusCode, err, string(bodyBytes))
 	}
-	return fmt.Errorf("failed to usend series status code: %d API=%q %s", resp.StatusCode, apiKey, string(bodyBytes))
+	return fmt.Errorf("failed to send series status code: %d API=%q %s", resp.StatusCode, apiKey, string(bodyBytes))
 }
 
 func (c *Client) SendLogs(ctx context.Context, buffer *bytes.Buffer) error {

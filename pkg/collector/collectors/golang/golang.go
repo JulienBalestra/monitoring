@@ -69,14 +69,14 @@ func (c *Collector) Collect(_ context.Context) error {
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 	c.measures.GaugeDeviation(&metrics.Sample{
 		Name:  "golang.heap.alloc",
 		Value: float64(memstat.HeapAlloc),
 		Time:  now,
 		Host:  c.conf.Host,
 		Tags:  tags,
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 
 	return nil
 }

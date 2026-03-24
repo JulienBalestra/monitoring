@@ -260,7 +260,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 				Host:  c.conf.Host,
 				Tags:  tags,
 			}
-			c.measures.GaugeDeviation(s, c.conf.CollectInterval*c.conf.CollectInterval)
+			c.measures.GaugeDeviation(s, c.conf.CollectInterval*2)
 		}
 	}
 

@@ -93,6 +93,6 @@ func (c *Collector) Collect(_ context.Context) error {
 		Time:  time.Now(),
 		Host:  c.conf.Host,
 		Tags:  append(c.conf.Tagger.GetUnstableWithDefault(c.conf.Host), "sensor:cpu"),
-	}, c.conf.CollectInterval*c.conf.CollectInterval)
+	}, c.conf.CollectInterval*2)
 	return nil
 }
