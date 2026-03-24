@@ -84,6 +84,7 @@ func (s *Sample) Hash() uint64 {
 	h := fnv.NewHash()
 	h = fnv.AddString(h, s.Name)
 	h = fnv.AddString(h, s.Host)
+	// sort in-place for performance: avoids allocation, subsequent calls are O(n)
 	sort.Strings(s.Tags)
 	for _, tag := range s.Tags {
 		h = fnv.AddString(h, tag)
