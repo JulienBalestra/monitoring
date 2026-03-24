@@ -239,9 +239,14 @@ func (t *Tagger) Print() {
 
 	b := bytes.Buffer{}
 	entities, tagNumber := 0, len(t.store)
-	for entity := range t.store {
-		// there is a read lock in Get
-		tags := t.Get(entity)
+	for entity, entityTags := range t.store {
+		tags := make([]string, 0)
+		for _, values := range entityTags {
+			for _, keyValue := range values {
+				tags = append(tags, keyValue)
+			}
+		}
+		sort.Strings(tags)
 		b.WriteString(fmt.Sprintf("  - %q: %q\n", entity, tags))
 		tagNumber += len(tags)
 	}

@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -106,6 +107,7 @@ func (c *Collector) Collect(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	_, _ = io.Copy(io.Discard, resp.Body)
 	_ = resp.Body.Close()
 	tags := c.Tags()
 	ipAddress := u.Host

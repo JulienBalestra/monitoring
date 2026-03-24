@@ -3,6 +3,7 @@ package conntrack
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -81,6 +82,11 @@ func (r *Record) Hash() uint64 {
 }
 
 func getQuadruplet(srcIPIndex int, line [][]byte) (*Quad, error) {
+	if srcIPIndex+3 >= len(line) ||
+		len(line[srcIPIndex]) <= 4 || len(line[srcIPIndex+1]) <= 4 ||
+		len(line[srcIPIndex+2]) <= 6 || len(line[srcIPIndex+3]) <= 6 {
+		return nil, errors.New("invalid conntrack quadruplet fields")
+	}
 	var err error
 	q := &Quad{
 		Source:          string(line[srcIPIndex][4:]),
@@ -100,6 +106,9 @@ func getQuadruplet(srcIPIndex int, line [][]byte) (*Quad, error) {
 }
 
 func getTraffic(packets, bytes []byte) (float64, float64, error) {
+	if len(packets) <= 8 || len(bytes) <= 6 {
+		return 0, 0, errors.New("invalid conntrack traffic fields")
+	}
 	packetsCount, err := strconv.ParseFloat(string(packets[8:]), 10)
 	if err != nil {
 		return 0, 0, err
